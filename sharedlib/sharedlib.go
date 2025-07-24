@@ -29,7 +29,8 @@ typedef struct {
 import "C"
 
 var (
-	txClient *client.TxClient
+	txClient        *client.TxClient
+	backupTxClients map[uint8]*client.TxClient
 )
 
 func wrapErr(err error) (ret *C.char) {
@@ -101,6 +102,10 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 		err = fmt.Errorf("error occurred when creating TxClient. err: %v", err)
 		return
 	}
+	if backupTxClients == nil {
+		backupTxClients = make(map[uint8]*client.TxClient)
+	}
+	backupTxClients[apiKeyIndex] = txClient
 
 	return nil
 }
@@ -120,23 +125,29 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	apiKeyIndex := uint8(cApiKeyIndex)
 	accountIndex := int64(cAccountIndex)
 
-	if txClient.GetApiKeyIndex() != apiKeyIndex {
-		err = fmt.Errorf("apiKeyIndex does not match. expected %v but got %v", txClient.GetApiKeyIndex(), apiKeyIndex)
+	client, ok := backupTxClients[apiKeyIndex]
+	if !ok {
+		err = fmt.Errorf("api key not registered")
 		return
 	}
-	if txClient.GetAccountIndex() != accountIndex {
-		err = fmt.Errorf("accountIndex does not match. expected %v but got %v", txClient.GetAccountIndex(), accountIndex)
+
+	if client.GetApiKeyIndex() != apiKeyIndex {
+		err = fmt.Errorf("apiKeyIndex does not match. expected %v but got %v", client.GetApiKeyIndex(), apiKeyIndex)
+		return
+	}
+	if client.GetAccountIndex() != accountIndex {
+		err = fmt.Errorf("accountIndex does not match. expected %v but got %v", client.GetAccountIndex(), accountIndex)
 		return
 	}
 
 	// check that the API key registered on Lighter matches this one
-	key, err := txClient.HTTP().GetApiKey(accountIndex, apiKeyIndex)
+	key, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
 	if err != nil {
 		err = fmt.Errorf("failed to get Api Keys. err: %v", err)
 		return
 	}
 
-	pubKeyBytes := txClient.GetKeyManager().PubKeyBytes()
+	pubKeyBytes := client.GetKeyManager().PubKeyBytes()
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
@@ -911,6 +922,23 @@ func CreateAuthToken(cDeadline C.longlong) (ret C.StrOrErr) {
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+//export SwitchAPIKey
+func SwitchAPIKey(c C.int) (ret *C.char) {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+		if err != nil {
+			ret = wrapErr(err)
+		}
+	}()
+
+	txClient = backupTxClients[uint8(c)]
 
 	return
 }
