@@ -939,6 +939,9 @@ func SwitchAPIKey(c C.int) (ret *C.char) {
 	}()
 
 	txClient = backupTxClients[uint8(c)]
+	if txClient == nil {
+		err = fmt.Errorf("no client initialized for api key")
+	}
 
 	return
 }
