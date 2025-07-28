@@ -571,7 +571,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.longlong, fee C.longlong, memo *C.char) (ret C.StrOrErr) {
+func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.longlong, cFee C.longlong, cMemo *C.char) (ret C.StrOrErr) {
 	var err error
 	var txInfoStr string
 
@@ -598,10 +598,18 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.l
 	toAccountIndex := int64(cToAccountIndex)
 	usdcAmount := int64(cUSDCAmount)
 	nonce := int64(cNonce)
+	fee := int64(cFee)
+	memo := [32]byte{}
+	memoStr := C.GoString(cMemo)
+	for i := 0; i < 32; i++ {
+		memo[i] = byte(memoStr[i])
+	}
 
 	txInfo := &types.TransferTxReq{
 		ToAccountIndex: toAccountIndex,
 		USDCAmount:     usdcAmount,
+		Fee:            fee,
+		Memo:           memo,
 	}
 	ops := new(types.TransactOpts)
 	if nonce != -1 {
