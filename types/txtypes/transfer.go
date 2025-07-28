@@ -13,6 +13,8 @@ type L2TransferTxInfo struct {
 
 	ToAccountIndex int64
 	USDCAmount     int64 // USDCAmount is given with 6 decimals
+	Fee            int64
+	Memo           [32]byte
 
 	ExpiredAt  int64
 	Nonce      int64

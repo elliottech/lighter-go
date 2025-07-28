@@ -29,6 +29,8 @@ type ChangePubKeyReq struct {
 type TransferTxReq struct {
 	ToAccountIndex int64
 	USDCAmount     int64
+	Fee            int64
+	Memo           [32]byte
 }
 
 type WithdrawTxReq struct {
@@ -438,6 +440,8 @@ func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2Transfer
 		ApiKeyIndex:      *ops.ApiKeyIndex,
 		ToAccountIndex:   tx.ToAccountIndex,
 		USDCAmount:       tx.USDCAmount,
+		Fee:              tx.Fee,
+		Memo:             tx.Memo,
 		ExpiredAt:        ops.ExpiredAt,
 		Nonce:            *ops.Nonce,
 	}
