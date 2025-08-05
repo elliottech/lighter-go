@@ -99,6 +99,13 @@ type BurnSharesTxReq struct {
 type UpdateLeverageTxReq struct {
 	MarketIndex           uint8
 	InitialMarginFraction uint16
+	MarginMode            uint8
+}
+
+type UpdateMarginTxReq struct {
+	MarketIndex uint8
+	USDCAmount  int64
+	Direction   uint8
 }
 
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
@@ -434,6 +441,28 @@ func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *Upd
 	return convertedTx, nil
 }
 
+func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
+	convertedTx := ConvertUpdateMarginTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
 	return &txtypes.L2TransferTxInfo{
 		FromAccountIndex: *ops.FromAccountIndex,
@@ -614,5 +643,17 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 		InitialMarginFraction: tx.InitialMarginFraction,
 		ExpiredAt:             ops.ExpiredAt,
 		Nonce:                 *ops.Nonce,
+	}
+}
+
+func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2UpdateMarginTxInfo {
+	return &txtypes.L2UpdateMarginTxInfo{
+		AccountIndex: *ops.FromAccountIndex,
+		ApiKeyIndex:  *ops.ApiKeyIndex,
+		MarketIndex:  tx.MarketIndex,
+		USDCAmount:   tx.USDCAmount,
+		Direction:    tx.Direction,
+		ExpiredAt:    ops.ExpiredAt,
+		Nonce:        *ops.Nonce,
 	}
 }
