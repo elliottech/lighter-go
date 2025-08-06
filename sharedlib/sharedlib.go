@@ -571,7 +571,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.longlong, cFee C.longlong, cMemo *C.char) (ret C.StrOrErr) {
+func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong) (ret C.StrOrErr) {
 	var err error
 	var txInfoStr string
 
