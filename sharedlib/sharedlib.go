@@ -601,6 +601,10 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.l
 	fee := int64(cFee)
 	memo := [32]byte{}
 	memoStr := C.GoString(cMemo)
+	if len(memoStr) != 32 {
+		err = fmt.Errorf("memo expected to be 32 bytes long")
+		return
+	}
 	for i := 0; i < 32; i++ {
 		memo[i] = byte(memoStr[i])
 	}
