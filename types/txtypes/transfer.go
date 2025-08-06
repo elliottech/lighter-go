@@ -1,6 +1,10 @@
 package txtypes
 
 import (
+	"encoding/hex"
+	"fmt"
+	"strings"
+
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
 )
@@ -92,4 +96,22 @@ func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32, extra ...g.Element) 
 	elems = append(elems, g.FromUint64(uint64(txInfo.USDCAmount)>>32))        //nolint:gosec
 
 	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+}
+
+func (txInfo *L2TransferTxInfo) GetL1SignatureBody() string {
+	hexMemo := hex.EncodeToString(txInfo.Memo[:])
+	hexMemo = strings.Replace(hexMemo, "0x", "", 1)
+
+	signatureBody := fmt.Sprintf(
+		templateTransfer,
+
+		getHex10FromUint64(uint64(txInfo.Nonce)),
+		getHex10FromUint64(uint64(txInfo.FromAccountIndex)),
+		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
+		getHex10FromUint64(uint64(txInfo.ToAccountIndex)),
+		getHex10FromUint64(uint64(txInfo.USDCAmount)),
+		getHex10FromUint64(uint64(txInfo.Fee)),
+		hexMemo,
+	)
+	return signatureBody
 }

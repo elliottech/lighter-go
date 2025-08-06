@@ -627,6 +627,15 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.l
 	}
 
 	txInfoStr = string(txInfoBytes)
+	obj := make(map[string]interface{})
+	err = json.Unmarshal(txInfoBytes, &obj)
+	obj["MessageToSign"] = tx.GetL1SignatureBody()
+	txInfoBytes, err = json.Marshal(obj)
+	if err != nil {
+		return
+	}
+
+	txInfoStr = string(txInfoBytes)
 	return
 }
 
