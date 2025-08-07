@@ -571,7 +571,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong) (ret C.StrOrErr) {
 	var err error
 	var txInfoStr string
 
@@ -598,10 +598,22 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.l
 	toAccountIndex := int64(cToAccountIndex)
 	usdcAmount := int64(cUSDCAmount)
 	nonce := int64(cNonce)
+	fee := int64(cFee)
+	memo := [32]byte{}
+	memoStr := C.GoString(cMemo)
+	if len(memoStr) != 32 {
+		err = fmt.Errorf("memo expected to be 32 bytes long")
+		return
+	}
+	for i := 0; i < 32; i++ {
+		memo[i] = byte(memoStr[i])
+	}
 
 	txInfo := &types.TransferTxReq{
 		ToAccountIndex: toAccountIndex,
 		USDCAmount:     usdcAmount,
+		Fee:            fee,
+		Memo:           memo,
 	}
 	ops := new(types.TransactOpts)
 	if nonce != -1 {
@@ -614,6 +626,15 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cNonce C.l
 	}
 
 	txInfoBytes, err := json.Marshal(tx)
+	if err != nil {
+		return
+	}
+
+	txInfoStr = string(txInfoBytes)
+	obj := make(map[string]interface{})
+	err = json.Unmarshal(txInfoBytes, &obj)
+	obj["MessageToSign"] = tx.GetL1SignatureBody()
+	txInfoBytes, err = json.Marshal(obj)
 	if err != nil {
 		return
 	}
@@ -837,7 +858,7 @@ func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 }
 
 //export SignUpdateLeverage
-func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cNonce C.longlong) (ret C.StrOrErr) {
+func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong) (ret C.StrOrErr) {
 	var err error
 	var txInfoStr string
 
@@ -864,10 +885,12 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cNonce
 	marketIndex := uint8(cMarketIndex)
 	initialMarginFraction := uint16(cInitialMarginFraction)
 	nonce := int64(cNonce)
+	marginMode := uint8(cMarginMode)
 
 	txInfo := &types.UpdateLeverageTxReq{
 		MarketIndex:           marketIndex,
 		InitialMarginFraction: initialMarginFraction,
+		MarginMode:            uint8(marginMode),
 	}
 	ops := new(types.TransactOpts)
 	if nonce != -1 {
@@ -944,6 +967,52 @@ func SwitchAPIKey(c C.int) (ret *C.char) {
 	}
 
 	return
+}
+
+//export SignUpdateMargin
+func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong) (ret C.StrOrErr) {
+	var err error
+	var txInfoStr string
+	defer func() {
+		if r := recover(); r != nil {
+			wrapErr(fmt.Errorf("panic: %v", r))
+		}
+		if err != nil {
+			ret = C.StrOrErr{
+				err: wrapErr(err),
+			}
+		} else {
+			ret = C.StrOrErr{
+				str: C.CString(txInfoStr),
+			}
+		}
+	}()
+
+	if txClient == nil {
+		err = fmt.Errorf("Client is not created, call CreateClient() first")
+	}
+
+	marketIndex := uint8(cMarketIndex)
+	usdcAmount := int64(cUSDCAmount)
+	direction := uint8(cDirection)
+	nonce := int64(cNonce)
+
+	txInfo := &types.UpdateMarginTxReq{
+		MarketIndex: marketIndex,
+		USDCAmount:  usdcAmount,
+		Direction:   direction,
+	}
+	ops := new(types.TransactOpts)
+	if nonce != -1 {
+		ops.Nonce = &nonce
+	}
+
+	tx, err := txClient.GetUpdateMarginTransaction(txInfo, ops)
+
+	txInfoBytes, err := json.Marshal(tx)
+	txInfoStr = string(txInfoBytes)
+
+	return ret
 }
 
 func main() {}
