@@ -58,6 +58,13 @@ func (txInfo *L2TransferTxInfo) Validate() error {
 		return ErrTransferAmountTooHigh
 	}
 
+	if txInfo.Fee < 0 {
+		return ErrTransferFeeNegative
+	}
+	if txInfo.Fee > MaxTransferAmount {
+		return ErrTransferFeeTooHigh
+	}
+
 	if txInfo.Nonce < MinNonce {
 		return ErrNonceTooLow
 	}
@@ -96,7 +103,6 @@ func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32, extra ...g.Element) 
 	elems = append(elems, g.FromUint64(uint64(txInfo.USDCAmount)>>32))        //nolint:gosec
 	elems = append(elems, g.FromUint64(uint64(txInfo.Fee)&0xFFFFFFFF))        //nolint:gosec
 	elems = append(elems, g.FromUint64(uint64(txInfo.Fee)>>32))               //nolint:gosec
-	elems = append(elems, g.FromUint64(uint64(txInfo.USDCAmount)>>32))        //nolint:gosec
 
 	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
 }

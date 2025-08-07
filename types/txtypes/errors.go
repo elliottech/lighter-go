@@ -61,4 +61,6 @@ var (
 	ErrInvalidMarginMode               = fmt.Errorf("MarginMode is not valid")
 	ErrCancelModeInvalid               = fmt.Errorf("CancelMode is not valid")
 	ErrInvalidUpdateMarginDirection    = fmt.Errorf("Margin movement direction is not valid")
+	ErrTransferFeeNegative             = fmt.Errorf("Transfer fee is negative")
+	ErrTransferFeeTooHigh              = fmt.Errorf("Transfer fee is higher than %d", MaxTransferAmount)
 )

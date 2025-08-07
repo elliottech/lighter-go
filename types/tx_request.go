@@ -359,6 +359,9 @@ func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferT
 	if err != nil {
 		return nil, err
 	}
+	if err = convertedTx.Validate(); err != nil {
+		return nil, err
+	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
 	if err != nil {
