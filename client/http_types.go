@@ -30,8 +30,3 @@ type TxHash struct {
 	ResultCode
 	TxHash string `json:"tx_hash,example=0x70997970C51812dc3A010C7d01b50e0d17dc79C8"`
 }
-
-type TransferFeeInfo struct {
-	ResultCode
-	TransferFee int64 `json:"transfer_fee_usdc"`
-}

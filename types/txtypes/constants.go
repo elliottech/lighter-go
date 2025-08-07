@@ -40,7 +40,6 @@ const (
 	TxTypeInternalCreateOrder       = 27
 
 	TxTypeL2CreateGroupedOrders = 28
-	TxTypeL2UpdateMargin        = 29
 )
 
 // Order Type
@@ -161,15 +160,4 @@ const (
 
 	MinWithdrawalAmount uint64 = 1
 	MaxWithdrawalAmount uint64 = MaxExchangeUSDC
-)
-
-// Margin Modes
-const (
-	CrossMargin    = iota
-	IsolatedMargin = 1
-)
-
-const (
-	RemoveFromIsolatedMargin = 0
-	AddToIsolatedMargin      = 1
 )

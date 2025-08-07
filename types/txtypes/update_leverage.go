@@ -13,7 +13,6 @@ type L2UpdateLeverageTxInfo struct {
 
 	MarketIndex           uint8
 	InitialMarginFraction uint16
-	MarginMode            uint8
 
 	ExpiredAt  int64
 	Nonce      int64
@@ -73,15 +72,11 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 		return ErrExpiredAtInvalid
 	}
 
-	if txInfo.MarginMode != CrossMargin && txInfo.MarginMode != IsolatedMargin {
-		return ErrInvalidMarginMode
-	}
-
 	return nil
 }
 
 func (txInfo *L2UpdateLeverageTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 9)
+	elems := make([]g.Element, 0, 8)
 
 	elems = append(elems, g.FromUint32(lighterChainId))
 	elems = append(elems, g.FromUint32(TxTypeL2UpdateLeverage))
@@ -92,7 +87,6 @@ func (txInfo *L2UpdateLeverageTxInfo) Hash(lighterChainId uint32, extra ...g.Ele
 	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
 	elems = append(elems, g.FromInt64(int64(txInfo.MarketIndex)))
 	elems = append(elems, g.FromInt64(int64(txInfo.InitialMarginFraction)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.MarginMode)))
 
 	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
 }

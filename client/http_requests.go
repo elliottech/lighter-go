@@ -113,16 +113,3 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 
 	return res.TxHash, nil
 }
-
-func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth string) (*TransferFeeInfo, error) {
-	result := &TransferFeeInfo{}
-	err := c.getAndParseL2HTTPResponse("api/v1/transferFeeInfo", map[string]any{
-		"account_index":    accountIndex,
-		"to_account_index": toAccountIndex,
-		"auth":             auth,
-	}, result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
