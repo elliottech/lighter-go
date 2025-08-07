@@ -9,6 +9,8 @@ import (
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
 )
 
+const templateTransfer = "Transfer\n\nnonce: %s\nfrom: %s\napi key: %s\nto: %s\namount: %s\nfee: %s\nmemo: %s\nOnly sign this message for a trusted client!"
+
 var _ TxInfo = (*L2TransferTxInfo)(nil)
 
 type L2TransferTxInfo struct {

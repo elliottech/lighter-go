@@ -12,7 +12,6 @@ import (
 
 const (
 	templateChangePubKey = "Register Lighter Account\n\npubkey: 0x%s\nnonce: %s\naccount index: %s\napi key index: %s\nOnly sign this message for a trusted client!"
-	templateTransfer     = "Transfer\n\nnonce: %s\nfrom: %s\napi key: %s\nto: %s\namount: %s\nfee: %s\nmemo: %s\nOnly sign this message for a trusted client!"
 )
 
 func getHex10FromUint64(value uint64) string {
