@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -45,6 +46,7 @@ func (c *HTTPClient) getAndParseL2HTTPResponse(path string, params map[string]an
 	if err != nil {
 		return err
 	}
+	// log.Println("Response: of ", u.String(), " is ", string(body))
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(string(body))
 	}
@@ -114,6 +116,54 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	return res.TxHash, nil
 }
 
+// SendTxBatch sends multiple transactions in a batch using /api/v1/sendTxBatch endpoint
+func (c *HTTPClient) SendTxBatch(txTypes []int, txInfos []string) ([]string, error) {
+	// Convert slices to JSON strings as required by the API
+	txTypesJson, err := json.Marshal(txTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	txInfosJson, err := json.Marshal(txInfos)
+	if err != nil {
+		return nil, err
+	}
+
+	data := url.Values{
+		"tx_types": {string(txTypesJson)},
+		"tx_infos": {string(txInfosJson)},
+	}
+
+	req, _ := http.NewRequest("POST", c.endpoint+"/api/v1/sendTxBatch", strings.NewReader(data.Encode()))
+	req.Header.Set("Channel-Name", c.channelName)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+
+	if err = c.parseResultStatus(body); err != nil {
+		return nil, err
+	}
+
+	res := &TxHashBatch{}
+	if err := json.Unmarshal(body, res); err != nil {
+		return nil, err
+	}
+
+	return res.TxHash, nil
+}
+
 func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth string) (*TransferFeeInfo, error) {
 	result := &TransferFeeInfo{}
 	err := c.getAndParseL2HTTPResponse("api/v1/transferFeeInfo", map[string]any{
@@ -121,6 +171,96 @@ func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth
 		"to_account_index": toAccountIndex,
 		"auth":             auth,
 	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetAccount(accountIndex int64) (*AccountResponse, error) {
+	result := &AccountResponse{}
+	err := c.getAndParseL2HTTPResponse("api/v1/account", map[string]any{
+		"by":    "index",
+		"value": fmt.Sprintf("%d", accountIndex),
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetAccountByL1Address(l1Address string) (*AccountByL1AddressResponse, error) {
+	result := &AccountByL1AddressResponse{}
+	err := c.getAndParseL2HTTPResponse("api/v1/accountsByL1Address", map[string]any{
+		"l1_address": l1Address,
+	}, result)
+	if err != nil {
+		return nil, err
+	} else {
+		log.Println("Detailed Account: ", result)
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetOrderBooks() (*OrderBookResponse, error) {
+	result := &OrderBookResponse{}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBooks", map[string]any{}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetOrderBookDetails(marketId uint8) (*OrderBookDetailsResponse, error) {
+	result := &OrderBookDetailsResponse{}
+	params := map[string]any{}
+	if marketId > 0 {
+		params["market_id"] = marketId
+	}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBookDetails", params, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetActiveOrders(accountIndex int64, marketId uint8, auth string) (*OrdersResponse, error) {
+	result := &OrdersResponse{}
+	err := c.getAndParseL2HTTPResponse("api/v1/accountActiveOrders", map[string]any{
+		"account_index": accountIndex,
+		"market_id":     marketId,
+		"auth":          auth,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetInactiveOrders(accountIndex int64, marketId uint8, auth string) (*OrdersResponse, error) {
+	return c.GetInactiveOrdersWithLimit(accountIndex, marketId, auth, 50) // Default limit of 50
+}
+
+func (c *HTTPClient) GetInactiveOrdersWithLimit(accountIndex int64, marketId uint8, auth string, limit int32) (*OrdersResponse, error) {
+	result := &OrdersResponse{}
+	params := map[string]any{
+		"account_index": accountIndex,
+		"auth":          auth,
+		"limit":         limit,
+	}
+	if marketId != 255 { // 255 means all markets
+		params["market_id"] = marketId
+	}
+	err := c.getAndParseL2HTTPResponse("api/v1/accountInactiveOrders", params, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *HTTPClient) GetFundingRates() (*FundingRatesResponse, error) {
+	result := &FundingRatesResponse{}
+	err := c.getAndParseL2HTTPResponse("api/v1/funding-rates", map[string]any{}, result)
 	if err != nil {
 		return nil, err
 	}
