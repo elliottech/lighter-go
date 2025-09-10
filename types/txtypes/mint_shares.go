@@ -17,7 +17,7 @@ type L2MintSharesTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2MintSharesTxInfo) GetTxType() uint8 {

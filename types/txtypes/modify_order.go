@@ -20,7 +20,7 @@ type L2ModifyOrderTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2ModifyOrderTxInfo) GetTxType() uint8 {

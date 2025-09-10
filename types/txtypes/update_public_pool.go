@@ -20,7 +20,7 @@ type L2UpdatePublicPoolTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2UpdatePublicPoolTxInfo) GetTxType() uint8 {

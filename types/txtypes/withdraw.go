@@ -16,7 +16,7 @@ type L2WithdrawTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2WithdrawTxInfo) Validate() error {
