@@ -18,7 +18,7 @@ type L2UpdateMarginTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2UpdateMarginTxInfo) GetTxType() uint8 {

@@ -19,7 +19,7 @@ type L2CreateGroupedOrdersTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2CreateGroupedOrdersTxInfo) GetTxType() uint8 {
