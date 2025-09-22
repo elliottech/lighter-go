@@ -641,6 +641,7 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 		ApiKeyIndex:           *ops.ApiKeyIndex,
 		MarketIndex:           tx.MarketIndex,
 		InitialMarginFraction: tx.InitialMarginFraction,
+		MarginMode:            tx.MarginMode,
 		ExpiredAt:             ops.ExpiredAt,
 		Nonce:                 *ops.Nonce,
 	}
