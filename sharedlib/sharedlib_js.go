@@ -36,8 +36,16 @@ func runJS(fn func() (interface{}, error)) interface{} {
 func toUint8(v js.Value) uint8   { return uint8(v.Int()) }
 func toUint16(v js.Value) uint16 { return uint16(v.Int()) }
 func toUint32(v js.Value) uint32 { return uint32(v.Int()) }
-func toInt64(v js.Value) int64   { return int64(v.Float()) }
-func toUint64(v js.Value) uint64 { return uint64(v.Float()) }
+func toInt64(v js.Value) int64   {
+	var n int64
+   	fmt.Sscan(v.String(), &n)
+    return n
+}
+func toUint64(v js.Value) uint64 {
+	var n uint64
+   	fmt.Sscan(v.String(), &n)
+    return n
+}
 
 func registerStrFunc(name string, handler func([]js.Value) (string, error)) {
 	js.Global().Set(name, js.FuncOf(func(_ js.Value, args []js.Value) any {
