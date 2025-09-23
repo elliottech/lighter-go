@@ -79,20 +79,6 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 	return nil
 }
 
-//export CheckClient
-func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
-	var err error
-	defer func() {
-		recoverErr(&err)
-		if err != nil {
-			ret = wrapErr(err)
-		}
-	}()
-
-	err = checkClient(uint8(cApiKeyIndex), int64(cAccountIndex))
-	return nil
-}
-
 //export SignChangePubKey
 func SignChangePubKey(cPubKey *C.char, cNonce C.longlong) (ret C.StrOrErr) {
 	var err error

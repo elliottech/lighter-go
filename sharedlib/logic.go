@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/elliottech/lighter-go/client"
@@ -48,8 +47,7 @@ func createClient(url, privateKey string, chainID uint32, apiKeyIndex uint8, acc
 		return fmt.Errorf("invalid account index")
 	}
 
-	httpClient := client.NewHTTPClient(url)
-	newClient, err := client.NewTxClient(httpClient, privateKey, accountIndex, apiKeyIndex, chainID)
+	newClient, err := client.NewTxClient(privateKey, accountIndex, apiKeyIndex, chainID)
 	if err != nil {
 		return fmt.Errorf("error occurred when creating TxClient. err: %v", err)
 	}
@@ -59,40 +57,6 @@ func createClient(url, privateKey string, chainID uint32, apiKeyIndex uint8, acc
 		backupTxClients = make(map[uint8]*client.TxClient)
 	}
 	backupTxClients[apiKeyIndex] = newClient
-
-	return nil
-}
-
-func checkClient(apiKeyIndex uint8, accountIndex int64) error {
-	if backupTxClients == nil {
-		return fmt.Errorf("api key not registered")
-	}
-
-	client, ok := backupTxClients[apiKeyIndex]
-	if !ok {
-		return fmt.Errorf("api key not registered")
-	}
-
-	if client.GetApiKeyIndex() != apiKeyIndex {
-		return fmt.Errorf("apiKeyIndex does not match. expected %v but got %v", client.GetApiKeyIndex(), apiKeyIndex)
-	}
-	if client.GetAccountIndex() != accountIndex {
-		return fmt.Errorf("accountIndex does not match. expected %v but got %v", client.GetAccountIndex(), accountIndex)
-	}
-
-	key, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
-	if err != nil {
-		return fmt.Errorf("failed to get Api Keys. err: %v", err)
-	}
-
-	pubKeyBytes := client.GetKeyManager().PubKeyBytes()
-	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
-	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
-
-	ak := key.ApiKeys[0]
-	if ak.PublicKey != pubKeyStr {
-		return fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, ak)
-	}
 
 	return nil
 }

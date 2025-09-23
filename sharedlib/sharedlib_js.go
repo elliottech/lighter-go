@@ -105,13 +105,6 @@ func main() {
 		)
 	})
 
-	registerErrFunc("CheckClient", func(args []js.Value) error {
-		if err := requireArgs(args, 2); err != nil {
-			return err
-		}
-		return checkClient(toUint8(args[0]), toInt64(args[1]))
-	})
-
 	registerStrFunc("SignChangePubKey", func(args []js.Value) (string, error) {
 		if err := requireArgs(args, 2); err != nil {
 			return "", err

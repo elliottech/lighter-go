@@ -14,7 +14,6 @@ const (
 )
 
 type TxClient struct {
-	apiClient    *HTTPClient
 	chainId      uint32
 	keyManager   signer.KeyManager
 	accountIndex int64
@@ -23,7 +22,7 @@ type TxClient struct {
 
 // NewTxClient is linked to a specific (account, apiKey) pair
 // apiKeyPrivateKey should be hex-encoded bytes generated using `hexutil.Encode(TxClient.GetKeyManager().PrvKeyBytes())`
-func NewTxClient(apiClient *HTTPClient, apiKeyPrivateKey string, accountIndex int64, apiKeyIndex uint8, chainId uint32) (*TxClient, error) {
+func NewTxClient(apiKeyPrivateKey string, accountIndex int64, apiKeyIndex uint8, chainId uint32) (*TxClient, error) {
 	// remove 0x from private key, if any, and parse to bytes
 	if len(apiKeyPrivateKey) < 2 {
 		return nil, fmt.Errorf("empty private key")
@@ -42,7 +41,6 @@ func NewTxClient(apiClient *HTTPClient, apiKeyPrivateKey string, accountIndex in
 	}
 
 	return &TxClient{
-		apiClient:    apiClient,
 		apiKeyIndex:  apiKeyIndex,
 		accountIndex: accountIndex,
 		chainId:      chainId,
@@ -62,16 +60,6 @@ func (c *TxClient) FullFillDefaultOps(ops *types.TransactOpts) (*types.TransactO
 	}
 	if ops.ApiKeyIndex == nil {
 		ops.ApiKeyIndex = &c.apiKeyIndex
-	}
-	if ops.Nonce == nil {
-		if c.apiClient == nil {
-			return nil, fmt.Errorf("nonce was not provided & HTTPClient is nil. Either provide the nonce or enable HTTPClient to get the nonce from Lighter")
-		}
-		nonce, err := c.apiClient.GetNextNonce(*ops.FromAccountIndex, *ops.ApiKeyIndex)
-		if err != nil {
-			return nil, err
-		}
-		ops.Nonce = &nonce
 	}
 
 	return ops, nil
@@ -98,10 +86,6 @@ func (c *TxClient) GetAuthToken(deadline time.Time) (string, error) {
 		ApiKeyIndex:      &c.apiKeyIndex,
 		FromAccountIndex: &c.accountIndex,
 	})
-}
-
-func (c *TxClient) HTTP() *HTTPClient {
-	return c.apiClient
 }
 
 func (c *TxClient) SwitchAPIKey(apiKey uint8) {
