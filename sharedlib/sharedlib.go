@@ -1,352 +1,181 @@
-//go:build !js && cgo
+//go:build js && wasm
 
 package main
 
-/*
-#include <stdlib.h>
-typedef struct {
-    char* str;
-    char* err;
-} StrOrErr;
+import (
+	"fmt"
+	"syscall/js"
+)
 
-typedef struct {
-    char* privateKey;
-    char* publicKey;
-    char* err;
-} ApiKeyResponse;
-*/
-import "C"
-
-import "fmt"
-
-func wrapErr(err error) *C.char {
-	return C.CString(fmt.Sprintf("%v", err))
-}
-
-func recoverErr(err *error) {
-	if r := recover(); r != nil {
-		*err = fmt.Errorf("%v", r)
+func requireArgs(args []js.Value, want int) error {
+	if len(args) < want {
+		return fmt.Errorf("expected %d arguments, got %d", want, len(args))
 	}
+	return nil
 }
 
-func finalizeStrOrErr(ret *C.StrOrErr, value string, err error) {
-	if err != nil {
-		ret.err = wrapErr(err)
-	} else {
-		ret.str = C.CString(value)
-	}
-}
-
-//export GenerateAPIKey
-func GenerateAPIKey(cSeed *C.char) (ret C.ApiKeyResponse) {
-	var err error
-	var privateKeyStr string
-	var publicKeyStr string
-
-	defer func() {
-		recoverErr(&err)
-		if err != nil {
-			ret = C.ApiKeyResponse{err: wrapErr(err)}
-		} else {
-			ret = C.ApiKeyResponse{
-				privateKey: C.CString(privateKeyStr),
-				publicKey:  C.CString(publicKeyStr),
+func runJS(fn func() (interface{}, error)) interface{} {
+	var (
+		result interface{}
+		err    error
+	)
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("%v", r)
 			}
+		}()
+		result, err = fn()
+	}()
+	if err != nil {
+		return map[string]any{"err": err.Error()}
+	}
+	return result
+}
+
+func toUint8(v js.Value) uint8   { return uint8(v.Int()) }
+func toUint16(v js.Value) uint16 { return uint16(v.Int()) }
+func toUint32(v js.Value) uint32 { return uint32(v.Int()) }
+func toInt64(v js.Value) int64 {
+	var n int64
+	fmt.Sscan(v.String(), &n)
+	return n
+}
+func toUint64(v js.Value) uint64 {
+	var n uint64
+	fmt.Sscan(v.String(), &n)
+	return n
+}
+
+func registerStrFunc(name string, handler func([]js.Value) (string, error)) {
+	js.Global().Set(name, js.FuncOf(func(_ js.Value, args []js.Value) any {
+		return runJS(func() (interface{}, error) {
+			str, err := handler(args)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"str": str}, nil
+		})
+	}))
+}
+
+func registerErrFunc(name string, handler func([]js.Value) error) {
+	js.Global().Set(name, js.FuncOf(func(_ js.Value, args []js.Value) any {
+		return runJS(func() (interface{}, error) {
+			if err := handler(args); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		})
+	}))
+}
+
+func registerAPIKeyFunc() {
+	js.Global().Set("GenerateAPIKey", js.FuncOf(func(_ js.Value, args []js.Value) any {
+		return runJS(func() (interface{}, error) {
+			seed := ""
+			if len(args) > 0 {
+				seed = args[0].String()
+			}
+			privateKey, publicKey, err := generateAPIKey(seed)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{
+				"privateKey": privateKey,
+				"publicKey":  publicKey,
+			}, nil
+		})
+	}))
+}
+
+func main() {
+	registerAPIKeyFunc()
+
+	registerErrFunc("CreateClient", func(args []js.Value) error {
+		if err := requireArgs(args, 5); err != nil {
+			return err
 		}
-	}()
+		return createClient(
+			args[0].String(),
+			args[1].String(),
+			toUint32(args[2]),
+			toUint8(args[3]),
+			toInt64(args[4]),
+		)
+	})
 
-	privateKeyStr, publicKeyStr, err = generateAPIKey(C.GoString(cSeed))
-	return
-}
-
-//export CreateClient
-func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
-	var err error
-	defer func() {
-		recoverErr(&err)
-		if err != nil {
-			ret = wrapErr(err)
+	registerStrFunc("SignCreateOrder", func(args []js.Value) (string, error) {
+		if err := requireArgs(args, 11); err != nil {
+			return "", err
 		}
-	}()
+		return signCreateOrder(
+			toUint8(args[0]),
+			toInt64(args[1]),
+			toInt64(args[2]),
+			toUint32(args[3]),
+			toUint8(args[4]),
+			toUint8(args[5]),
+			toUint8(args[6]),
+			toUint8(args[7]),
+			toUint32(args[8]),
+			toInt64(args[9]),
+			toInt64(args[10]),
+		)
+	})
 
-	err = createClient(
-		C.GoString(cUrl),
-		C.GoString(cPrivateKey),
-		uint32(cChainId),
-		uint8(cApiKeyIndex),
-		int64(cAccountIndex),
-	)
-	return nil
-}
-
-//export SignChangePubKey
-func SignChangePubKey(cPubKey *C.char, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signChangePubKey(C.GoString(cPubKey), int64(cNonce))
-	return
-}
-
-//export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signCreateOrder(
-		uint8(cMarketIndex),
-		int64(cClientOrderIndex),
-		int64(cBaseAmount),
-		uint32(cPrice),
-		uint8(cIsAsk),
-		uint8(cOrderType),
-		uint8(cTimeInForce),
-		uint8(cReduceOnly),
-		uint32(cTriggerPrice),
-		int64(cOrderExpiry),
-		int64(cNonce),
-	)
-	return
-}
-
-//export SignCancelOrder
-func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signCancelOrder(uint8(cMarketIndex), int64(cOrderIndex), int64(cNonce))
-	return
-}
-
-//export SignWithdraw
-func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signWithdraw(uint64(cUSDCAmount), int64(cNonce))
-	return
-}
-
-//export SignCreateSubAccount
-func SignCreateSubAccount(cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signCreateSubAccount(int64(cNonce))
-	return
-}
-
-//export SignCancelAllOrders
-func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signCancelAllOrders(uint8(cTimeInForce), int64(cTime), int64(cNonce))
-	return
-}
-
-//export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signModifyOrder(
-		uint8(cMarketIndex),
-		int64(cIndex),
-		int64(cBaseAmount),
-		uint32(cPrice),
-		uint32(cTriggerPrice),
-		int64(cNonce),
-	)
-	return
-}
-
-//export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signTransfer(
-		int64(cToAccountIndex),
-		int64(cUSDCAmount),
-		int64(cFee),
-		C.GoString(cMemo),
-		int64(cNonce),
-	)
-	return
-}
-
-//export SignCreatePublicPool
-func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signCreatePublicPool(
-		int64(cOperatorFee),
-		int64(cInitialTotalShares),
-		int64(cMinOperatorShareRate),
-		int64(cNonce),
-	)
-	return
-}
-
-//export SignUpdatePublicPool
-func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signUpdatePublicPool(
-		int64(cPublicPoolIndex),
-		uint8(cStatus),
-		int64(cOperatorFee),
-		int64(cMinOperatorShareRate),
-		int64(cNonce),
-	)
-	return
-}
-
-//export SignMintShares
-func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signMintShares(int64(cPublicPoolIndex), int64(cShareAmount), int64(cNonce))
-	return
-}
-
-//export SignBurnShares
-func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signBurnShares(int64(cPublicPoolIndex), int64(cShareAmount), int64(cNonce))
-	return
-}
-
-//export SignUpdateLeverage
-func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signUpdateLeverage(
-		uint8(cMarketIndex),
-		uint16(cInitialMarginFraction),
-		uint8(cMarginMode),
-		int64(cNonce),
-	)
-	return
-}
-
-//export CreateAuthToken
-func CreateAuthToken(cDeadline C.longlong) (ret C.StrOrErr) {
-	var err error
-	var authToken string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, authToken, err)
-	}()
-
-	authToken, err = createAuthToken(int64(cDeadline))
-	return
-}
-
-//export SwitchAPIKey
-func SwitchAPIKey(c C.int) (ret *C.char) {
-	var err error
-	defer func() {
-		recoverErr(&err)
-		if err != nil {
-			ret = wrapErr(err)
+	registerStrFunc("SignCancelOrder", func(args []js.Value) (string, error) {
+		if err := requireArgs(args, 3); err != nil {
+			return "", err
 		}
-	}()
+		return signCancelOrder(toUint8(args[0]), toInt64(args[1]), toInt64(args[2]))
+	})
 
-	err = switchAPIKey(uint8(c))
-	return nil
+	registerStrFunc("SignModifyOrder", func(args []js.Value) (string, error) {
+		if err := requireArgs(args, 6); err != nil {
+			return "", err
+		}
+		return signModifyOrder(
+			toUint8(args[0]),
+			toInt64(args[1]),
+			toInt64(args[2]),
+			toUint32(args[3]),
+			toUint32(args[4]),
+			toInt64(args[5]),
+		)
+	})
+
+	registerStrFunc("SignUpdateLeverage", func(args []js.Value) (string, error) {
+		if err := requireArgs(args, 4); err != nil {
+			return "", err
+		}
+		return signUpdateLeverage(
+			toUint8(args[0]),
+			toUint16(args[1]),
+			toUint8(args[2]),
+			toInt64(args[3]),
+		)
+	})
+
+	registerStrFunc("CreateAuthToken", func(args []js.Value) (string, error) {
+		deadline := int64(0)
+		if len(args) > 0 {
+			deadline = toInt64(args[0])
+		}
+		return createAuthToken(deadline)
+	})
+
+	registerStrFunc("SignUpdateMargin", func(args []js.Value) (string, error) {
+		if err := requireArgs(args, 4); err != nil {
+			return "", err
+		}
+		return signUpdateMargin(
+			toUint8(args[0]),
+			toInt64(args[1]),
+			toUint8(args[2]),
+			toInt64(args[3]),
+		)
+	})
+
+	select {}
 }
-
-//export SignUpdateMargin
-func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong) (ret C.StrOrErr) {
-	var err error
-	var txInfoStr string
-
-	defer func() {
-		recoverErr(&err)
-		finalizeStrOrErr(&ret, txInfoStr, err)
-	}()
-
-	txInfoStr, err = signUpdateMargin(
-		uint8(cMarketIndex),
-		int64(cUSDCAmount),
-		uint8(cDirection),
-		int64(cNonce),
-	)
-	return
-}
-
-func main() {}

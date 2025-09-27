@@ -7,3 +7,7 @@ On chain support, like depositing on Ethereum or modifying an API key directly w
 
 At the moment, its main purpose is to offer visibility on the code behind the precompiled libraries used by the Python SDK.
 If you'd like to compile your own binaries, the commands are in the `justfile`
+
+```
+GOOS=js GOARCH=wasm go build -trimpath -o ./build/signer.wasm ./sharedlib
+```
