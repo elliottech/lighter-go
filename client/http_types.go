@@ -57,6 +57,27 @@ type TxHash struct {
 	TxHash string `json:"tx_hash,example=0x70997970C51812dc3A010C7d01b50e0d17dc79C8"`
 }
 
+type TxInfo struct {
+	ResultCode
+	Hash             string `json:"hash"`
+	Type             uint8  `json:"type"`
+	Info             string `json:"info"`
+	EventInfo        string `json:"event_info"`
+	Status           int64  `json:"status"`
+	TransactionIndex int64  `json:"transaction_index"`
+	L1Address        string `json:"l1_address"`
+	AccountIndex     int64  `json:"account_index"`
+	Nonce            int64  `json:"nonce"`
+	ExpireAt         int64  `json:"expire_at"`
+	BlockHeight      int64  `json:"block_height"`
+	QueuedAt         int64  `json:"queued_at"`
+	SequenceIndex    int64  `json:"sequence_index"`
+	ParentHash       string `json:"parent_hash"`
+	CommittedAt      int64  `json:"committed_at"`
+	VerifiedAt       int64  `json:"verified_at"`
+	ExecutedAt       int64  `json:"executed_at"`
+}
+
 type TransferFeeInfo struct {
 	ResultCode
 	TransferFee int64 `json:"transfer_fee_usdc"`

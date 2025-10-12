@@ -90,6 +90,9 @@ func (c *HTTPClient) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountA
 	return result, nil
 }
 
+// SendRawTx sends a raw transaction to the network
+// Docs: https://apidocs.lighter.xyz/reference/sendtx
+// POST https://mainnet.zklighter.elliot.ai/api/v1/sendTx
 func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	txType := tx.GetTxType()
 	txInfo, err := tx.GetTxInfo()
@@ -127,6 +130,26 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	}
 
 	return res.TxHash, nil
+}
+
+// GetTx Get transaction by hash or sequence index
+// Docs: https://apidocs.lighter.xyz/reference/tx
+// GET https://mainnet.zklighter.elliot.ai/api/v1/tx
+func (c *HTTPClient) GetTx(txHash, sequenceIndex string) (*TxInfo, error) {
+	result := &TxInfo{}
+	params := map[string]any{}
+	if txHash != "" {
+		params["by"] = "hash"
+		params["value"] = txHash
+	} else if sequenceIndex != "" {
+		params["by"] = "sequence_index"
+		params["value"] = sequenceIndex
+	}
+	err := c.getAndParseL2HTTPResponse("api/v1/tx", params, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth string) (*TransferFeeInfo, error) {
