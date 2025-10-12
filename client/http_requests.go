@@ -66,6 +66,9 @@ func (c *HTTPClient) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64,
 	return result.Nonce, nil
 }
 
+// GetApiKey Get account api key. Set api_key_index to 255 to retrieve all api keys associated with the account.
+// Docs: https://apidocs.lighter.xyz/reference/apikeys
+// GET https://mainnet.zklighter.elliot.ai/api/v1/apikeys
 func (c *HTTPClient) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountApiKeys, error) {
 	result := &AccountApiKeys{}
 	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex, "api_key_index": apiKeyIndex}, result)
