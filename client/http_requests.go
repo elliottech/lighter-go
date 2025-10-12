@@ -66,6 +66,18 @@ func (c *HTTPClient) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64,
 	return result.Nonce, nil
 }
 
+// AccountsByL1Address queries account information by L1 address
+// Docs: https://apidocs.lighter.xyz/reference/accountsbyl1address
+// GET https://mainnet.zklighter.elliot.ai/api/v1/accountsByL1Address, query params: l1_address string required
+func (c *HTTPClient) AccountsByL1Address(l1Address string) (*AccountByL1Address, error) {
+	result := &AccountByL1Address{}
+	err := c.getAndParseL2HTTPResponse("api/v1/accountsByL1Address", map[string]any{"l1_address": l1Address}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // GetApiKey Get account api key. Set api_key_index to 255 to retrieve all api keys associated with the account.
 // Docs: https://apidocs.lighter.xyz/reference/apikeys
 // GET https://mainnet.zklighter.elliot.ai/api/v1/apikeys
