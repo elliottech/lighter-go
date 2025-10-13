@@ -132,7 +132,7 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	return res.TxHash, nil
 }
 
-// GetTx Get transaction by hash or sequence index
+// GetTx Get transaction by hash or sequence index. Only one of the parameters `txHash` or `sequenceIndex` will be used. If both are provided, `txHash` takes precedence.
 // Docs: https://apidocs.lighter.xyz/reference/tx
 // GET https://mainnet.zklighter.elliot.ai/api/v1/tx
 func (c *HTTPClient) GetTx(txHash, sequenceIndex string) (*TxInfo, error) {
@@ -144,6 +144,8 @@ func (c *HTTPClient) GetTx(txHash, sequenceIndex string) (*TxInfo, error) {
 	} else if sequenceIndex != "" {
 		params["by"] = "sequence_index"
 		params["value"] = sequenceIndex
+	} else {
+		return nil, fmt.Errorf("either txHash or sequenceIndex must be provided")
 	}
 	err := c.getAndParseL2HTTPResponse("api/v1/tx", params, result)
 	if err != nil {
