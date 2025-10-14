@@ -166,3 +166,32 @@ func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth
 	}
 	return result, nil
 }
+
+// OrderBookDetails Get data about a specific market’s orderbook
+// Docs: https://apidocs.lighter.xyz/reference/orderbookdetails
+// GET https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails
+func (c *HTTPClient) OrderBookDetails(marketId uint8) (*OrderBookDetails, error) {
+	result := &OrderBookDetails{}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBookDetails", map[string]any{
+		"market_id": marketId,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// OrderBookOrders Get order book orders
+// Docs: https://apidocs.lighter.xyz/reference/orderbookorders
+// GET https://mainnet.zklighter.elliot.ai/api/v1/orderBookOrders
+func (c *HTTPClient) OrderBookOrders(marketId uint8, limit int64) (*OrderBookOrders, error) {
+	result := &OrderBookOrders{}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBookOrders", map[string]any{
+		"market_id": marketId,
+		"limit":     limit,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
