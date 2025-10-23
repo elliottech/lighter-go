@@ -89,15 +89,15 @@ func (c *TxClient) GetKeyManager() signer.KeyManager {
 	return c.keyManager
 }
 
+func (c *TxClient) HTTP() *HTTPClient {
+	return c.apiClient
+}
+
 func (c *TxClient) GetAuthToken(deadline time.Time) (string, error) {
 	return types.ConstructAuthToken(c.keyManager, deadline, &types.TransactOpts{
 		ApiKeyIndex:      &c.apiKeyIndex,
 		FromAccountIndex: &c.accountIndex,
 	})
-}
-
-func (c *TxClient) HTTP() *HTTPClient {
-	return c.apiClient
 }
 
 func (c *TxClient) SwitchAPIKey(apiKey uint8) {
