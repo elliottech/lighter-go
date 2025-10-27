@@ -2,6 +2,9 @@ build-darwin-local:
     go mod vendor
     go build -buildmode=c-shared -trimpath -o ./build/signer-arm64.dylib ./sharedlib/sharedlib.go
 
+build-darwin-docker:
+    docker run --rm -v ${PWD}:/go/src/sdk -w /go/src/sdk golang:1.23.2-bullseye bash -c "go build -buildmode=c-shared -trimpath -o ./build/signer-arm64.dylib ./sharedlib"
+
 build-linux-local:
     go mod vendor
     go build -buildmode=c-shared -trimpath -o ./build/signer-amd64.so ./sharedlib/sharedlib.go
