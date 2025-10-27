@@ -25,7 +25,7 @@ type L2TransferTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
-	SignedHash string `json:"-"`
+	SignedHash string
 }
 
 func (txInfo *L2TransferTxInfo) Validate() error {
