@@ -7,6 +7,7 @@ import (
 
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const templateTransfer = "Transfer\n\nnonce: %s\nfrom: %s\napi key: %s\nto: %s\namount: %s\nfee: %s\nmemo: %s\nOnly sign this message for a trusted client!"
@@ -25,6 +26,7 @@ type L2TransferTxInfo struct {
 	ExpiredAt  int64
 	Nonce      int64
 	Sig        []byte
+	L1Sig      string // only usable if SDK has access to the private key
 	SignedHash string `json:"-"`
 }
 
@@ -90,6 +92,28 @@ func (txInfo *L2TransferTxInfo) GetTxInfo() (string, error) {
 	return getTxInfo(txInfo)
 }
 
+func (txInfo *L2TransferTxInfo) GetL1SignatureBody() string {
+	hexMemo := hex.EncodeToString(txInfo.Memo[:])
+	hexMemo = strings.Replace(hexMemo, "0x", "", 1)
+
+	signatureBody := fmt.Sprintf(
+		templateTransfer,
+
+		getHex10FromUint64(uint64(txInfo.Nonce)),
+		getHex10FromUint64(uint64(txInfo.FromAccountIndex)),
+		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
+		getHex10FromUint64(uint64(txInfo.ToAccountIndex)),
+		getHex10FromUint64(uint64(txInfo.USDCAmount)),
+		getHex10FromUint64(uint64(txInfo.Fee)),
+		hexMemo,
+	)
+	return signatureBody
+}
+
+func (txInfo *L2TransferTxInfo) GetL1AddressBySignature() common.Address {
+	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(), txInfo.L1Sig)
+}
+
 func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
 	elems := make([]g.Element, 0, 11)
 
@@ -107,22 +131,4 @@ func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32, extra ...g.Element) 
 	elems = append(elems, g.FromUint64(uint64(txInfo.Fee)>>32))               //nolint:gosec
 
 	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
-}
-
-func (txInfo *L2TransferTxInfo) GetL1SignatureBody() string {
-	hexMemo := hex.EncodeToString(txInfo.Memo[:])
-	hexMemo = strings.Replace(hexMemo, "0x", "", 1)
-
-	signatureBody := fmt.Sprintf(
-		templateTransfer,
-
-		getHex10FromUint64(uint64(txInfo.Nonce)),
-		getHex10FromUint64(uint64(txInfo.FromAccountIndex)),
-		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
-		getHex10FromUint64(uint64(txInfo.ToAccountIndex)),
-		getHex10FromUint64(uint64(txInfo.USDCAmount)),
-		getHex10FromUint64(uint64(txInfo.Fee)),
-		hexMemo,
-	)
-	return signatureBody
 }
