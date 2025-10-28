@@ -57,6 +57,10 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 		return ErrMarketIndexTooHigh
 	}
 
+	if txInfo.MarginMode != CrossMargin && txInfo.MarginMode != IsolatedMargin {
+		return ErrInvalidMarginMode
+	}
+
 	// InitialMarginFraction
 	if txInfo.InitialMarginFraction <= 0 {
 		return ErrInitialMarginFractionTooLow
@@ -71,10 +75,6 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 
 	if txInfo.ExpiredAt < 0 || txInfo.ExpiredAt > MaxTimestamp {
 		return ErrExpiredAtInvalid
-	}
-
-	if txInfo.MarginMode != CrossMargin && txInfo.MarginMode != IsolatedMargin {
-		return ErrInvalidMarginMode
 	}
 
 	return nil
