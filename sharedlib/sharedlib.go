@@ -1103,8 +1103,14 @@ func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.i
 	}
 
 	tx, err := txClient.GetUpdateMarginTransaction(txInfo, ops)
+	if err != nil {
+		return
+	}
 
 	txInfoBytes, err := json.Marshal(tx)
+	if err != nil {
+		return
+	}
 	txInfoStr = string(txInfoBytes)
 
 	return ret
