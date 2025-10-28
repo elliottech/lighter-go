@@ -66,6 +66,21 @@ func (c *HTTPClient) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64,
 	return result.Nonce, nil
 }
 
+// AccountsByL1Address queries account information by L1 address
+// Docs: https://apidocs.lighter.xyz/reference/accountsbyl1address
+// GET https://mainnet.zklighter.elliot.ai/api/v1/accountsByL1Address, query params: l1_address string required
+func (c *HTTPClient) AccountsByL1Address(l1Address string) (*AccountByL1Address, error) {
+	result := &AccountByL1Address{}
+	err := c.getAndParseL2HTTPResponse("api/v1/accountsByL1Address", map[string]any{"l1_address": l1Address}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetApiKey Get account api key. Set api_key_index to 255 to retrieve all api keys associated with the account.
+// Docs: https://apidocs.lighter.xyz/reference/apikeys
+// GET https://mainnet.zklighter.elliot.ai/api/v1/apikeys
 func (c *HTTPClient) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountApiKeys, error) {
 	result := &AccountApiKeys{}
 	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex, "api_key_index": apiKeyIndex}, result)
@@ -75,6 +90,9 @@ func (c *HTTPClient) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountA
 	return result, nil
 }
 
+// SendRawTx sends a raw transaction to the network
+// Docs: https://apidocs.lighter.xyz/reference/sendtx
+// POST https://mainnet.zklighter.elliot.ai/api/v1/sendTx
 func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	txType := tx.GetTxType()
 	txInfo, err := tx.GetTxInfo()
@@ -114,12 +132,63 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	return res.TxHash, nil
 }
 
+// GetTx Get transaction by hash or sequence index. Only one of the parameters `txHash` or `sequenceIndex` will be used. If both are provided, `txHash` takes precedence.
+// Docs: https://apidocs.lighter.xyz/reference/tx
+// GET https://mainnet.zklighter.elliot.ai/api/v1/tx
+func (c *HTTPClient) GetTx(txHash, sequenceIndex string) (*TxInfo, error) {
+	result := &TxInfo{}
+	params := map[string]any{}
+	if txHash != "" {
+		params["by"] = "hash"
+		params["value"] = txHash
+	} else if sequenceIndex != "" {
+		params["by"] = "sequence_index"
+		params["value"] = sequenceIndex
+	} else {
+		return nil, fmt.Errorf("either txHash or sequenceIndex must be provided")
+	}
+	err := c.getAndParseL2HTTPResponse("api/v1/tx", params, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth string) (*TransferFeeInfo, error) {
 	result := &TransferFeeInfo{}
 	err := c.getAndParseL2HTTPResponse("api/v1/transferFeeInfo", map[string]any{
 		"account_index":    accountIndex,
 		"to_account_index": toAccountIndex,
 		"auth":             auth,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// OrderBookDetails Get data about a specific market’s orderbook
+// Docs: https://apidocs.lighter.xyz/reference/orderbookdetails
+// GET https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails
+func (c *HTTPClient) OrderBookDetails(marketId uint8) (*OrderBookDetails, error) {
+	result := &OrderBookDetails{}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBookDetails", map[string]any{
+		"market_id": marketId,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// OrderBookOrders Get order book orders
+// Docs: https://apidocs.lighter.xyz/reference/orderbookorders
+// GET https://mainnet.zklighter.elliot.ai/api/v1/orderBookOrders
+func (c *HTTPClient) OrderBookOrders(marketId uint8, limit int64) (*OrderBookOrders, error) {
+	result := &OrderBookOrders{}
+	err := c.getAndParseL2HTTPResponse("api/v1/orderBookOrders", map[string]any{
+		"market_id": marketId,
+		"limit":     limit,
 	}, result)
 	if err != nil {
 		return nil, err
