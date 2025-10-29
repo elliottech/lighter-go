@@ -55,9 +55,12 @@ func wrapErr(err error) (ret *C.char) {
 	return C.CString(fmt.Sprintf("%v", err))
 }
 
-func getTxClient(apiKeyIndex uint8, accountIndex int64) (*client.TxClient, error) {
+func getTxClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (*client.TxClient, error) {
 	txClientMu.Lock()
 	defer txClientMu.Unlock()
+
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
 	if apiKeyIndex == 255 && accountIndex == -1 {
 		if defaultTxClient == nil {
