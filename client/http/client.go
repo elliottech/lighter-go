@@ -28,6 +28,8 @@ var (
 	}
 )
 
+var _ core.MinimalHTTPClient = (*client)(nil)
+
 type client struct {
 	endpoint string
 }

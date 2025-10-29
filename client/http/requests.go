@@ -62,11 +62,14 @@ func (c *client) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64, err
 	return result.Nonce, nil
 }
 
-func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountApiKeys, error) {
+func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error) {
 	result := &AccountApiKeys{}
 	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex, "api_key_index": apiKeyIndex}, result)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return result, nil
+	if len(result.ApiKeys) == 0 {
+		return "", fmt.Errorf("no api keys returned")
+	}
+	return result.ApiKeys[0].PublicKey, nil
 }

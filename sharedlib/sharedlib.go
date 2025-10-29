@@ -157,7 +157,7 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	}
 
 	// check that the API key registered on Lighter matches this one
-	key, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
+	publicKey, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
 	if err != nil {
 		err = fmt.Errorf("failed to get Api Keys. err: %v", err)
 		return
@@ -167,9 +167,8 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
-	ak := key.ApiKeys[0]
-	if ak.PublicKey != pubKeyStr {
-		err = fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, ak)
+	if publicKey != pubKeyStr {
+		err = fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, publicKey)
 		return
 	}
 
