@@ -169,30 +169,6 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	return
 }
 
-//export SwitchDefaultClient
-func SwitchDefaultClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
-	var err error
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%v", r)
-		}
-		if err != nil {
-			ret = wrapErr(err)
-		}
-	}()
-
-	txClient, err := getTxClient(cApiKeyIndex, cAccountIndex)
-	if err != nil {
-		return
-	}
-
-	txClientMu.Lock()
-	defaultTxClient = txClient
-	txClientMu.Unlock()
-
-	return
-}
-
 // CreateAuthToken Note: in order for the deadline to be valid, it needs to be at most 8 hours from now.
 // It's recommended that it'd be at most 7:55, as differences in clock times could make this
 // invalid. Still, this endpoint does not enforce that so users can generate the auth tokens in advance.
