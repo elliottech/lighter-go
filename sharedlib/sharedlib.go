@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/elliottech/lighter-go/client"
+	"github.com/elliottech/lighter-go/client/http"
 	"github.com/elliottech/lighter-go/types"
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"unsafe"
 )
 
 /*
 #include <stdlib.h>
-#include <stdint.h> 
+#include <stdint.h>
 typedef struct {
 	char* str;
 	char* err;
@@ -111,7 +112,7 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 		return
 	}
 
-	httpClient := client.NewHTTPClient(url)
+	httpClient := http.NewClient(url)
 	txClient, err = client.NewTxClient(httpClient, privateKey, accountIndex, apiKeyIndex, chainId)
 	if err != nil {
 		err = fmt.Errorf("error occurred when creating TxClient. err: %v", err)
