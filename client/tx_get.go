@@ -2,12 +2,20 @@ package client
 
 import (
 	"fmt"
+	"time"
 
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 )
+
+func (c *TxClient) GetAuthToken(deadline time.Time) (string, error) {
+	return types.ConstructAuthToken(c.keyManager, deadline, &types.TransactOpts{
+		ApiKeyIndex:      &c.apiKeyIndex,
+		FromAccountIndex: &c.accountIndex,
+	})
+}
 
 func (c *TxClient) GetChangePubKeyTransaction(tx *types.ChangePubKeyReq, ops *types.TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)

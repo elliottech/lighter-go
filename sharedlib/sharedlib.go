@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/elliottech/lighter-go/client"
+	"github.com/elliottech/lighter-go/client/http"
 	"github.com/elliottech/lighter-go/types"
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"unsafe"
 )
 
 /*
 #include <stdlib.h>
-#include <stdint.h> 
+#include <stdint.h>
 typedef struct {
 	char* str;
 	char* err;
@@ -111,7 +112,7 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 		return
 	}
 
-	httpClient := client.NewHTTPClient(url)
+	httpClient := http.NewClient(url)
 	txClient, err = client.NewTxClient(httpClient, privateKey, accountIndex, apiKeyIndex, chainId)
 	if err != nil {
 		err = fmt.Errorf("error occurred when creating TxClient. err: %v", err)
@@ -156,7 +157,7 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	}
 
 	// check that the API key registered on Lighter matches this one
-	key, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
+	publicKey, err := client.HTTP().GetApiKey(accountIndex, apiKeyIndex)
 	if err != nil {
 		err = fmt.Errorf("failed to get Api Keys. err: %v", err)
 		return
@@ -166,9 +167,8 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
-	ak := key.ApiKeys[0]
-	if ak.PublicKey != pubKeyStr {
-		err = fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, ak)
+	if publicKey != pubKeyStr {
+		err = fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, publicKey)
 		return
 	}
 

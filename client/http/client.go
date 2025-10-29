@@ -1,10 +1,12 @@
-package client
+package http
 
 import (
 	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
+
+	core "github.com/elliottech/lighter-go/client"
 )
 
 var (
@@ -17,7 +19,7 @@ var (
 		MaxConnsPerHost:     1000,
 		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     10 * time.Second,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: false},
 	}
 
 	httpClient = &http.Client{
@@ -26,24 +28,18 @@ var (
 	}
 )
 
-type HTTPClient struct {
-	endpoint            string
-	channelName         string
-	fatFingerProtection bool
+var _ core.MinimalHTTPClient = (*client)(nil)
+
+type client struct {
+	endpoint string
 }
 
-func NewHTTPClient(baseUrl string) *HTTPClient {
+func NewClient(baseUrl string) core.MinimalHTTPClient {
 	if baseUrl == "" {
 		return nil
 	}
 
-	return &HTTPClient{
-		endpoint:            baseUrl,
-		channelName:         "",
-		fatFingerProtection: true,
+	return &client{
+		endpoint: baseUrl,
 	}
-}
-
-func (c *HTTPClient) SetFatFingerProtection(enabled bool) {
-	c.fatFingerProtection = enabled
 }
