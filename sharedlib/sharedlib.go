@@ -3,15 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 	"unsafe"
 
-	"github.com/elliottech/lighter-go/client"
-	"github.com/elliottech/lighter-go/client/http"
+	"github.com/elliottech/lighter-go/executables"
 	"github.com/elliottech/lighter-go/types"
-	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
-	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -44,11 +40,6 @@ typedef struct {
 */
 import "C"
 
-var (
-	txClient        *client.TxClient
-	backupTxClients map[uint8]*client.TxClient
-)
-
 func wrapErr(err error) (ret *C.char) {
 	return C.CString(fmt.Sprintf("%v", err))
 }
@@ -76,16 +67,7 @@ func GenerateAPIKey(cSeed *C.char) (ret C.ApiKeyResponse) {
 	}()
 
 	seed := C.GoString(cSeed)
-	seedP := &seed
-	if seed == "" {
-		seedP = nil
-	}
-
-	key := curve.SampleScalar(seedP)
-
-	publicKeyStr = hexutil.Encode(schnorr.SchnorrPkFromSk(key).ToLittleEndianBytes())
-	privateKeyStr = hexutil.Encode(key.ToLittleEndianBytes())
-
+	privateKeyStr, publicKeyStr, err = executables.GenerateAPIKeyShared(seed)
 	return
 }
 
@@ -107,21 +89,10 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 	apiKeyIndex := uint8(cApiKeyIndex)
 	accountIndex := int64(cAccountIndex)
 
-	if accountIndex <= 0 {
-		err = fmt.Errorf("invalid account index")
-		return
-	}
-
-	httpClient := http.NewClient(url)
-	txClient, err = client.NewTxClient(httpClient, privateKey, accountIndex, apiKeyIndex, chainId)
+	err = executables.CreateClientShared(url, privateKey, chainId, apiKeyIndex, accountIndex)
 	if err != nil {
-		err = fmt.Errorf("error occurred when creating TxClient. err: %v", err)
 		return
 	}
-	if backupTxClients == nil {
-		backupTxClients = make(map[uint8]*client.TxClient)
-	}
-	backupTxClients[apiKeyIndex] = txClient
 
 	return nil
 }
