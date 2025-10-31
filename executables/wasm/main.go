@@ -8,6 +8,7 @@ import (
 	"syscall/js"
 
 	"github.com/elliottech/lighter-go/executables"
+	"github.com/elliottech/lighter-go/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -32,8 +33,8 @@ func main() {
 	}))
 
 	js.Global().Set("CreateClient", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		if len(args) < 4 {
-			return js.ValueOf(map[string]interface{}{"error": "CreateClient expects 4 args: url, privateKey, chainId, apiKeyIndex, accountIndex"})
+		if len(args) < 5 {
+			return js.ValueOf(map[string]interface{}{"error": "CreateClient expects 5 args: url, privateKey, chainId, apiKeyIndex, accountIndex"})
 		}
 		url := args[0].String()
 		privateKey := args[1].String()
@@ -222,6 +223,153 @@ func main() {
 		nonce := int64(args[5].Int())
 
 		txInfo, err := executables.GetModifyOrderTransaction(marketIndex, index, baseAmount, price, triggerPrice, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignCreateSubAccount", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 1 {
+			return js.ValueOf(map[string]interface{}{"error": "SignCreateSubAccount expects 1 arg: nonce"})
+		}
+		nonce := int64(args[0].Int())
+
+		txInfo, err := executables.GetCreateSubAccountTransaction(nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignCreatePublicPool", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 4 {
+			return js.ValueOf(map[string]interface{}{"error": "SignCreatePublicPool expects 4 args"})
+		}
+		operatorFee := int64(args[0].Int())
+		initialTotalShares := int64(args[1].Int())
+		minOperatorShareRate := int64(args[2].Int())
+		nonce := int64(args[3].Int())
+
+		txInfo, err := executables.GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperatorShareRate, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignUpdatePublicPool", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 5 {
+			return js.ValueOf(map[string]interface{}{"error": "SignUpdatePublicPool expects 5 args"})
+		}
+		publicPoolIndex := uint8(args[0].Int())
+		status := uint8(args[1].Int())
+		operatorFee := int64(args[2].Int())
+		minOperatorShareRate := int64(args[3].Int())
+		nonce := int64(args[4].Int())
+
+		txInfo, err := executables.GetUpdatePublicPoolTransaction(publicPoolIndex, status, operatorFee, minOperatorShareRate, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignMintShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 3 {
+			return js.ValueOf(map[string]interface{}{"error": "SignMintShares expects 3 args"})
+		}
+		publicPoolIndex := int64(args[0].Int())
+		shareAmount := int64(args[1].Int())
+		nonce := int64(args[2].Int())
+
+		txInfo, err := executables.GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignBurnShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 3 {
+			return js.ValueOf(map[string]interface{}{"error": "SignBurnShares expects 3 args"})
+		}
+		publicPoolIndex := int64(args[0].Int())
+		shareAmount := int64(args[1].Int())
+		nonce := int64(args[2].Int())
+
+		txInfo, err := executables.GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SignUpdateMargin", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 4 {
+			return js.ValueOf(map[string]interface{}{"error": "SignUpdateMargin expects 4 args"})
+		}
+		marketIndex := uint8(args[0].Int())
+		usdcAmount := int64(args[1].Int())
+		direction := uint8(args[2].Int())
+		nonce := int64(args[3].Int())
+
+		txInfo, err := executables.GetUpdateMarginTransaction(marketIndex, direction, usdcAmount, nonce)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+	}))
+
+	js.Global().Set("SwitchAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 1 {
+			return js.ValueOf(map[string]interface{}{"error": "SwitchAPIKey expects 1 arg: apiKeyIndex"})
+		}
+		apiKeyIndex := uint8(args[0].Int())
+		err := executables.SwitchAPIKey(apiKeyIndex)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+		return js.ValueOf(map[string]interface{}{"error": ""})
+	}))
+
+	js.Global().Set("SignCreateGroupedOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 2 {
+			return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects at least 2 args: groupingType, orders array, nonce"})
+		}
+		groupingType := uint8(args[0].Int())
+		
+		// Parse orders array from JS
+		ordersArg := args[1]
+		if ordersArg.Type() != js.TypeObject {
+			return js.ValueOf(map[string]interface{}{"error": "orders must be an array"})
+		}
+		length := ordersArg.Length()
+		orders := make([]*types.CreateOrderTxReq, length)
+		
+		for i := 0; i < length; i++ {
+			orderObj := ordersArg.Index(i)
+			if orderObj.Type() != js.TypeObject {
+				return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("order %d must be an object", i)})
+			}
+			
+			orders[i] = &types.CreateOrderTxReq{
+				MarketIndex:      uint8(orderObj.Get("MarketIndex").Int()),
+				ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
+				BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
+				Price:            uint32(orderObj.Get("Price").Int()),
+				IsAsk:            uint8(orderObj.Get("IsAsk").Int()),
+				Type:             uint8(orderObj.Get("Type").Int()),
+				TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
+				ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
+				TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
+				OrderExpiry:      int64(orderObj.Get("OrderExpiry").Int()),
+			}
+		}
+		
+		nonce := int64(args[2].Int())
+		
+		txInfo, err := executables.GetCreateGroupedOrdersTransaction(groupingType, orders, nonce)
 		if err != nil {
 			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
 		}
