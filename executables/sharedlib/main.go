@@ -80,8 +80,10 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 }
 
 //export SignChangePubKey
-func SignChangePubKey(cPubKey *C.char, cNonce C.longlong) (ret C.StrOrErr) {
+func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 	pubKeyStr := C.GoString(cPubKey)
 	pubKeyBytes, err := hexutil.Decode(pubKeyStr)
 	if err != nil {
@@ -95,7 +97,7 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong) (ret C.StrOrErr) {
 	var pubKey [40]byte
 	copy(pubKey[:], pubKeyBytes)
 
-	txInfoStr, _, err := executables.GetChangePubKeyTransaction(pubKey, nonce)
+	txInfoStr, _, err := executables.GetChangePubKeyTransaction(pubKey, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -105,7 +107,7 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong) (ret C.StrOrErr) {
 }
 
 //export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	marketIndex := uint8(cMarketIndex)
 	clientOrderIndex := int64(cClientOrderIndex)
 	baseAmount := int64(cBaseAmount)
@@ -117,6 +119,8 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 	triggerPrice := uint32(cTriggerPrice)
 	orderExpiry := int64(cOrderExpiry)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
 	txInfoStr, err := executables.GetCreateOrderTransaction(
 		marketIndex,
@@ -130,6 +134,8 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 		triggerPrice,
 		orderExpiry,
 		nonce,
+		apiKeyIndex,
+		accountIndex,
 	)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
@@ -140,11 +146,13 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 }
 
 //export SignCreateGroupedOrders
-func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cNonce C.longlong) (ret C.StrOrErr) {
+func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	length := int(cLen)
 	orders := make([]*types.CreateOrderTxReq, length)
 	size := unsafe.Sizeof(*cOrders)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
 	for i := 0; i < length; i++ {
 		order := (*C.CreateOrderTxReq)(unsafe.Pointer(uintptr(unsafe.Pointer(cOrders)) + uintptr(i)*uintptr(size)))
@@ -168,7 +176,7 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		}
 	}
 
-	txInfoStr, err := executables.GetCreateGroupedOrdersTransaction(uint8(cGroupingType), orders, nonce)
+	txInfoStr, err := executables.GetCreateGroupedOrdersTransaction(uint8(cGroupingType), orders, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -178,12 +186,14 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 }
 
 //export SignCancelOrder
-func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	marketIndex := uint8(cMarketIndex)
 	orderIndex := int64(cOrderIndex)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetCancelOrderTransaction(marketIndex, orderIndex, nonce)
+	txInfoStr, err := executables.GetCancelOrderTransaction(marketIndex, orderIndex, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -193,11 +203,13 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 }
 
 //export SignWithdraw
-func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	usdcAmount := uint64(cUSDCAmount)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetWithdrawTransaction(usdcAmount, nonce)
+	txInfoStr, err := executables.GetWithdrawTransaction(usdcAmount, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -207,9 +219,11 @@ func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
 }
 
 //export SignCreateSubAccount
-func SignCreateSubAccount(cNonce C.longlong) (ret C.StrOrErr) {
+func SignCreateSubAccount(cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	nonce := int64(cNonce)
-	txInfoStr, err := executables.GetCreateSubAccountTransaction(nonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
+	txInfoStr, err := executables.GetCreateSubAccountTransaction(nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -219,12 +233,14 @@ func SignCreateSubAccount(cNonce C.longlong) (ret C.StrOrErr) {
 }
 
 //export SignCancelAllOrders
-func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	timeInForce := uint8(cTimeInForce)
 	t := int64(cTime)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetCancelAllOrdersTransaction(timeInForce, t, nonce)
+	txInfoStr, err := executables.GetCancelAllOrdersTransaction(timeInForce, t, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -234,15 +250,17 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	marketIndex := uint8(cMarketIndex)
 	index := int64(cIndex)
 	baseAmount := int64(cBaseAmount)
 	price := uint32(cPrice)
 	triggerPrice := uint32(cTriggerPrice)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetModifyOrderTransaction(marketIndex, index, baseAmount, price, triggerPrice, nonce)
+	txInfoStr, err := executables.GetModifyOrderTransaction(marketIndex, index, baseAmount, price, triggerPrice, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -252,11 +270,13 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong) (ret C.StrOrErr) {
+func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	toAccountIndex := int64(cToAccountIndex)
 	usdcAmount := int64(cUSDCAmount)
 	nonce := int64(cNonce)
 	fee := int64(cFee)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 	memo := [32]byte{}
 	memoStr := C.GoString(cMemo)
 	if len(memoStr) != 32 {
@@ -267,7 +287,7 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.lon
 		memo[i] = byte(memoStr[i])
 	}
 
-	txInfoStr, err := executables.GetTransferTransaction(toAccountIndex, usdcAmount, fee, nonce, memo)
+	txInfoStr, err := executables.GetTransferTransaction(toAccountIndex, usdcAmount, fee, nonce, memo, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -277,13 +297,15 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.lon
 }
 
 //export SignCreatePublicPool
-func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	operatorFee := int64(cOperatorFee)
 	initialTotalShares := int64(cInitialTotalShares)
 	minOperatorShareRate := int64(cMinOperatorShareRate)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperatorShareRate, nonce)
+	txInfoStr, err := executables.GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperatorShareRate, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -293,14 +315,16 @@ func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlon
 }
 
 //export SignUpdatePublicPool
-func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	publicPoolIndex := uint8(cPublicPoolIndex)
 	status := uint8(cStatus)
 	operatorFee := int64(cOperatorFee)
 	minOperatorShareRate := int64(cMinOperatorShareRate)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetUpdatePublicPoolTransaction(publicPoolIndex, status, operatorFee, minOperatorShareRate, nonce)
+	txInfoStr, err := executables.GetUpdatePublicPoolTransaction(publicPoolIndex, status, operatorFee, minOperatorShareRate, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -310,12 +334,14 @@ func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorF
 }
 
 //export SignMintShares
-func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	publicPoolIndex := int64(cPublicPoolIndex)
 	shareAmount := int64(cShareAmount)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce)
+	txInfoStr, err := executables.GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -325,12 +351,14 @@ func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 }
 
 //export SignBurnShares
-func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong) (ret C.StrOrErr) {
+func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	publicPoolIndex := int64(cPublicPoolIndex)
 	shareAmount := int64(cShareAmount)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce)
+	txInfoStr, err := executables.GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -340,13 +368,15 @@ func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 }
 
 //export SignUpdateLeverage
-func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong) (ret C.StrOrErr) {
+func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	marketIndex := uint8(cMarketIndex)
 	initialMarginFraction := uint16(cInitialMarginFraction)
 	nonce := int64(cNonce)
 	marginMode := uint8(cMarginMode)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetUpdateLeverageTransaction(marketIndex, marginMode, initialMarginFraction, nonce)
+	txInfoStr, err := executables.GetUpdateLeverageTransaction(marketIndex, marginMode, initialMarginFraction, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -356,9 +386,11 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMargi
 }
 
 //export CreateAuthToken
-func CreateAuthToken(cDeadline C.longlong) (ret C.StrOrErr) {
+func CreateAuthToken(cDeadline C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	deadline := int64(cDeadline)
-	authToken, err := executables.CreateAuthToken(deadline)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
+	authToken, err := executables.CreateAuthToken(deadline, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {
@@ -374,13 +406,15 @@ func SwitchAPIKey(c C.int) (ret *C.char) {
 }
 
 //export SignUpdateMargin
-func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong) (ret C.StrOrErr) {
+func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
 	marketIndex := uint8(cMarketIndex)
 	usdcAmount := int64(cUSDCAmount)
 	direction := uint8(cDirection)
 	nonce := int64(cNonce)
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
 
-	txInfoStr, err := executables.GetUpdateMarginTransaction(marketIndex, direction, usdcAmount, nonce)
+	txInfoStr, err := executables.GetUpdateMarginTransaction(marketIndex, direction, usdcAmount, nonce, apiKeyIndex, accountIndex)
 	if err != nil {
 		ret = C.StrOrErr{err: wrapErr(err)}
 	} else {

@@ -146,12 +146,11 @@ func CheckClient(apiKeyIndex uint8, accountIndex int64) error {
 
 // GetChangePubKeyTransaction generates a ChangePubKey transaction
 // Uses default client (legacy API for backward compatibility)
-func GetChangePubKeyTransaction(pubKey [40]byte, nonce int64) (string, string, error) {
-	txClientInstance, err := GetClientForAPIKey(255, -1) // Default client
+func GetChangePubKeyTransaction(pubKey [40]byte, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", "", err
 	}
-	txClient := txClientInstance // Use for compatibility
 
 	txInfo := &types.ChangePubKeyReq{
 		PubKey: pubKey,
@@ -200,12 +199,13 @@ func GetCreateOrderTransaction(
 	triggerPrice uint32,
 	orderExpiry int64,
 	nonce int64,
+	apiKeyIndex uint8,
+	accountIndex int64,
 ) (string, error) {
-	txClientInstance, err := getDefaultClient()
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	if orderExpiry == -1 {
 		orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli() // 28 days
@@ -242,12 +242,11 @@ func GetCreateOrderTransaction(
 }
 
 // CreateAuthToken generates an auth token
-func CreateAuthToken(deadline int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func CreateAuthToken(deadline int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	if deadline == 0 {
 		deadline = time.Now().Add(time.Hour * 7).Unix()
@@ -285,12 +284,11 @@ func SwitchAPIKey(apiKeyIndex uint8) error {
 }
 
 // GetCreateSubAccountTransaction generates a CreateSubAccount transaction
-func GetCreateSubAccountTransaction(nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetCreateSubAccountTransaction(nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	ops := new(types.TransactOpts)
 	if nonce != -1 {
@@ -311,12 +309,11 @@ func GetCreateSubAccountTransaction(nonce int64) (string, error) {
 }
 
 // GetCreatePublicPoolTransaction generates a CreatePublicPool transaction
-func GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperatorShareRate, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperatorShareRate, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.CreatePublicPoolTxReq{
 		OperatorFee:          operatorFee,
@@ -342,12 +339,11 @@ func GetCreatePublicPoolTransaction(operatorFee, initialTotalShares, minOperator
 }
 
 // GetUpdatePublicPoolTransaction generates an UpdatePublicPool transaction
-func GetUpdatePublicPoolTransaction(publicPoolIndex, status uint8, operatorFee, minOperatorShareRate, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetUpdatePublicPoolTransaction(publicPoolIndex, status uint8, operatorFee, minOperatorShareRate, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.UpdatePublicPoolTxReq{
 		PublicPoolIndex:      int64(publicPoolIndex),
@@ -374,12 +370,11 @@ func GetUpdatePublicPoolTransaction(publicPoolIndex, status uint8, operatorFee, 
 }
 
 // GetTransferTransaction generates a Transfer transaction
-func GetTransferTransaction(toAccountIndex, usdcAmount, fee, nonce int64, memo [32]byte) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetTransferTransaction(toAccountIndex, usdcAmount, fee, nonce int64, memo [32]byte, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.TransferTxReq{
 		ToAccountIndex: toAccountIndex,
@@ -419,12 +414,11 @@ func GetTransferTransaction(toAccountIndex, usdcAmount, fee, nonce int64, memo [
 }
 
 // GetWithdrawTransaction generates a Withdraw transaction
-func GetWithdrawTransaction(usdcAmount uint64, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetWithdrawTransaction(usdcAmount uint64, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.WithdrawTxReq{
 		USDCAmount: usdcAmount,
@@ -448,12 +442,11 @@ func GetWithdrawTransaction(usdcAmount uint64, nonce int64) (string, error) {
 }
 
 // GetCreateGroupedOrdersTransaction generates a CreateGroupedOrders transaction
-func GetCreateGroupedOrdersTransaction(groupingType uint8, orders []*types.CreateOrderTxReq, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetCreateGroupedOrdersTransaction(groupingType uint8, orders []*types.CreateOrderTxReq, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	req := &types.CreateGroupedOrdersTxReq{
 		GroupingType: groupingType,
@@ -478,12 +471,11 @@ func GetCreateGroupedOrdersTransaction(groupingType uint8, orders []*types.Creat
 }
 
 // GetCancelOrderTransaction generates a CancelOrder transaction
-func GetCancelOrderTransaction(marketIndex uint8, orderIndex, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetCancelOrderTransaction(marketIndex uint8, orderIndex, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.CancelOrderTxReq{
 		MarketIndex: marketIndex,
@@ -508,12 +500,11 @@ func GetCancelOrderTransaction(marketIndex uint8, orderIndex, nonce int64) (stri
 }
 
 // GetModifyOrderTransaction generates a ModifyOrder transaction
-func GetModifyOrderTransaction(marketIndex uint8, index, baseAmount int64, price, triggerPrice uint32, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetModifyOrderTransaction(marketIndex uint8, index, baseAmount int64, price, triggerPrice uint32, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.ModifyOrderTxReq{
 		MarketIndex:  marketIndex,
@@ -541,12 +532,11 @@ func GetModifyOrderTransaction(marketIndex uint8, index, baseAmount int64, price
 }
 
 // GetCancelAllOrdersTransaction generates a CancelAllOrders transaction
-func GetCancelAllOrdersTransaction(timeInForce uint8, timeVal, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetCancelAllOrdersTransaction(timeInForce uint8, timeVal, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.CancelAllOrdersTxReq{
 		TimeInForce: timeInForce,
@@ -571,12 +561,11 @@ func GetCancelAllOrdersTransaction(timeInForce uint8, timeVal, nonce int64) (str
 }
 
 // GetMintSharesTransaction generates a MintShares transaction
-func GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.MintSharesTxReq{
 		PublicPoolIndex: publicPoolIndex,
@@ -601,12 +590,11 @@ func GetMintSharesTransaction(publicPoolIndex, shareAmount, nonce int64) (string
 }
 
 // GetBurnSharesTransaction generates a BurnShares transaction
-func GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.BurnSharesTxReq{
 		PublicPoolIndex: publicPoolIndex,
@@ -631,12 +619,11 @@ func GetBurnSharesTransaction(publicPoolIndex, shareAmount, nonce int64) (string
 }
 
 // GetUpdateLeverageTransaction generates an UpdateLeverage transaction
-func GetUpdateLeverageTransaction(marketIndex, marginMode uint8, initialMarginFraction uint16, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetUpdateLeverageTransaction(marketIndex, marginMode uint8, initialMarginFraction uint16, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.UpdateLeverageTxReq{
 		MarketIndex:           marketIndex,
@@ -662,12 +649,11 @@ func GetUpdateLeverageTransaction(marketIndex, marginMode uint8, initialMarginFr
 }
 
 // GetUpdateMarginTransaction generates an UpdateMargin transaction
-func GetUpdateMarginTransaction(marketIndex, direction uint8, usdcAmount, nonce int64) (string, error) {
-	txClientInstance, err := getDefaultClient()
+func GetUpdateMarginTransaction(marketIndex, direction uint8, usdcAmount, nonce int64, apiKeyIndex uint8, accountIndex int64) (string, error) {
+	txClient, err := GetClientForAPIKey(apiKeyIndex, accountIndex)
 	if err != nil {
 		return "", err
 	}
-	txClient := txClientInstance
 
 	txInfo := &types.UpdateMarginTxReq{
 		MarketIndex: marketIndex,
