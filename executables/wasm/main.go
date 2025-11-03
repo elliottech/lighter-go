@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"syscall/js"
+	"time"
 
 	"github.com/elliottech/lighter-go/executables"
 	"github.com/elliottech/lighter-go/types"
@@ -377,6 +378,11 @@ func main() {
 				return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("order %d must be an object", i)})
 			}
 			
+			orderExpiry := int64(orderObj.Get("OrderExpiry").Int())
+			if orderExpiry == -1 {
+				orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli()
+			}
+			
 			orders[i] = &types.CreateOrderTxReq{
 				MarketIndex:      uint8(orderObj.Get("MarketIndex").Int()),
 				ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
@@ -387,7 +393,7 @@ func main() {
 				TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
 				ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
 				TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
-				OrderExpiry:      int64(orderObj.Get("OrderExpiry").Int()),
+				OrderExpiry:      orderExpiry,
 			}
 		}
 		
