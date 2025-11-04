@@ -13,7 +13,7 @@ The go SDK implements just the core signing, as well as a small HTTP client so t
 The [Python SDK](https://github.com/elliottech/lighter-python) offers support for HTTP and WebSocket functionality as well as [examples](https://github.com/elliottech/lighter-python/tree/main/examples) on how to generate the API keys, how to create and cancel orders, generate AUTH tokens for various HTTP/WS endpoints which require them. 
 
 All generated shared libraries follow the naming convention `lighter_signer_{os}_{arch}` where os is linux/windows/darwin and arch is amd64(x86) or arm64.\
-The build can be found in the release notes.\
+The build & accompanying `.h` files can be found in the release notes [here](https://github.com/elliottech/lighter-go/releases).\
 If you'd like to compile your own binaries, the commands are in the `justfile`.
 
 
@@ -22,9 +22,9 @@ If you'd like to compile your own binaries, the commands are in the `justfile`.
 === Client ===
 CreateClient
 CheckClient
-CreateAuthToken
 
 === API Key ===
+CreateAuthToken
 SignChangePubKey
 GenerateAPIKey
 
@@ -78,7 +78,7 @@ The majority of methods receive 3 arguments at the end:
   - this can be a subaccount or a different main account all together 
   - if default is passed, signer will use the default txClient
 
-Note: in order to use the default client, you need to bash both the default values for `apiKeyIndex` and `accountIndex`
+**Note:** in order to use the default client, you need to bash both the default values for `apiKeyIndex` and `accountIndex`
 
 ## Auth tokens
 
@@ -91,53 +91,4 @@ Calling `CreateAuthToken` with an expiry 20 hours in the future will work, but t
 This still allows you to generate all the tokens ahead of time and use them accordingly. \
 Such an approach (both implementation & how to manage them) can be found in great details in the [python-sdk](https://github.com/elliottech/lighter-python/tree/main/examples/read-only-auth).
 
-Note: auth tokens are bound to an API key. Changing the API key to something else **will invalidate** all generated auth tokens.  
-
-## Details
-
-The interface of the shared library is the following
-```c
-extern char* CreateClient(char* cUrl, char* cPrivateKey, int cChainId, int cApiKeyIndex, long long cAccountIndex);
-extern char* CheckClient(int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr CreateAuthToken(long long cDeadline, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignChangePubKey(char* cPubKey, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern ApiKeyResponse GenerateAPIKey(char* cSeed);
-extern StrOrErr SignCreateOrder(int cMarketIndex, long long cClientOrderIndex, long long cBaseAmount, int cPrice, int cIsAsk, int cOrderType, int cTimeInForce, int cReduceOnly, int cTriggerPrice, long long cOrderExpiry, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignCreateGroupedOrders(uint8_t cGroupingType, CreateOrderTxReq* cOrders, int cLen, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignCancelOrder(int cMarketIndex, long long cOrderIndex, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignCancelAllOrders(int cTimeInForce, long long cTime, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignModifyOrder(int cMarketIndex, long long cIndex, long long cBaseAmount, long long cPrice, long long cTriggerPrice, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignUpdateLeverage(int cMarketIndex, int cInitialMarginFraction, int cMarginMode, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignUpdateMargin(int cMarketIndex, long long cUSDCAmount, int cDirection, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignWithdraw(long long cUSDCAmount, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignTransfer(long long cToAccountIndex, long long cUSDCAmount, long long cFee, char* cMemo, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignCreateSubAccount(long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignCreatePublicPool(long long cOperatorFee, long long cInitialTotalShares, long long cMinOperatorShareRate, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignUpdatePublicPool(long long cPublicPoolIndex, int cStatus, long long cOperatorFee, long long cMinOperatorShareRate, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignMintShares(long long cPublicPoolIndex, long long cShareAmount, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-extern StrOrErr SignBurnShares(long long cPublicPoolIndex, long long cShareAmount, long long cNonce, int cApiKeyIndex, long long cAccountIndex);
-
-typedef struct {
-	char* str;
-	char* err;
-} StrOrErr;
-
-typedef struct {
-	char* privateKey;
-	char* publicKey;
-	char* err;
-} ApiKeyResponse;
-
-typedef struct {
-    uint8_t MarketIndex;
-    int64_t ClientOrderIndex;
-    int64_t BaseAmount;
-    uint32_t Price;
-    uint8_t IsAsk;
-    uint8_t Type;
-    uint8_t TimeInForce;
-    uint8_t ReduceOnly;
-    uint32_t TriggerPrice;
-    int64_t OrderExpiry;
-} CreateOrderTxReq;
-```
+**Note:** auth tokens are bound to an API key. Changing the API key to something else **will invalidate** all generated auth tokens.  

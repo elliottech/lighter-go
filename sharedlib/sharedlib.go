@@ -128,6 +128,7 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 		allTxClients[accountIndex] = make(map[uint8]*client.TxClient)
 	}
 	allTxClients[accountIndex][apiKeyIndex] = txClient
+	defaultTxClient = txClient
 	txClientMu.Unlock()
 
 	return nil
@@ -168,6 +169,8 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 
 	return
 }
+
+/// === API Key related ops ===
 
 // CreateAuthToken Note: in order for the deadline to be valid, it needs to be at most 8 hours from now.
 // It's recommended that it'd be at most 7:55, as differences in clock times could make this
@@ -210,8 +213,6 @@ func CreateAuthToken(cDeadline C.longlong, cApiKeyIndex C.int, cAccountIndex C.l
 
 	return
 }
-
-/// === API Key related ops ===
 
 //export SignChangePubKey
 func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
