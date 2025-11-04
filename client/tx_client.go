@@ -69,7 +69,7 @@ func (c *TxClient) FullFillDefaultOps(ops *types.TransactOpts) (*types.TransactO
 	if ops.ApiKeyIndex == nil {
 		ops.ApiKeyIndex = &c.apiKeyIndex
 	}
-	if ops.Nonce == nil {
+	if ops.Nonce == nil || *ops.Nonce == -1 {
 		if c.apiClient == nil {
 			return nil, fmt.Errorf("nonce was not provided & HTTPClient is nil. Either provide the nonce or enable HTTPClient to get the nonce from Lighter")
 		}
