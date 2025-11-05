@@ -20,6 +20,14 @@ typedef struct {
 } StrOrErr;
 
 typedef struct {
+	uint8_t txType;
+	char* txInfo;
+	char* txHash;
+	char* messageToSign;
+	char* err;
+} SignedTxResponse;
+
+typedef struct {
 	char* privateKey;
 	char* publicKey;
 	char* err;
@@ -42,6 +50,34 @@ import "C"
 
 func wrapErr(err error) (ret *C.char) {
 	return C.CString(fmt.Sprintf("%v", err))
+}
+
+// convertSignedTxResponse takes the return type of operations which signs a message, and returns the C response
+// if MessageToSign is not present, it returns nul
+func convertSignedTxResponse(response *client.SignedTx, err error) C.SignedTxResponse {
+	if err != nil {
+		return C.SignedTxResponse{
+			err: wrapErr(err),
+		}
+	} else {
+		resp := C.SignedTxResponse{
+			txType: C.uint8_t(response.TxType),
+			txInfo: C.CString(response.TxInfo),
+			txHash: C.CString(response.TxHash),
+		}
+		if len(response.MessageToSign) > 0 {
+			resp.messageToSign = C.CString(response.MessageToSign)
+		}
+
+		return resp
+	}
+}
+
+// getClient returns the go TxClient from the specified cApiKeyIndex and cAccountIndex
+func getClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (*client.TxClient, error) {
+	apiKeyIndex := uint8(cApiKeyIndex)
+	accountIndex := int64(cAccountIndex)
+	return client.GetClient(apiKeyIndex, accountIndex)
 }
 
 //export GenerateAPIKey
@@ -69,42 +105,47 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 	apiKeyIndex := uint8(cApiKeyIndex)
 	accountIndex := int64(cAccountIndex)
 
-	return wrapErr(client.CreateClient(http.NewClient, url, privateKey, chainId, apiKeyIndex, accountIndex))
+	httpClient := http.NewClient(url)
+
+	_, err := client.CreateClient(httpClient, privateKey, chainId, apiKeyIndex, accountIndex)
+	return wrapErr(err)
 }
 
 //export CheckClient
 func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
-	apiKeyIndex := uint8(cApiKeyIndex)
-	accountIndex := int64(cAccountIndex)
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return wrapErr(err)
+	}
 
-	return wrapErr(client.CheckClient(apiKeyIndex, accountIndex))
+	// For CheckClient, the getClient logic takes care of edge cases.
+	// If the user is providing a pair which is not the default one, it'll fail.
+	// If the user is providing a pair which does not exist, an error will be thrown.
+
+	return wrapErr(c.Check())
 }
 
 //export SignChangePubKey
-func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
+func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) C.SignedTxResponse {
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return C.SignedTxResponse{err: wrapErr(err)}
+	}
+
 	nonce := int64(cNonce)
-	apiKeyIndex := uint8(cApiKeyIndex)
-	accountIndex := int64(cAccountIndex)
 	pubKeyStr := C.GoString(cPubKey)
 	pubKeyBytes, err := hexutil.Decode(pubKeyStr)
 	if err != nil {
-		ret = C.StrOrErr{err: wrapErr(err)}
-		return
+		return C.SignedTxResponse{err: wrapErr(err)}
 	}
 	if len(pubKeyBytes) != 40 {
-		ret = C.StrOrErr{err: wrapErr(fmt.Errorf("invalid pub key length. expected 40 but got %v", len(pubKeyBytes)))}
-		return
+		return C.SignedTxResponse{err: wrapErr(fmt.Errorf("invalid pub key length. expected 40 but got %v", len(pubKeyBytes)))}
 	}
 	var pubKey [40]byte
 	copy(pubKey[:], pubKeyBytes)
 
-	txInfoStr, _, err := client.GetChangePubKeyTransaction(pubKey, nonce, apiKeyIndex, accountIndex)
-	if err != nil {
-		ret = C.StrOrErr{err: wrapErr(err)}
-	} else {
-		ret = C.StrOrErr{str: C.CString(txInfoStr)}
-	}
-	return
+	resp, err := c.GetChangePubKeyTx(pubKey, nonce)
+	return convertSignedTxResponse(resp, err)
 }
 
 //export SignCreateOrder

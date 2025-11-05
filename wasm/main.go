@@ -1,3 +1,4 @@
+//go:build js
 // +build js
 
 package main
@@ -19,6 +20,34 @@ func wrapErr(err error) string {
 		return fmt.Sprintf("%v", err)
 	}
 	return ""
+}
+
+func convertSignedTxResponseJS(response *client.SignedTx, err error) js.Value {
+	if err != nil {
+		// wrapErr should return a string; if it returns error, js.ValueOf will stringify it anyway
+		return js.ValueOf(map[string]interface{}{"error": err})
+	}
+	if response == nil {
+		return js.ValueOf(map[string]interface{}{"error": "nil response"})
+	}
+
+	// Build the object; numbers become JS Number (float64 under the hood)
+	out := map[string]interface{}{
+		"txType":        int(response.TxType), // cast to int for js.ValueOf compatibility
+		"txInfo":        response.TxInfo,
+		"txHash":        response.TxHash,
+		"messageToSign": response.MessageToSign,
+		"error":         "",
+	}
+
+	return js.ValueOf(out)
+}
+
+func getClient(args []js.Value) (*client.TxClient, error) {
+	l := len(args)
+	apiKeyIndex := uint8(args[l-2].Int())
+	accountIndex := int64(args[l-1].Int())
+	return client.GetClient(apiKeyIndex, accountIndex)
 }
 
 func main() {
@@ -43,7 +72,8 @@ func main() {
 		chainId := uint32(args[2].Int())
 		apiKeyIndex := uint8(args[3].Int())
 		accountIndex := int64(args[4].Int())
-		err := client.CreateClient(http.NewClient, url, privateKey, chainId, apiKeyIndex, accountIndex)
+		httpClient := http.NewClient(url)
+		_, err := client.CreateClient(httpClient, privateKey, chainId, apiKeyIndex, accountIndex)
 		if err != nil {
 			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
 		}
@@ -54,9 +84,12 @@ func main() {
 		if len(args) < 2 {
 			return js.ValueOf(map[string]interface{}{"error": "CheckClient expects 2 args: apiKeyIndex, accountIndex"})
 		}
-		apiKeyIndex := uint8(args[0].Int())
-		accountIndex := int64(args[1].Int())
-		err := client.CheckClient(apiKeyIndex, accountIndex)
+		c, err := getClient(args)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
+
+		err = c.Check()
 		if err != nil {
 			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
 		}
@@ -83,8 +116,11 @@ func main() {
 		}
 		pubKeyHex := args[0].String()
 		nonce := int64(args[1].Int())
-		apiKeyIndex := uint8(args[2].Int())
-		accountIndex := int64(args[3].Int())
+
+		c, err := getClient(args)
+		if err != nil {
+			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
+		}
 
 		pubKeyBytes, err := hexutil.Decode(pubKeyHex)
 		if err != nil {
@@ -96,11 +132,8 @@ func main() {
 		var pubKey [40]byte
 		copy(pubKey[:], pubKeyBytes)
 
-		txInfo, _, err := client.GetChangePubKeyTransaction(pubKey, nonce, apiKeyIndex, accountIndex)
-		if err != nil {
-			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
-		}
-		return js.ValueOf(map[string]interface{}{"txInfo": txInfo, "error": ""})
+		response, err := c.GetChangePubKeyTx(pubKey, nonce)
+		return convertSignedTxResponseJS(response, err)
 	}))
 
 	js.Global().Set("SignCreateOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -352,7 +385,7 @@ func main() {
 			return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects 5 args: groupingType, orders array, nonce, apiKeyIndex, accountIndex"})
 		}
 		groupingType := uint8(args[0].Int())
-		
+
 		// Parse orders array from JS
 		ordersArg := args[1]
 		if ordersArg.Type() != js.TypeObject {
@@ -360,18 +393,18 @@ func main() {
 		}
 		length := ordersArg.Length()
 		orders := make([]*types.CreateOrderTxReq, length)
-		
+
 		for i := 0; i < length; i++ {
 			orderObj := ordersArg.Index(i)
 			if orderObj.Type() != js.TypeObject {
 				return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("order %d must be an object", i)})
 			}
-			
+
 			orderExpiry := int64(orderObj.Get("OrderExpiry").Int())
 			if orderExpiry == -1 {
 				orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli()
 			}
-			
+
 			orders[i] = &types.CreateOrderTxReq{
 				MarketIndex:      uint8(orderObj.Get("MarketIndex").Int()),
 				ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
@@ -385,11 +418,11 @@ func main() {
 				OrderExpiry:      orderExpiry,
 			}
 		}
-		
+
 		nonce := int64(args[2].Int())
 		apiKeyIndex := uint8(args[3].Int())
 		accountIndex := int64(args[4].Int())
-		
+
 		txInfo, err := client.GetCreateGroupedOrdersTransaction(groupingType, orders, nonce, apiKeyIndex, accountIndex)
 		if err != nil {
 			return js.ValueOf(map[string]interface{}{"error": wrapErr(err)})
@@ -399,4 +432,3 @@ func main() {
 
 	select {}
 }
-
