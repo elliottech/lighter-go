@@ -89,6 +89,8 @@ type WSTrade struct {
 	UsdAmount                        string `json:"usd_amount"`
 	AskId                            int64  `json:"ask_id"`
 	BidId                            int64  `json:"bid_id"`
+	AskClientId                      int64  `json:"ask_client_id"`
+	BidClientId                      int64  `json:"bid_client_id"`
 	AskAccountId                     int64  `json:"ask_account_id"`
 	BidAccountId                     int64  `json:"bid_account_id"`
 	IsMakerAsk                       bool   `json:"is_maker_ask"`
