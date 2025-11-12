@@ -4,7 +4,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"syscall/js"
@@ -13,6 +12,7 @@ import (
 	"github.com/elliottech/lighter-go/client"
 	"github.com/elliottech/lighter-go/client/http"
 	"github.com/elliottech/lighter-go/types"
+	"github.com/elliottech/lighter-go/types/txtypes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -23,22 +23,38 @@ func wrapErr(err error) js.Value {
 	return js.ValueOf(map[string]interface{}{})
 }
 
-func convertSignedTxResponseJS(response *client.SignedTx, err error) js.Value {
+func messageToSign(info txtypes.TxInfo) string {
+	switch tx := info.(type) {
+	case *txtypes.L2ChangePubKeyTxInfo:
+		return tx.GetL1SignatureBody()
+	case *txtypes.L2TransferTxInfo:
+		return tx.GetL1SignatureBody()
+	default:
+		return ""
+	}
+}
+
+func convertTxInfoToJS(info txtypes.TxInfo, err error) js.Value {
 	if err != nil {
 		return wrapErr(err)
 	}
-	if response == nil {
+	if info == nil {
 		return js.ValueOf(map[string]interface{}{"error": "nil response"})
 	}
 
-	// Build the object; numbers become JS Number (float64 under the hood)
-	out := map[string]interface{}{
-		"txType":        int(response.TxType), // cast to int for js.ValueOf compatibility
-		"txInfo":        response.TxInfo,
-		"txHash":        response.TxHash,
-		"messageToSign": response.MessageToSign,
+	txInfoStr, strErr := info.GetTxInfo()
+	if strErr != nil {
+		return wrapErr(strErr)
 	}
 
+	out := map[string]interface{}{
+		"txType": info.GetTxType(),
+		"txInfo": txInfoStr,
+		"txHash": info.GetTxHash(),
+	}
+	if msg := messageToSign(info); msg != "" {
+		out["messageToSign"] = msg
+	}
 	return js.ValueOf(out)
 }
 
@@ -194,8 +210,15 @@ func main() {
 			var pubKey [40]byte
 			copy(pubKey[:], pubKeyBytes)
 
-			response, err := c.GetChangePubKeyTx(pubKey, nonce)
-			return convertSignedTxResponseJS(response, err)
+			txInfo := &types.ChangePubKeyReq{
+				PubKey: pubKey,
+			}
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
+			}
+
+			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -282,16 +305,7 @@ func main() {
 			}
 
 			tx, err := c.GetCreateOrderTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -319,16 +333,7 @@ func main() {
 			}
 
 			tx, err := c.GetCancelOrderTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -356,16 +361,7 @@ func main() {
 			}
 
 			tx, err := c.GetCancelAllOrdersTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -406,29 +402,7 @@ func main() {
 			}
 
 			tx, err := c.GetTransferTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			// Add MessageToSign to the response
-			txInfoMap := make(map[string]interface{})
-			err = json.Unmarshal(txInfoBytes, &txInfoMap)
-			if err != nil {
-				return wrapErr(err)
-			}
-			txInfoMap["MessageToSign"] = tx.GetL1SignatureBody()
-
-			txInfoBytesFinal, err := json.Marshal(txInfoMap)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytesFinal)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -454,16 +428,7 @@ func main() {
 			}
 
 			tx, err := c.GetWithdrawTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -493,16 +458,7 @@ func main() {
 			}
 
 			tx, err := c.GetUpdateLeverageTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -536,16 +492,7 @@ func main() {
 			}
 
 			tx, err := c.GetModifyOrderTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -567,16 +514,7 @@ func main() {
 			}
 
 			tx, err := c.GetCreateSubAccountTransaction(ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -606,16 +544,7 @@ func main() {
 			}
 
 			tx, err := c.GetCreatePublicPoolTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -647,16 +576,7 @@ func main() {
 			}
 
 			tx, err := c.GetUpdatePublicPoolTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -684,16 +604,7 @@ func main() {
 			}
 
 			tx, err := c.GetMintSharesTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -721,16 +632,7 @@ func main() {
 			}
 
 			tx, err := c.GetBurnSharesTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -760,16 +662,7 @@ func main() {
 			}
 
 			tx, err := c.GetUpdateMarginTransaction(txInfo, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(tx)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 
@@ -830,16 +723,7 @@ func main() {
 			}
 
 			txInfo, err := c.GetCreateGroupedOrdersTransaction(req, ops)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			txInfoBytes, err := json.Marshal(txInfo)
-			if err != nil {
-				return wrapErr(err)
-			}
-
-			return js.ValueOf(map[string]interface{}{"txInfo": string(txInfoBytes)})
+			return convertTxInfoToJS(txInfo, err)
 		})
 	}))
 

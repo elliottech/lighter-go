@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/elliottech/lighter-go/types"
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -19,16 +18,6 @@ var (
 	defaultTxClient *TxClient
 	allTxClients    map[int64]map[uint8]*TxClient // accountIndex -> apiKeyIndex -> client
 )
-
-type SignedTx struct {
-	TxType uint8
-	TxInfo string
-	TxHash string
-
-	// MessageToSign is present only when the client needs to sign this w/ the Ethereum Private Key
-	// These cases are for GetChangePubKeyTx and GetTransferTX
-	MessageToSign string
-}
 
 // GenerateAPIKey generates a new API key pair from a seed
 func GenerateAPIKey(seed string) (string, string, error) {
@@ -116,31 +105,3 @@ func (c *TxClient) Check() error {
 
 	return nil
 }
-
-// GetChangePubKeyTx generates a ChangePubKey transaction
-func (c *TxClient) GetChangePubKeyTx(pubKey [40]byte, nonce int64) (*SignedTx, error) {
-	txInfo := &types.ChangePubKeyReq{
-		PubKey: pubKey,
-	}
-	ops := &types.TransactOpts{
-		Nonce: &nonce,
-	}
-
-	tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
-	if err != nil {
-		return nil, err
-	}
-
-	txInfoStr, err := tx.GetTxInfo()
-	if err != nil {
-		return nil, err
-	}
-
-	return &SignedTx{
-		TxType:        tx.GetTxType(),
-		TxHash:        tx.GetTxHash(),
-		TxInfo:        txInfoStr,
-		MessageToSign: tx.GetL1SignatureBody(),
-	}, nil
-}
-
