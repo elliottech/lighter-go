@@ -28,13 +28,14 @@ type AccountApiKeys struct {
 
 type TxHash struct {
 	ResultCode
-	TxHash string `json:"tx_hash,example=0x70997970C51812dc3A010C7d01b50e0d17dc79C8"`
+	TxHash                   string `json:"tx_hash,example=0x70997970C51812dc3A010C7d01b50e0d17dc79C8"`
+	PredictedExecutionTimeMs int64  `json:"predicted_execution_time_ms"`
 }
 
 type TxHashBatch struct {
 	ResultCode
 	TxHash                   []string `json:"tx_hash"`
-	PredictedExecutionTimeMs int      `json:"predicted_execution_time_ms"`
+	PredictedExecutionTimeMs int64    `json:"predicted_execution_time_ms"`
 }
 
 type TransferFeeInfo struct {

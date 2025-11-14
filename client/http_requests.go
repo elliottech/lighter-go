@@ -77,11 +77,11 @@ func (c *HTTPClient) GetApiKey(accountIndex int64, apiKeyIndex uint8) (*AccountA
 	return result, nil
 }
 
-func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
+func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (*TxHash, error) {
 	txType := tx.GetTxType()
 	txInfo, err := tx.GetTxInfo()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	data := url.Values{"tx_type": {strconv.Itoa(int(txType))}, "tx_info": {txInfo}}
@@ -95,29 +95,29 @@ func (c *HTTPClient) SendRawTx(tx txtypes.TxInfo) (string, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(string(body))
+		return nil, errors.New(string(body))
 	}
 	if err = c.parseResultStatus(body); err != nil {
-		return "", err
+		return nil, err
 	}
 	res := &TxHash{}
 	if err := json.Unmarshal(body, res); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return res.TxHash, nil
+	return res, nil
 }
 
 // SendTxBatch sends multiple transactions in a batch using /api/v1/sendTxBatch endpoint
-func (c *HTTPClient) SendTxBatch(txTypes []int, txInfos []string) ([]string, error) {
+func (c *HTTPClient) SendTxBatch(txTypes []int, txInfos []string) (*TxHashBatch, error) {
 	// Convert slices to JSON strings as required by the API
 	txTypesJson, err := json.Marshal(txTypes)
 	if err != nil {
@@ -161,7 +161,7 @@ func (c *HTTPClient) SendTxBatch(txTypes []int, txInfos []string) ([]string, err
 		return nil, err
 	}
 
-	return res.TxHash, nil
+	return res, nil
 }
 
 func (c *HTTPClient) GetTransferFeeInfo(accountIndex, toAccountIndex int64, auth string) (*TransferFeeInfo, error) {
