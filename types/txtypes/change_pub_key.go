@@ -8,10 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const (
-	templateChangePubKey = "Register Lighter Account\n\npubkey: 0x%s\nnonce: %s\naccount index: %s\napi key index: %s\nOnly sign this message for a trusted client!"
-)
-
 var _ TxInfo = (*L2ChangePubKeyTxInfo)(nil)
 
 type L2ChangePubKeyTxInfo struct {
@@ -65,7 +61,7 @@ func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
 		return ErrExpiredAtInvalid
 	}
 
-	if !isValidPubKey(txInfo.PubKey) {
+	if !IsValidPubKeyLength(txInfo.PubKey) {
 		return ErrPubKeyInvalid
 	}
 
@@ -74,7 +70,7 @@ func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
 
 func (txInfo *L2ChangePubKeyTxInfo) GetL1SignatureBody() string {
 	signatureBody := fmt.Sprintf(
-		templateChangePubKey,
+		TemplateChangePubKey,
 		common.Bytes2Hex(txInfo.PubKey),
 		getHex10FromUint64(uint64(txInfo.Nonce)),
 		getHex10FromUint64(uint64(txInfo.AccountIndex)),

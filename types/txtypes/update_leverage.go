@@ -11,7 +11,7 @@ type L2UpdateLeverageTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex           uint8
+	MarketIndex           int16
 	InitialMarginFraction uint16
 	MarginMode            uint8
 
@@ -48,13 +48,9 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 	if txInfo.ApiKeyIndex > MaxApiKeyIndex {
 		return ErrApiKeyIndexTooHigh
 	}
-
 	// MarketIndex
-	if txInfo.MarketIndex < MinMarketIndex {
-		return ErrMarketIndexTooLow
-	}
-	if txInfo.MarketIndex > MaxMarketIndex {
-		return ErrMarketIndexTooHigh
+	if txInfo.MarketIndex == NilMarketIndex {
+		return ErrInvalidMarketIndex
 	}
 
 	if txInfo.MarginMode != CrossMargin && txInfo.MarginMode != IsolatedMargin {

@@ -5,21 +5,31 @@ import (
 	"fmt"
 	"strings"
 
+	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
+	gQuint "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func isValidPubKey(bytes []byte) bool {
-	if len(bytes) != 40 {
-		return false
-	}
+const (
+	TemplateChangePubKey = "Register Lighter Account\n\npubkey: 0x%s\nnonce: %s\naccount index: %s\napi key index: %s\nOnly sign this message for a trusted client!"
+	TemplateTransfer     = "Transfer\n\nnonce: %s\nfrom: %s (route %s)\napi key: %s\nto: %s (route %s)\nasset: %s\namount: %s\nfee: %s" +
+		"\nchainId: %s\nmemo: %s\nOnly sign this message for a trusted client!"
+	TemplateSubAccount = "Create Lighter Sub Account\n\nmaster account index: %s\nOnly sign this message for a trusted client!"
+)
 
-	return !isZeroByteSlice(bytes)
+const SignatureLength = 80
+const L1SignatureLength = 65
+const PubKeyLength = gFp5.Bytes
+const HashLength = gQuint.Bytes
+
+func IsValidPubKeyLength(bytes []byte) bool {
+	return len(bytes) == gFp5.Bytes
 }
 
-func isZeroByteSlice(bytes []byte) bool {
+func IsZeroByteSlice(bytes []byte) bool {
 	for _, s := range bytes {
 		if s != 0 {
 			return false
