@@ -14,9 +14,10 @@ import (
 // This will be managed by both sharedlib and wasm builds
 // Supports multiple accounts and API keys with thread safety
 var (
-	txClientMu      sync.Mutex
-	defaultTxClient *TxClient
-	allTxClients    map[int64]map[uint8]*TxClient // accountIndex -> apiKeyIndex -> client
+	txClientMu              sync.Mutex
+	defaultTxClient         *TxClient
+	defaultClientPerAccount = make(map[int64]*TxClient)
+	allTxClients            map[int64]map[uint8]*TxClient // accountIndex -> apiKeyIndex -> client
 )
 
 // GenerateAPIKey generates a new API key pair from a seed
@@ -38,6 +39,13 @@ func GenerateAPIKey(seed string) (string, string, error) {
 func GetClient(apiKeyIndex uint8, accountIndex int64) (*TxClient, error) {
 	txClientMu.Lock()
 	defer txClientMu.Unlock()
+
+	if apiKeyIndex == 255 && accountIndex != -1 {
+		client := defaultClientPerAccount[accountIndex]
+		if client != nil {
+			return client, nil
+		}
+	}
 
 	// Special case: return default client
 	if apiKeyIndex == 255 && accountIndex == -1 {
@@ -82,6 +90,7 @@ func CreateClient(httpClient MinimalHTTPClient, privateKey string, chainId uint3
 
 	// Update default client (most recently created becomes default)
 	defaultTxClient = txClientInstance
+	defaultClientPerAccount[accountIndex] = txClientInstance
 	txClientMu.Unlock()
 
 	return txClientInstance, nil
