@@ -516,13 +516,13 @@ func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorF
 		return signedTxResponseErr(err)
 	}
 
-	publicPoolIndex := uint8(cPublicPoolIndex)
+	publicPoolIndex := int64(cPublicPoolIndex)
 	status := uint8(cStatus)
 	operatorFee := int64(cOperatorFee)
 	minOperatorShareRate := uint16(cMinOperatorShareRate)
 
 	tx := &types.UpdatePublicPoolTxReq{
-		PublicPoolIndex:      int64(publicPoolIndex),
+		PublicPoolIndex:      publicPoolIndex,
 		Status:               status,
 		OperatorFee:          operatorFee,
 		MinOperatorShareRate: minOperatorShareRate,
