@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"time"
 	"unsafe"
@@ -453,11 +454,30 @@ func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteT
 	usdcFee := int64(cUsdcFee)
 	memo := [32]byte{}
 	memoStr := C.GoString(cMemo)
-	if len(memoStr) != 32 {
-		return signedTxResponseErr("memo expected to be 32 bytes long")
+	if len(memoStr) == 66 {
+		if memoStr[0:2] == "0x" {
+			memoStr = memoStr[2:66]
+		} else {
+			return signedTxResponseErr(fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr)))
+		}
 	}
-	for i := 0; i < 32; i++ {
-		memo[i] = byte(memoStr[i])
+
+	// assume hex encoded here
+	if len(memoStr) == 64 {
+		b, err := hex.DecodeString(memoStr)
+		if err != nil {
+			return signedTxResponseErr(fmt.Sprintf("failed to decode hex string. err: %v", err))
+		}
+
+		for i := 0; i < 32; i += 1 {
+			memo[i] = b[i]
+		}
+	} else if len(memoStr) == 32 {
+		for i := 0; i < 32; i++ {
+			memo[i] = byte(memoStr[i])
+		}
+	} else {
+		return signedTxResponseErr(fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr)))
 	}
 
 	tx := &types.TransferTxReq{
