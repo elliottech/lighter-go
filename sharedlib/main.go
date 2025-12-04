@@ -49,6 +49,8 @@ typedef struct {
 */
 import "C"
 
+var chainId uint32
+
 func wrapErr(err any) *C.char {
 	if err == nil {
 		return nil
@@ -61,7 +63,7 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
-		return typed.GetL1SignatureBody()
+		return typed.GetL1SignatureBody(chainId)
 	default:
 		return ""
 	}
@@ -145,7 +147,7 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 
 	url := C.GoString(cUrl)
 	privateKey := C.GoString(cPrivateKey)
-	chainId := uint32(cChainId)
+	chainId = uint32(cChainId)
 	apiKeyIndex := uint8(cApiKeyIndex)
 	accountIndex := int64(cAccountIndex)
 
@@ -217,7 +219,7 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 		return signedTxResponseErr(err)
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := int16(cMarketIndex)
 	clientOrderIndex := int64(cClientOrderIndex)
 	baseAmount := int64(cBaseAmount)
 	price := uint32(cPrice)
@@ -276,7 +278,7 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		}
 
 		orders[i] = &types.CreateOrderTxReq{
-			MarketIndex:      uint8(order.MarketIndex),
+			MarketIndex:      int16(order.MarketIndex),
 			ClientOrderIndex: int64(order.ClientOrderIndex),
 			BaseAmount:       int64(order.BaseAmount),
 			Price:            uint32(order.Price),
@@ -312,7 +314,7 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 		return signedTxResponseErr(err)
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := int16(cMarketIndex)
 	orderIndex := int64(cOrderIndex)
 
 	tx := &types.CancelOrderTxReq{
@@ -326,7 +328,7 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 }
 
 //export SignWithdraw
-func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -338,10 +340,14 @@ func SignWithdraw(cUSDCAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int,
 		return signedTxResponseErr(err)
 	}
 
-	usdcAmount := uint64(cUSDCAmount)
+	assetIndex := int16(cAssetIndex)
+	routeType := uint8(cRouteType)
+	amount := uint64(cAmount)
 
 	tx := &types.WithdrawTxReq{
-		USDCAmount: usdcAmount,
+		AssetIndex: assetIndex,
+		RouteType:  routeType,
+		Amount:     amount,
 	}
 	ops := getTransactOpts(cNonce)
 
@@ -407,7 +413,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 		return signedTxResponseErr(err)
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := int16(cMarketIndex)
 	index := int64(cIndex)
 	baseAmount := int64(cBaseAmount)
 	price := uint32(cPrice)
@@ -427,7 +433,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.longlong, cMemo *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteType, cToRouteType C.uint8_t, cAmount, cUsdcFee C.longlong, cMemo *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -440,8 +446,11 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.lon
 	}
 
 	toAccountIndex := int64(cToAccountIndex)
-	usdcAmount := int64(cUSDCAmount)
-	fee := int64(cFee)
+	assetIndex := int16(cAssetIndex)
+	fromRouteType := uint8(cFromRouteType)
+	toRouteType := uint8(cToRouteType)
+	amount := int64(cAmount)
+	usdcFee := int64(cUsdcFee)
 	memo := [32]byte{}
 	memoStr := C.GoString(cMemo)
 	if len(memoStr) != 32 {
@@ -453,8 +462,11 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.lon
 
 	tx := &types.TransferTxReq{
 		ToAccountIndex: toAccountIndex,
-		USDCAmount:     usdcAmount,
-		Fee:            fee,
+		AssetIndex:     assetIndex,
+		FromRouteType:  fromRouteType,
+		ToRouteType:    toRouteType,
+		Amount:         amount,
+		USDCFee:        usdcFee,
 		Memo:           memo,
 	}
 	ops := getTransactOpts(cNonce)
@@ -464,7 +476,7 @@ func SignTransfer(cToAccountIndex C.longlong, cUSDCAmount C.longlong, cFee C.lon
 }
 
 //export SignCreatePublicPool
-func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -478,7 +490,7 @@ func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlon
 
 	operatorFee := int64(cOperatorFee)
 	initialTotalShares := int64(cInitialTotalShares)
-	minOperatorShareRate := int64(cMinOperatorShareRate)
+	minOperatorShareRate := uint16(cMinOperatorShareRate)
 
 	tx := &types.CreatePublicPoolTxReq{
 		OperatorFee:          operatorFee,
@@ -492,7 +504,7 @@ func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.longlon
 }
 
 //export SignUpdatePublicPool
-func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -504,13 +516,13 @@ func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorF
 		return signedTxResponseErr(err)
 	}
 
-	publicPoolIndex := uint8(cPublicPoolIndex)
+	publicPoolIndex := int64(cPublicPoolIndex)
 	status := uint8(cStatus)
 	operatorFee := int64(cOperatorFee)
-	minOperatorShareRate := int64(cMinOperatorShareRate)
+	minOperatorShareRate := uint16(cMinOperatorShareRate)
 
 	tx := &types.UpdatePublicPoolTxReq{
-		PublicPoolIndex:      int64(publicPoolIndex),
+		PublicPoolIndex:      publicPoolIndex,
 		Status:               status,
 		OperatorFee:          operatorFee,
 		MinOperatorShareRate: minOperatorShareRate,
@@ -586,7 +598,7 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMargi
 		return signedTxResponseErr(err)
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := int16(cMarketIndex)
 	initialMarginFraction := uint16(cInitialMarginFraction)
 	marginMode := uint8(cMarginMode)
 
@@ -640,7 +652,7 @@ func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.i
 		return signedTxResponseErr(err)
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := int16(cMarketIndex)
 	usdcAmount := int64(cUSDCAmount)
 	direction := uint8(cDirection)
 

@@ -3,6 +3,9 @@ package txtypes
 import "fmt"
 
 var (
+	ErrAssetIndexTooLow                = fmt.Errorf("AssetIndex should not be less than %d", MinAssetIndex)
+	ErrAssetIndexTooHigh               = fmt.Errorf("AssetIndex should not be larger than %d", MaxAssetIndex)
+	ErrRouteTypeInvalid                = fmt.Errorf("RouteType is invalid")
 	ErrAccountIndexTooLow              = fmt.Errorf("AccountIndex should not be less than %d", MinAccountIndex)
 	ErrAccountIndexTooHigh             = fmt.Errorf("AccountIndex should not be larger than %d", MaxAccountIndex)
 	ErrNonceTooLow                     = fmt.Errorf("AccountNonce should not be less than %d", MinNonce)
@@ -39,8 +42,9 @@ var (
 	ErrTransferFeeNegative             = fmt.Errorf("TransferFee should not be negative")
 	ErrTransferFeeTooHigh              = fmt.Errorf("TransferFee should not be larger than %d", MaxTransferAmount)
 	ErrMarketIndexTooLow               = fmt.Errorf("MarketIndex should not be less than %d", MinMarketIndex)
-	ErrMarketIndexTooHigh              = fmt.Errorf("MarketIndex should not be larger than %d", MaxMarketIndex)
+	ErrMarketIndexTooHigh              = fmt.Errorf("MarketIndex should not be larger than %d", MaxSpotMarketIndex)
 	ErrMarketIndexMismatch             = fmt.Errorf("MarketIndex should match the market index of the order")
+	ErrInvalidMarketIndex              = fmt.Errorf("MarketIndex is not valid")
 	ErrInitialMarginFractionTooLow     = fmt.Errorf("InitialMarginFraction should not be less than %d", 0)
 	ErrInitialMarginFractionTooHigh    = fmt.Errorf("InitialMarginFraction should not be larger than %d", MarginFractionTick)
 	ErrClientOrderIndexTooLow          = fmt.Errorf("ClientOrderIndex should not be less than %d", MinClientOrderIndex)
