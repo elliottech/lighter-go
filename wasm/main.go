@@ -93,6 +93,22 @@ func safeInt16(v js.Value, index int) (int16, error) {
 	return int16(v.Int()), nil
 }
 
+// safeUint64 safely extracts a uint64 from a js.Value, handling undefined values
+func safeUint64(v js.Value, index int) (uint64, error) {
+	if v.Type() == js.TypeUndefined {
+		return 0, fmt.Errorf("argument %d is undefined", index)
+	}
+	return uint64(v.Int()), nil
+}
+
+// safeUint16 safely extracts a uint16 from a js.Value, handling undefined values
+func safeUint16(v js.Value, index int) (uint16, error) {
+	if v.Type() == js.TypeUndefined {
+		return 0, fmt.Errorf("argument %d is undefined", index)
+	}
+	return uint16(v.Int()), nil
+}
+
 func getClient(args []js.Value) (*client.TxClient, error) {
 	l := len(args)
 	if l < 2 {
@@ -500,7 +516,7 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			amount, err := safeInt(args[2], 2)
+			amount, err := safeUint64(args[2], 2)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -512,7 +528,7 @@ func main() {
 			txInfo := &types.WithdrawTxReq{
 				AssetIndex: assetIndex,
 				RouteType:  routeType,
-				Amount:     uint64(amount),
+				Amount:     amount,
 			}
 			ops := new(types.TransactOpts)
 			if nonce != -1 {
@@ -628,7 +644,10 @@ func main() {
 
 			operatorFee := int64(args[0].Int())
 			initialTotalShares := int64(args[1].Int())
-			minOperatorShareRate := int64(args[2].Int())
+			minOperatorShareRate, err := safeUint16(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
 			nonce := int64(args[3].Int())
 
 			txInfo := &types.CreatePublicPoolTxReq{
@@ -656,14 +675,20 @@ func main() {
 				return wrapErr(err)
 			}
 
-			publicPoolIndex := uint8(args[0].Int())
+			publicPoolIndex, err := safeInt(args[0], 0)
+			if err != nil {
+				return wrapErr(err)
+			}
 			status := uint8(args[1].Int())
 			operatorFee := int64(args[2].Int())
-			minOperatorShareRate := int64(args[3].Int())
+			minOperatorShareRate, err := safeUint16(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
 			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdatePublicPoolTxReq{
-				PublicPoolIndex:      int64(publicPoolIndex),
+				PublicPoolIndex:      publicPoolIndex,
 				Status:               status,
 				OperatorFee:          operatorFee,
 				MinOperatorShareRate: minOperatorShareRate,
