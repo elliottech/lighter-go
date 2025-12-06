@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -50,7 +51,10 @@ typedef struct {
 */
 import "C"
 
-var chainId uint32
+var (
+	mu      sync.Mutex
+	chainId uint32
+)
 
 func wrapErr(err any) *C.char {
 	if err == nil {
@@ -120,6 +124,8 @@ func getTransactOpts(cNonce C.longlong) *types.TransactOpts {
 
 //export GenerateAPIKey
 func GenerateAPIKey(cSeed *C.char) (ret C.ApiKeyResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = C.ApiKeyResponse{err: wrapErr(fmt.Errorf("panic: %v", r))}
@@ -140,6 +146,8 @@ func GenerateAPIKey(cSeed *C.char) (ret C.ApiKeyResponse) {
 
 //export CreateClient
 func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = wrapErr(fmt.Errorf("panic: %v", r))
@@ -160,6 +168,8 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 
 //export CheckClient
 func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = wrapErr(fmt.Errorf("panic: %v", r))
@@ -176,6 +186,8 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 
 //export SignChangePubKey
 func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -209,6 +221,8 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cA
 
 //export SignCreateOrder
 func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -255,6 +269,8 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 
 //export SignCreateGroupedOrders
 func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -304,6 +320,8 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 
 //export SignCancelOrder
 func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -330,6 +348,8 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 
 //export SignWithdraw
 func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -358,6 +378,8 @@ func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cNon
 
 //export SignCreateSubAccount
 func SignCreateSubAccount(cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -377,6 +399,8 @@ func SignCreateSubAccount(cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C
 
 //export SignCancelAllOrders
 func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -403,6 +427,8 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong
 
 //export SignModifyOrder
 func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -435,6 +461,8 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 
 //export SignTransfer
 func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteType, cToRouteType C.uint8_t, cAmount, cUsdcFee C.longlong, cMemo *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -497,6 +525,8 @@ func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteT
 
 //export SignCreatePublicPool
 func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -525,6 +555,8 @@ func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cM
 
 //export SignUpdatePublicPool
 func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -555,6 +587,8 @@ func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorF
 
 //export SignMintShares
 func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -581,6 +615,8 @@ func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 
 //export SignBurnShares
 func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -607,6 +643,8 @@ func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 
 //export SignUpdateLeverage
 func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -635,6 +673,8 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMargi
 
 //export CreateAuthToken
 func CreateAuthToken(cDeadline C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.StrOrErr) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = C.StrOrErr{err: wrapErr(fmt.Errorf("panic: %v", r))}
@@ -661,6 +701,8 @@ func CreateAuthToken(cDeadline C.longlong, cApiKeyIndex C.int, cAccountIndex C.l
 
 //export SignUpdateMargin
 func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	mu.Lock()
+	defer mu.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
