@@ -11,7 +11,7 @@ type L2UpdateLeverageTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex           uint8
+	MarketIndex           uint16
 	InitialMarginFraction uint16
 	MarginMode            uint8
 

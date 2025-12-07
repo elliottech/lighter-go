@@ -11,7 +11,7 @@ type L2CancelOrderTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex uint8
+	MarketIndex uint16
 	Index       int64 // Client Order Index or Order Index of the order to cancel
 
 	ExpiredAt  int64

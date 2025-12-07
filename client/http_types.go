@@ -244,8 +244,8 @@ type Order struct {
 	ClientOrderId    string `json:"client_order_id,omitempty"`
 
 	// Market and account info
-	MarketIndex       uint8 `json:"market_index,omitempty"`
-	OwnerAccountIndex int64 `json:"owner_account_index,omitempty"`
+	MarketIndex       uint16 `json:"market_index,omitempty"`
+	OwnerAccountIndex int64  `json:"owner_account_index,omitempty"`
 
 	// Order details - using human-readable formats from API
 	InitialBaseAmount   string `json:"initial_base_amount,omitempty"`   // e.g. "0.100"

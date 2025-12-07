@@ -98,8 +98,8 @@ const (
 	MaxApiKeyIndex        uint8 = 254             // (1 << 8) - 2
 	MaxMasterAccountIndex int64 = 140737488355327 // (1 << 47) - 1
 
-	MinMarketIndex uint8 = 0
-	MaxMarketIndex uint8 = 254 // (1 << 8) - 2
+	MinMarketIndex uint16 = 0
+	MaxMarketIndex uint16 = 65535 // (1 << 8) - 2 TODO: spot的市场>255
 
 	MaxInvestedPublicPoolCount int64 = 16
 	InitialPoolShareValue      int64 = 1_000                                             // 0.001 USDC

@@ -265,7 +265,7 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 		return
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := uint16(cMarketIndex)
 	clientOrderIndex := int64(cClientOrderIndex)
 	baseAmount := int64(cBaseAmount)
 	price := uint32(cPrice)
@@ -337,7 +337,7 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 		return
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := uint16(cMarketIndex)
 	orderIndex := int64(cOrderIndex)
 	nonce := int64(cNonce)
 
@@ -537,7 +537,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 		return
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := uint16(cMarketIndex)
 	index := int64(cIndex)
 	baseAmount := int64(cBaseAmount)
 	price := uint32(cPrice)
@@ -882,7 +882,7 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMargi
 		return
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := uint16(cMarketIndex)
 	initialMarginFraction := uint16(cInitialMarginFraction)
 	nonce := int64(cNonce)
 	marginMode := uint8(cMarginMode)
@@ -992,7 +992,7 @@ func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.i
 		err = fmt.Errorf("Client is not created, call CreateClient() first")
 	}
 
-	marketIndex := uint8(cMarketIndex)
+	marketIndex := uint16(cMarketIndex)
 	usdcAmount := int64(cUSDCAmount)
 	direction := uint8(cDirection)
 	nonce := int64(cNonce)

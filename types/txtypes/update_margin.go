@@ -11,7 +11,7 @@ type L2UpdateMarginTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex uint8
+	MarketIndex uint16
 	USDCAmount  int64
 	Direction   uint8
 

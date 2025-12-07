@@ -38,7 +38,7 @@ type WithdrawTxReq struct {
 }
 
 type CreateOrderTxReq struct {
-	MarketIndex      uint8
+	MarketIndex      uint16
 	ClientOrderIndex int64
 	BaseAmount       int64
 	Price            uint32
@@ -56,7 +56,7 @@ type CreateGroupedOrdersTxReq struct {
 }
 
 type ModifyOrderTxReq struct {
-	MarketIndex  uint8
+	MarketIndex  uint16
 	Index        int64
 	BaseAmount   int64
 	Price        uint32
@@ -64,7 +64,7 @@ type ModifyOrderTxReq struct {
 }
 
 type CancelOrderTxReq struct {
-	MarketIndex uint8
+	MarketIndex uint16
 	Index       int64
 }
 
@@ -97,13 +97,13 @@ type BurnSharesTxReq struct {
 }
 
 type UpdateLeverageTxReq struct {
-	MarketIndex           uint8
+	MarketIndex           uint16
 	InitialMarginFraction uint16
 	MarginMode            uint8
 }
 
 type UpdateMarginTxReq struct {
-	MarketIndex uint8
+	MarketIndex uint16
 	USDCAmount  int64
 	Direction   uint8
 }
