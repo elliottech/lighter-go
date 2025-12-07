@@ -28,7 +28,7 @@ type WSClient struct {
 	subscriptions map[string]bool
 
 	// Order book state management - like Python version
-	orderBookStates map[uint8]*WSOrderBookState
+	orderBookStates map[uint16]*WSOrderBookState
 
 	// Connection state callbacks - like Python version
 	onConnected    func()
@@ -47,7 +47,7 @@ func NewWSClient(config *WSConfig) *WSClient {
 		config:          config,
 		handlers:        make(map[string][]WSHandler),
 		subscriptions:   make(map[string]bool),
-		orderBookStates: make(map[uint8]*WSOrderBookState),
+		orderBookStates: make(map[uint16]*WSOrderBookState),
 		stopCh:          make(chan struct{}),
 	}
 }
@@ -446,7 +446,7 @@ func (ws *WSClient) handleAccountMessage(data []byte) {
 }
 
 // GetOrderBookState returns current order book state for a market (like Python version)
-func (ws *WSClient) GetOrderBookState(marketId uint8) *WSOrderBookState {
+func (ws *WSClient) GetOrderBookState(marketId uint16) *WSOrderBookState {
 	ws.mu.RLock()
 	defer ws.mu.RUnlock()
 	return ws.orderBookStates[marketId]

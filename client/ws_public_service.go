@@ -104,7 +104,7 @@ func (s *LighterWebsocketPublicService) SubscribeOrderBook(
 	subCtx, subCancel := context.WithCancel(s.ctx)
 
 	// Custom handler that converts internal updates to new format
-	handler := func(marketId uint8, bids, asks []PriceLevel, timestamp int64, isSnapshot bool) error {
+	handler := func(marketId uint16, bids, asks []PriceLevel, timestamp int64, isSnapshot bool) error {
 		response := LighterOrderBookResponse{
 			MarketId:   marketId,
 			Bids:       bids,
@@ -183,8 +183,8 @@ func (s *LighterWebsocketPublicService) SubscribeAccount(
 // startOrderBookService is the internal method that handles order book subscriptions
 func (s *LighterWebsocketPublicService) startOrderBookService(
 	ctx context.Context,
-	marketId uint8,
-	handler func(uint8, []PriceLevel, []PriceLevel, int64, bool) error,
+	marketId uint16,
+	handler func(uint16, []PriceLevel, []PriceLevel, int64, bool) error,
 ) error {
 	// Subscribe to order book channel
 	channel := fmt.Sprintf("order_book/%d", marketId)
@@ -220,8 +220,8 @@ func (s *LighterWebsocketPublicService) startOrderBookService(
 // handleOrderBookSnapshot processes snapshot messages
 func (s *LighterWebsocketPublicService) handleOrderBookSnapshot(
 	data []byte,
-	marketId uint8,
-	handler func(uint8, []PriceLevel, []PriceLevel, int64, bool) error,
+	marketId uint16,
+	handler func(uint16, []PriceLevel, []PriceLevel, int64, bool) error,
 ) error {
 	// Parse snapshot message (similar to existing handleOrderBookSnapshot)
 	var msg struct {
@@ -244,7 +244,7 @@ func (s *LighterWebsocketPublicService) handleOrderBookSnapshot(
 
 	if parts := strings.Split(msg.Channel, ":"); len(parts) == 2 {
 		if id, err := strconv.ParseUint(parts[1], 10, 8); err == nil {
-			marketId = uint8(id)
+			marketId = uint16(id)
 		}
 	}
 
@@ -272,8 +272,8 @@ func (s *LighterWebsocketPublicService) handleOrderBookSnapshot(
 // handleOrderBookUpdate processes incremental update messages
 func (s *LighterWebsocketPublicService) handleOrderBookUpdate(
 	data []byte,
-	marketId uint8,
-	handler func(uint8, []PriceLevel, []PriceLevel, int64, bool) error,
+	marketId uint16,
+	handler func(uint16, []PriceLevel, []PriceLevel, int64, bool) error,
 ) error {
 	// Parse update message (similar to existing handleOrderBookUpdate)
 	var msg struct {
@@ -296,7 +296,7 @@ func (s *LighterWebsocketPublicService) handleOrderBookUpdate(
 	if marketId == 0 {
 		if parts := strings.Split(msg.Channel, ":"); len(parts) == 2 {
 			if id, err := strconv.ParseUint(parts[1], 10, 8); err == nil {
-				marketId = uint8(id)
+				marketId = uint16(id)
 			}
 		}
 	}

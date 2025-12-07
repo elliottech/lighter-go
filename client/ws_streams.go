@@ -19,9 +19,9 @@ import (
 // Utility methods for data conversion
 
 // ConvertWSOrderBookToKubi converts WebSocket order book data to kubi format
-func ConvertWSOrderBookToKubi(wsData *WSOrderBookUpdate, marketId uint8) (*OrderBookDataResponse, error) {
+func ConvertWSOrderBookToKubi(wsData *WSOrderBookUpdate, marketId uint16) (*OrderBookDataResponse, error) {
 	orderBooks := make([]OrderBookData, 0, 1)
-	
+
 	bids := make([]PriceLevel, 0, len(wsData.Bids))
 	for i, bid := range wsData.Bids {
 		if len(bid) < 2 {
@@ -33,7 +33,7 @@ func ConvertWSOrderBookToKubi(wsData *WSOrderBookUpdate, marketId uint8) (*Order
 			Quantity: bid[1],
 		})
 	}
-	
+
 	asks := make([]PriceLevel, 0, len(wsData.Asks))
 	for i, ask := range wsData.Asks {
 		if len(ask) < 2 {
@@ -45,15 +45,15 @@ func ConvertWSOrderBookToKubi(wsData *WSOrderBookUpdate, marketId uint8) (*Order
 			Quantity: ask[1],
 		})
 	}
-	
+
 	orderBook := OrderBookData{
 		MarketId: marketId, // Use provided market ID directly
 		Bids:     bids,
 		Asks:     asks,
 	}
-	
+
 	orderBooks = append(orderBooks, orderBook)
-	
+
 	return &OrderBookDataResponse{
 		ResultCode: ResultCode{Code: CodeOK},
 		OrderBooks: orderBooks,

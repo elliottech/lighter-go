@@ -211,7 +211,7 @@ func (c *HTTPClient) GetOrderBooks() (*OrderBookResponse, error) {
 	return result, nil
 }
 
-func (c *HTTPClient) GetOrderBookDetails(marketId uint8) (*OrderBookDetailsResponse, error) {
+func (c *HTTPClient) GetOrderBookDetails(marketId uint16) (*OrderBookDetailsResponse, error) {
 	result := &OrderBookDetailsResponse{}
 	params := map[string]any{}
 	if marketId > 0 {
@@ -224,7 +224,7 @@ func (c *HTTPClient) GetOrderBookDetails(marketId uint8) (*OrderBookDetailsRespo
 	return result, nil
 }
 
-func (c *HTTPClient) GetActiveOrders(accountIndex int64, marketId uint8, auth string) (*OrdersResponse, error) {
+func (c *HTTPClient) GetActiveOrders(accountIndex int64, marketId uint16, auth string) (*OrdersResponse, error) {
 	result := &OrdersResponse{}
 	err := c.getAndParseL2HTTPResponse("api/v1/accountActiveOrders", map[string]any{
 		"account_index": accountIndex,
@@ -237,11 +237,11 @@ func (c *HTTPClient) GetActiveOrders(accountIndex int64, marketId uint8, auth st
 	return result, nil
 }
 
-func (c *HTTPClient) GetInactiveOrders(accountIndex int64, marketId uint8, auth string) (*OrdersResponse, error) {
+func (c *HTTPClient) GetInactiveOrders(accountIndex int64, marketId uint16, auth string) (*OrdersResponse, error) {
 	return c.GetInactiveOrdersWithLimit(accountIndex, marketId, auth, 50) // Default limit of 50
 }
 
-func (c *HTTPClient) GetInactiveOrdersWithLimit(accountIndex int64, marketId uint8, auth string, limit int32) (*OrdersResponse, error) {
+func (c *HTTPClient) GetInactiveOrdersWithLimit(accountIndex int64, marketId uint16, auth string, limit int32) (*OrdersResponse, error) {
 	result := &OrdersResponse{}
 	params := map[string]any{
 		"account_index": accountIndex,
@@ -270,7 +270,7 @@ func (c *HTTPClient) GetFundingRates() (*FundingRatesResponse, error) {
 // ============= Phase 1: Core Data Query Methods =============
 
 // GetCandlesticks retrieves candlestick data for a market
-func (c *HTTPClient) GetCandlesticks(marketId uint8, resolution string, startTimestamp, endTimestamp int64, countBack int32, setTimestampToEnd *bool) (*CandlesticksResponse, error) {
+func (c *HTTPClient) GetCandlesticks(marketId uint16, resolution string, startTimestamp, endTimestamp int64, countBack int32, setTimestampToEnd *bool) (*CandlesticksResponse, error) {
 	result := &CandlesticksResponse{}
 	params := map[string]any{
 		"market_id":       marketId,
@@ -290,7 +290,7 @@ func (c *HTTPClient) GetCandlesticks(marketId uint8, resolution string, startTim
 }
 
 // GetFundings retrieves funding history data for a market
-func (c *HTTPClient) GetFundings(marketId uint8, startTimestamp, endTimestamp *int64, limit *int32) (*FundingsResponse, error) {
+func (c *HTTPClient) GetFundings(marketId uint16, startTimestamp, endTimestamp *int64, limit *int32) (*FundingsResponse, error) {
 	result := &FundingsResponse{}
 	params := map[string]any{
 		"market_id": marketId,
@@ -312,7 +312,7 @@ func (c *HTTPClient) GetFundings(marketId uint8, startTimestamp, endTimestamp *i
 }
 
 // GetRecentTrades retrieves recent trades for a market
-func (c *HTTPClient) GetRecentTrades(marketId uint8, limit *int32) (*RecentTradesResponse, error) {
+func (c *HTTPClient) GetRecentTrades(marketId uint16, limit *int32) (*RecentTradesResponse, error) {
 	result := &RecentTradesResponse{}
 	params := map[string]any{
 		"market_id": marketId,
@@ -328,7 +328,7 @@ func (c *HTTPClient) GetRecentTrades(marketId uint8, limit *int32) (*RecentTrade
 }
 
 // GetTrades retrieves trade history for a market or account
-func (c *HTTPClient) GetTrades(marketId *uint8, accountIndex *int64, startTimestamp, endTimestamp *int64, limit *int32, auth *string) (*TradesResponse, error) {
+func (c *HTTPClient) GetTrades(marketId *uint16, accountIndex *int64, startTimestamp, endTimestamp *int64, limit *int32, auth *string) (*TradesResponse, error) {
 	result := &TradesResponse{}
 	params := map[string]any{}
 
@@ -416,7 +416,7 @@ func (c *HTTPClient) GetAccountMetadata(accountIndex int64, auth string) (*Accou
 }
 
 // GetLiquidations retrieves liquidation history for an account
-func (c *HTTPClient) GetLiquidations(accountIndex int64, marketId *uint8, startTimestamp, endTimestamp *int64, limit *int32, auth string) (*LiquidationsResponse, error) {
+func (c *HTTPClient) GetLiquidations(accountIndex int64, marketId *uint16, startTimestamp, endTimestamp *int64, limit *int32, auth string) (*LiquidationsResponse, error) {
 	result := &LiquidationsResponse{}
 	params := map[string]any{
 		"account_index": accountIndex,
@@ -442,7 +442,7 @@ func (c *HTTPClient) GetLiquidations(accountIndex int64, marketId *uint8, startT
 }
 
 // GetPnL retrieves profit/loss history for an account
-func (c *HTTPClient) GetPnL(accountIndex int64, marketId *uint8, startDate, endDate *string, auth string) (*PnLResponse, error) {
+func (c *HTTPClient) GetPnL(accountIndex int64, marketId *uint16, startDate, endDate *string, auth string) (*PnLResponse, error) {
 	result := &PnLResponse{}
 	params := map[string]any{
 		"account_index": accountIndex,
@@ -465,7 +465,7 @@ func (c *HTTPClient) GetPnL(accountIndex int64, marketId *uint8, startDate, endD
 }
 
 // GetPositionFunding retrieves funding fee history for positions
-func (c *HTTPClient) GetPositionFunding(accountIndex int64, marketId *uint8, startTimestamp, endTimestamp *int64, limit *int32, auth string) (*PositionFundingResponse, error) {
+func (c *HTTPClient) GetPositionFunding(accountIndex int64, marketId *uint16, startTimestamp, endTimestamp *int64, limit *int32, auth string) (*PositionFundingResponse, error) {
 	result := &PositionFundingResponse{}
 	params := map[string]any{
 		"account_index": accountIndex,
