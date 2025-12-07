@@ -60,7 +60,7 @@ type AccountInfo struct {
 }
 
 type AccountMarketStats struct {
-	MarketId       uint8  `json:"market_id,omitempty"`
+	MarketId       uint16 `json:"market_id,omitempty"`
 	OpenOrderCount int64  `json:"open_order_count,omitempty"`
 	Sign           int8   `json:"sign,omitempty"`
 	Position       string `json:"position,omitempty"`
@@ -97,7 +97,7 @@ type AccountByL1AddressResponse struct {
 }
 
 type Position struct {
-	MarketId               uint8  `json:"market_id"`
+	MarketId               uint16 `json:"market_id"`
 	Symbol                 string `json:"symbol"`
 	InitialMarginFraction  string `json:"initial_margin_fraction"`
 	OpenOrderCount         int    `json:"open_order_count"`
@@ -156,7 +156,7 @@ type OrderBookResponse struct {
 
 type OrderBook struct {
 	Symbol                 string `json:"symbol"`
-	MarketId               uint8  `json:"market_id"`
+	MarketId               uint16 `json:"market_id"`
 	Status                 string `json:"status"`
 	TakerFee               string `json:"taker_fee"`
 	MakerFee               string `json:"maker_fee"`
@@ -169,7 +169,7 @@ type OrderBook struct {
 }
 
 type OrderBookData struct {
-	MarketId uint8        `json:"market_id"`
+	MarketId uint16       `json:"market_id"`
 	Bids     []PriceLevel `json:"bids"`
 	Asks     []PriceLevel `json:"asks"`
 }
@@ -181,7 +181,7 @@ type OrderBookDataResponse struct {
 
 type OrderBookDetail struct {
 	Symbol                       string                 `json:"symbol"`
-	MarketId                     uint8                  `json:"market_id"`
+	MarketId                     uint16                 `json:"market_id"`
 	Status                       string                 `json:"status"`
 	TakerFee                     string                 `json:"taker_fee"`
 	MakerFee                     string                 `json:"maker_fee"`
@@ -289,7 +289,7 @@ type Order struct {
 
 // Candlestick represents a single candlestick data point
 type Candlestick struct {
-	MarketId            uint8  `json:"market_id"`
+	MarketId            uint16 `json:"market_id"`
 	Symbol              string `json:"symbol"`
 	Resolution          string `json:"resolution"`             // "1", "5", "15", "60", "240", "1D"
 	Timestamp           int64  `json:"timestamp"`              // Unix timestamp
@@ -312,7 +312,7 @@ type CandlesticksResponse struct {
 
 // FundingHistory represents historical funding data
 type FundingHistory struct {
-	MarketId        uint8  `json:"market_id"`
+	MarketId        uint16 `json:"market_id"`
 	Symbol          string `json:"symbol"`
 	Timestamp       int64  `json:"timestamp"`         // Unix timestamp
 	FundingRate     string `json:"funding_rate"`      // Funding rate
@@ -332,7 +332,7 @@ type FundingsResponse struct {
 type Trade struct {
 	TradeId       int64  `json:"trade_id"`
 	TxHash        string `json:"tx_hash"`
-	MarketId      uint8  `json:"market_id"`
+	MarketId      uint16 `json:"market_id"`
 	Symbol        string `json:"symbol"`
 	Price         string `json:"price"`
 	Size          string `json:"size"`
@@ -453,7 +453,7 @@ type AccountMetadataResponse struct {
 type Liquidation struct {
 	LiquidationId    int64  `json:"liquidation_id"`
 	AccountIndex     int64  `json:"account_index"`
-	MarketId         uint8  `json:"market_id"`
+	MarketId         uint16 `json:"market_id"`
 	Symbol           string `json:"symbol"`
 	LiquidatedSize   string `json:"liquidated_size"`   // Size liquidated
 	LiquidationPrice string `json:"liquidation_price"` // Price at liquidation
@@ -476,7 +476,7 @@ type LiquidationsResponse struct {
 // PnLEntry represents a single profit/loss record
 type PnLEntry struct {
 	AccountIndex   int64  `json:"account_index"`
-	MarketId       uint8  `json:"market_id"`
+	MarketId       uint16 `json:"market_id"`
 	Symbol         string `json:"symbol"`
 	Date           string `json:"date"`            // YYYY-MM-DD format
 	RealizedPnL    string `json:"realized_pnl"`    // Daily realized PnL
@@ -499,7 +499,7 @@ type PnLResponse struct {
 // PositionFunding represents funding fee for a position
 type PositionFunding struct {
 	AccountIndex     int64  `json:"account_index"`
-	MarketId         uint8  `json:"market_id"`
+	MarketId         uint16 `json:"market_id"`
 	Symbol           string `json:"symbol"`
 	PositionSize     string `json:"position_size"`     // Size of position when funding was applied
 	FundingRate      string `json:"funding_rate"`      // Funding rate applied
@@ -584,7 +584,7 @@ type Transaction struct {
 	TxType       int32                  `json:"tx_type"`      // Transaction type ID
 	TxTypeName   string                 `json:"tx_type_name"` // Human readable type
 	AccountIndex int64                  `json:"account_index"`
-	MarketId     uint8                  `json:"market_id,omitempty"`
+	MarketId     uint16                 `json:"market_id,omitempty"`
 	Nonce        int64                  `json:"nonce"`
 	Status       string                 `json:"status"` // "pending", "confirmed", "failed"
 	BlockHeight  int64                  `json:"block_height,omitempty"`

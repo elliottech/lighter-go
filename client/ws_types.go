@@ -56,7 +56,7 @@ type WSAccountUpdate struct {
 }
 
 type WSPosition struct {
-	MarketId               uint8  `json:"market_id"`
+	MarketId               uint16 `json:"market_id"`
 	Symbol                 string `json:"symbol"`
 	InitialMarginFraction  string `json:"initial_margin_fraction"`
 	OpenOrderCount         int    `json:"open_order_count"`
@@ -110,7 +110,7 @@ type WSOrderUpdate struct {
 	AccountIndex     int64  `json:"account_index"`
 	OrderId          string `json:"order_id"`
 	ClientOrderIndex int64  `json:"client_order_index"`
-	MarketId         uint8  `json:"market_id"`
+	MarketId         uint16 `json:"market_id"`
 	Status           string `json:"status"`
 	BaseQuantity     string `json:"base_quantity"`
 	FilledQuantity   string `json:"filled_quantity"`
@@ -163,7 +163,7 @@ type WSPriceLevel struct {
 
 // WebSocket order book state for incremental updates
 type WSOrderBookState struct {
-	MarketId  uint8             `json:"market_id"`
+	MarketId  uint16            `json:"market_id"`
 	Bids      map[string]string `json:"bids"`
 	Asks      map[string]string `json:"asks"`
 	Timestamp int64             `json:"timestamp"`
@@ -228,13 +228,13 @@ type LighterWebsocketPrivateServiceI interface {
 
 // Parameter types
 type LighterOrderBookParamKey struct {
-	MarketId uint8
+	MarketId uint16
 }
 
 // LighterTickerParamKey removed - not supported by Lighter
 
 type LighterTradesParamKey struct {
-	MarketId uint8
+	MarketId uint16
 }
 
 type LighterAccountParamKey struct {
@@ -247,7 +247,7 @@ type LighterOrdersParamKey struct {
 
 // Response types
 type LighterOrderBookResponse struct {
-	MarketId   uint8        `json:"market_id"`
+	MarketId   uint16       `json:"market_id"`
 	Bids       []PriceLevel `json:"bids"`
 	Asks       []PriceLevel `json:"asks"`
 	Timestamp  int64        `json:"timestamp"`
@@ -257,7 +257,7 @@ type LighterOrderBookResponse struct {
 // LighterTickerResponse removed - not supported by Lighter
 
 type LighterTradesResponse struct {
-	MarketId  uint8  `json:"market_id"`
+	MarketId  uint16 `json:"market_id"`
 	Symbol    string `json:"symbol"`
 	Price     string `json:"price"`
 	Quantity  string `json:"quantity"`
@@ -278,7 +278,7 @@ type LighterOrdersResponse struct {
 	AccountId        int64  `json:"account_id"`
 	OrderId          string `json:"order_id"`
 	ClientOrderIndex int64  `json:"client_order_index"`
-	MarketId         uint8  `json:"market_id"`
+	MarketId         uint16 `json:"market_id"`
 	Status           string `json:"status"`
 	BaseQuantity     string `json:"base_quantity"`
 	FilledQuantity   string `json:"filled_quantity"`
