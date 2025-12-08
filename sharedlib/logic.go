@@ -61,7 +61,7 @@ func createClient(url, privateKey string, chainID uint32, apiKeyIndex uint8, acc
 	return nil
 }
 
-func signCreateOrder(marketIndex uint8, clientOrderIndex, baseAmount int64, price uint32, isAsk, orderType, timeInForce, reduceOnly uint8, triggerPrice uint32, orderExpiry int64, nonce int64) (string, error) {
+func signCreateOrder(marketIndex int16, clientOrderIndex, baseAmount int64, price uint32, isAsk, orderType, timeInForce, reduceOnly uint8, triggerPrice uint32, orderExpiry int64, nonce int64) (string, error) {
 	if err := ensureClient(); err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func signCreateOrder(marketIndex uint8, clientOrderIndex, baseAmount int64, pric
 	return string(txInfoBytes), nil
 }
 
-func signCancelOrder(marketIndex uint8, orderIndex int64, nonce int64) (string, error) {
+func signCancelOrder(marketIndex int16, orderIndex int64, nonce int64) (string, error) {
 	if err := ensureClient(); err != nil {
 		return "", err
 	}
@@ -119,7 +119,7 @@ func signCancelOrder(marketIndex uint8, orderIndex int64, nonce int64) (string, 
 	return string(txInfoBytes), nil
 }
 
-func signModifyOrder(marketIndex uint8, index, baseAmount int64, price, triggerPrice uint32, nonce int64) (string, error) {
+func signModifyOrder(marketIndex int16, index, baseAmount int64, price, triggerPrice uint32, nonce int64) (string, error) {
 	if err := ensureClient(); err != nil {
 		return "", err
 	}
@@ -145,7 +145,7 @@ func signModifyOrder(marketIndex uint8, index, baseAmount int64, price, triggerP
 	return string(txInfoBytes), nil
 }
 
-func signUpdateLeverage(marketIndex uint8, initialMarginFraction uint16, marginMode uint8, nonce int64) (string, error) {
+func signUpdateLeverage(marketIndex int16, initialMarginFraction uint16, marginMode uint8, nonce int64) (string, error) {
 	if err := ensureClient(); err != nil {
 		return "", err
 	}
@@ -186,7 +186,7 @@ func createAuthToken(deadline int64) (string, error) {
 	return token, nil
 }
 
-func signUpdateMargin(marketIndex uint8, usdcAmount int64, direction uint8, nonce int64) (string, error) {
+func signUpdateMargin(marketIndex int16, usdcAmount int64, direction uint8, nonce int64) (string, error) {
 	if err := ensureClient(); err != nil {
 		return "", err
 	}

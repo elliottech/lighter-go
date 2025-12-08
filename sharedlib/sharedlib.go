@@ -36,6 +36,7 @@ func runJS(fn func() (interface{}, error)) interface{} {
 func toUint8(v js.Value) uint8   { return uint8(v.Int()) }
 func toUint16(v js.Value) uint16 { return uint16(v.Int()) }
 func toUint32(v js.Value) uint32 { return uint32(v.Int()) }
+func toInt16(v js.Value) int16   { return int16(v.Int()) }
 func toInt64(v js.Value) int64 {
 	var n int64
 	fmt.Sscan(v.String(), &n)
@@ -110,7 +111,7 @@ func main() {
 			return "", err
 		}
 		return signCreateOrder(
-			toUint8(args[0]),
+			toInt16(args[0]),
 			toInt64(args[1]),
 			toInt64(args[2]),
 			toUint32(args[3]),
@@ -128,7 +129,7 @@ func main() {
 		if err := requireArgs(args, 3); err != nil {
 			return "", err
 		}
-		return signCancelOrder(toUint8(args[0]), toInt64(args[1]), toInt64(args[2]))
+		return signCancelOrder(toInt16(args[0]), toInt64(args[1]), toInt64(args[2]))
 	})
 
 	registerStrFunc("SignModifyOrder", func(args []js.Value) (string, error) {
@@ -136,7 +137,7 @@ func main() {
 			return "", err
 		}
 		return signModifyOrder(
-			toUint8(args[0]),
+			toInt16(args[0]),
 			toInt64(args[1]),
 			toInt64(args[2]),
 			toUint32(args[3]),
@@ -150,7 +151,7 @@ func main() {
 			return "", err
 		}
 		return signUpdateLeverage(
-			toUint8(args[0]),
+			toInt16(args[0]),
 			toUint16(args[1]),
 			toUint8(args[2]),
 			toInt64(args[3]),
@@ -170,7 +171,7 @@ func main() {
 			return "", err
 		}
 		return signUpdateMargin(
-			toUint8(args[0]),
+			toInt16(args[0]),
 			toInt64(args[1]),
 			toUint8(args[2]),
 			toInt64(args[3]),
