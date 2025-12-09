@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"syscall/js"
@@ -28,7 +29,7 @@ func messageToSign(info txtypes.TxInfo) string {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return tx.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
-		return tx.GetL1SignatureBody()
+		return tx.GetL1SignatureBody(304) // Lighter mainnet Chain ID, TODO: make it configurable
 	default:
 		return ""
 	}
@@ -66,12 +67,28 @@ func safeInt(v js.Value, index int) (int64, error) {
 	return int64(v.Int()), nil
 }
 
+// safeInt16 safely extracts an int16 from a js.Value, handling undefined values
+func safeInt16(v js.Value, index int) (int16, error) {
+	if v.Type() == js.TypeUndefined {
+		return 0, fmt.Errorf("argument %d is undefined", index)
+	}
+	return int16(v.Int()), nil
+}
+
 // safeUint8 safely extracts a uint8 from a js.Value, handling undefined values
 func safeUint8(v js.Value, index int) (uint8, error) {
 	if v.Type() == js.TypeUndefined {
 		return 0, fmt.Errorf("argument %d is undefined", index)
 	}
 	return uint8(v.Int()), nil
+}
+
+// safeUint16 safely extracts a uint16 from a js.Value, handling undefined values
+func safeUint16(v js.Value, index int) (uint16, error) {
+	if v.Type() == js.TypeUndefined {
+		return 0, fmt.Errorf("argument %d is undefined", index)
+	}
+	return uint16(v.Int()), nil
 }
 
 // safeUint32 safely extracts a uint32 from a js.Value, handling undefined values
@@ -238,7 +255,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeUint8(args[0], 0)
+			marketIndex, err := safeInt16(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -319,7 +336,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex := uint8(args[0].Int())
+			marketIndex := int16(args[0].Int())
 			orderIndex := int64(args[1].Int())
 			nonce := int64(args[2].Int())
 
@@ -367,8 +384,8 @@ func main() {
 
 	js.Global().Set("SignTransfer", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 7 {
-				return js.ValueOf(map[string]interface{}{"error": "SignTransfer expects 7 args: toAccount, usdcAmount, fee, memo, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 9 {
+				return js.ValueOf(map[string]interface{}{"error": "SignTransfer expects 9 args: toAccount, usdcAmount, fee, memo, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -376,13 +393,17 @@ func main() {
 			}
 
 			toAccount := int64(args[0].Int())
-			usdcAmount := int64(args[1].Int())
-			fee := int64(args[2].Int())
-			memoStr := args[3].String()
-			nonce := int64(args[4].Int())
+			assetIndex := int16(args[1].Int())
+			fromRouteType := uint8(args[2].Int())
+			toRouteType := uint8(args[3].Int())
+			amount := int64(args[4].Int())
+			usdcFee := int64(args[5].Int())
+			memoStr := args[6].String()
+			nonce := int64(args[7].Int())
 
 			var memoArr [32]byte
-			bs := []byte(memoStr)
+			// bs := []byte(memoStr)
+			bs, err := hex.DecodeString(memoStr)
 			if len(bs) != 32 {
 				return wrapErr(fmt.Errorf("memo expected to be 32 bytes long"))
 			}
@@ -392,8 +413,11 @@ func main() {
 
 			txInfo := &types.TransferTxReq{
 				ToAccountIndex: toAccount,
-				USDCAmount:     usdcAmount,
-				Fee:            fee,
+				AssetIndex:     assetIndex,
+				FromRouteType:  fromRouteType,
+				ToRouteType:    toRouteType,
+				Amount:         amount,
+				USDCFee:        usdcFee,
 				Memo:           memoArr,
 			}
 			ops := new(types.TransactOpts)
@@ -408,19 +432,23 @@ func main() {
 
 	js.Global().Set("SignWithdraw", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 4 {
-				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 4 args: usdcAmount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 4 args: assetIndex, routeType, amount, nonce"})
 			}
 			c, err := getClient(args)
 			if err != nil {
 				return wrapErr(err)
 			}
 
-			usdcAmount := uint64(args[0].Int())
-			nonce := int64(args[1].Int())
+			assetIndex := int16(args[0].Int())
+			routeType := uint8(args[1].Int())
+			amount := uint64(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.WithdrawTxReq{
-				USDCAmount: usdcAmount,
+				AssetIndex: assetIndex,
+				RouteType:  routeType,
+				Amount:     amount,
 			}
 			ops := new(types.TransactOpts)
 			if nonce != -1 {
@@ -442,7 +470,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex := uint8(args[0].Int())
+			marketIndex := int16(args[0].Int())
 			fraction := uint16(args[1].Int())
 			marginMode := uint8(args[2].Int())
 			nonce := int64(args[3].Int())
@@ -472,7 +500,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex := uint8(args[0].Int())
+			marketIndex := int16(args[0].Int())
 			index := int64(args[1].Int())
 			baseAmount := int64(args[2].Int())
 			price := uint32(args[3].Int())
@@ -530,7 +558,7 @@ func main() {
 
 			operatorFee := int64(args[0].Int())
 			initialTotalShares := int64(args[1].Int())
-			minOperatorShareRate := int64(args[2].Int())
+			minOperatorShareRate := uint16(args[2].Int())
 			nonce := int64(args[3].Int())
 
 			txInfo := &types.CreatePublicPoolTxReq{
@@ -561,7 +589,7 @@ func main() {
 			publicPoolIndex := uint8(args[0].Int())
 			status := uint8(args[1].Int())
 			operatorFee := int64(args[2].Int())
-			minOperatorShareRate := int64(args[3].Int())
+			minOperatorShareRate := uint16(args[3].Int())
 			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdatePublicPoolTxReq{
@@ -646,7 +674,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex := uint8(args[0].Int())
+			marketIndex := int16(args[0].Int())
 			usdcAmount := int64(args[1].Int())
 			direction := uint8(args[2].Int())
 			nonce := int64(args[3].Int())
@@ -698,7 +726,7 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:      uint8(orderObj.Get("MarketIndex").Int()),
+					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
 					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
 					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
 					Price:            uint32(orderObj.Get("Price").Int()),
