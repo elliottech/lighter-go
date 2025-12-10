@@ -1,7 +1,9 @@
 package client
 
 const (
-	CodeOK = 200
+	CodeOK         = 200
+	MarketTypeSpot = "spot"
+	MarketTypePerp = "perp"
 )
 
 type ResultCode struct {
@@ -155,17 +157,20 @@ type OrderBookResponse struct {
 }
 
 type OrderBook struct {
-	Symbol                 string `json:"symbol"`
-	MarketId               uint16 `json:"market_id"`
-	Status                 string `json:"status"`
-	TakerFee               string `json:"taker_fee"`
-	MakerFee               string `json:"maker_fee"`
-	LiquidationFee         string `json:"liquidation_fee"`
-	MinBaseAmount          string `json:"min_base_amount"`
-	MinQuoteAmount         string `json:"min_quote_amount"`
-	SupportedSizeDecimals  uint8  `json:"supported_size_decimals"`
-	SupportedPriceDecimals uint8  `json:"supported_price_decimals"`
-	SupportedQuoteDecimals uint8  `json:"supported_quote_decimals"`
+	Symbol          string `json:"symbol"`
+	MarketId        uint16 `json:"market_id"`
+	MarketType      string `json:"market_type"`
+	Status          string `json:"status"`
+	TakerFee        string `json:"taker_fee"`
+	MakerFee        string `json:"maker_fee"`
+	LiquidationFee  string `json:"liquidation_fee"`
+	MinBaseAmount   string `json:"min_base_amount"`
+	MinQuoteAmount  string `json:"min_quote_amount"`
+	OrderQuoteLimit string `json:"order_quote_limit"`
+
+	SupportedSizeDecimals  uint8 `json:"supported_size_decimals"`
+	SupportedPriceDecimals uint8 `json:"supported_price_decimals"`
+	SupportedQuoteDecimals uint8 `json:"supported_quote_decimals"`
 }
 
 type OrderBookData struct {
@@ -182,6 +187,7 @@ type OrderBookDataResponse struct {
 type OrderBookDetail struct {
 	Symbol                       string                 `json:"symbol"`
 	MarketId                     uint16                 `json:"market_id"`
+	MarketType                   string                 `json:"market_type"`
 	Status                       string                 `json:"status"`
 	TakerFee                     string                 `json:"taker_fee"`
 	MakerFee                     string                 `json:"maker_fee"`
