@@ -49,10 +49,18 @@ type WSAccountUpdate struct {
 	TotalVolume        float64                `json:"total_volume"`
 	WeeklyTradesCount  int                    `json:"weekly_trades_count"`
 	WeeklyVolume       float64                `json:"weekly_volume"`
+	Assets             map[string]*WSAsset    `json:"assets"`
 	Positions          map[string]*WSPosition `json:"positions"`
 	Shares             []WSShare              `json:"shares"`
 	Trades             map[string][]WSTrade   `json:"trades"`
 	FundingHistories   map[string]interface{} `json:"funding_histories"`
+}
+
+type WSAsset struct {
+	Symbol        string `json:"symbol"`
+	AssetId       uint64 `json:"asset_id"`
+	Balance       string `json:"balance"`
+	LockedBalance string `json:"locked_balance"`
 }
 
 type WSPosition struct {
