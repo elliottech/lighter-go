@@ -116,6 +116,13 @@ type Position struct {
 	AllocatedMargin        string `json:"allocated_margin"`
 }
 
+type Asset struct {
+	Symbol        string `json:"symbol"`
+	AssetId       uint16 `json:"asset_id"`
+	Balance       string `json:"balance"`
+	LockedBalance string `json:"locked_balance"`
+}
+
 type Share struct {
 	PublicPoolIndex int64  `json:"public_pool_index"`
 	SharesAmount    int    `json:"shares_amount"`
@@ -140,6 +147,7 @@ type Account struct {
 	CanInvite                bool       `json:"can_invite"`
 	ReferralPointsPercentage string     `json:"referral_points_percentage"`
 	Positions                []Position `json:"positions"`
+	Assets                   []Asset    `json:"assets"`
 	TotalAssetValue          string     `json:"total_asset_value"`
 	CrossAssetValue          string     `json:"cross_asset_value"`
 	Shares                   []Share    `json:"shares"`
