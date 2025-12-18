@@ -327,9 +327,8 @@ func main() {
 				TriggerPrice:     triggerPrice,
 				OrderExpiry:      orderExpiry,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetCreateOrderTransaction(txInfo, ops)
@@ -358,9 +357,8 @@ func main() {
 				MarketIndex: marketIndex,
 				Index:       orderIndex,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetCancelOrderTransaction(txInfo, ops)
@@ -386,9 +384,8 @@ func main() {
 				TimeInForce: timeInForce,
 				Time:        timeVal,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetCancelAllOrdersTransaction(txInfo, ops)
@@ -482,9 +479,8 @@ func main() {
 				USDCFee:        usdcFee,
 				Memo:           memoArr,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetTransferTransaction(txInfo, ops)
@@ -530,9 +526,8 @@ func main() {
 				RouteType:  routeType,
 				Amount:     amount,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetWithdrawTransaction(txInfo, ops)
@@ -563,9 +558,8 @@ func main() {
 				InitialMarginFraction: fraction,
 				MarginMode:            marginMode,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetUpdateLeverageTransaction(txInfo, ops)
@@ -600,9 +594,8 @@ func main() {
 				Price:        price,
 				TriggerPrice: triggerPrice,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetModifyOrderTransaction(txInfo, ops)
@@ -622,9 +615,8 @@ func main() {
 
 			nonce := int64(args[0].Int())
 
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetCreateSubAccountTransaction(ops)
@@ -655,9 +647,8 @@ func main() {
 				InitialTotalShares:   initialTotalShares,
 				MinOperatorShareRate: minOperatorShareRate,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetCreatePublicPoolTransaction(txInfo, ops)
@@ -693,9 +684,8 @@ func main() {
 				OperatorFee:          operatorFee,
 				MinOperatorShareRate: minOperatorShareRate,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetUpdatePublicPoolTransaction(txInfo, ops)
@@ -721,9 +711,8 @@ func main() {
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetMintSharesTransaction(txInfo, ops)
@@ -749,9 +738,8 @@ func main() {
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetBurnSharesTransaction(txInfo, ops)
@@ -782,9 +770,8 @@ func main() {
 				USDCAmount:  usdcAmount,
 				Direction:   direction,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			tx, err := c.GetUpdateMarginTransaction(txInfo, ops)
@@ -843,9 +830,8 @@ func main() {
 				GroupingType: groupingType,
 				Orders:       orders,
 			}
-			ops := new(types.TransactOpts)
-			if nonce != -1 {
-				ops.Nonce = &nonce
+			ops := &types.TransactOpts{
+				Nonce: &nonce,
 			}
 
 			txInfo, err := c.GetCreateGroupedOrdersTransaction(req, ops)
