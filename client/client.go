@@ -21,13 +21,8 @@ var (
 )
 
 // GenerateAPIKey generates a new API key pair from a seed
-func GenerateAPIKey(seed string) (string, string, error) {
-	var seedP *string
-	if seed != "" {
-		seedP = &seed
-	}
-
-	key := curve.SampleScalar(seedP)
+func GenerateAPIKey() (string, string, error) {
+	key := curve.SampleScalar(nil)
 	publicKeyStr := hexutil.Encode(schnorr.SchnorrPkFromSk(key).ToLittleEndianBytes())
 	privateKeyStr := hexutil.Encode(key.ToLittleEndianBytes())
 

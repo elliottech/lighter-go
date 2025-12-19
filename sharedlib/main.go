@@ -119,15 +119,14 @@ func getTransactOpts(cNonce C.longlong) *types.TransactOpts {
 }
 
 //export GenerateAPIKey
-func GenerateAPIKey(cSeed *C.char) (ret C.ApiKeyResponse) {
+func GenerateAPIKey() (ret C.ApiKeyResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = C.ApiKeyResponse{err: wrapErr(fmt.Errorf("panic: %v", r))}
 		}
 	}()
 
-	seed := C.GoString(cSeed)
-	privateKeyStr, publicKeyStr, err := client.GenerateAPIKey(seed)
+	privateKeyStr, publicKeyStr, err := client.GenerateAPIKey()
 	if err != nil {
 		return C.ApiKeyResponse{err: wrapErr(err)}
 	}
