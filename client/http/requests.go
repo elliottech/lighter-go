@@ -32,7 +32,7 @@ func (c *client) getAndParseL2HTTPResponse(path string, params map[string]any, r
 		q.Set(k, fmt.Sprintf("%v", v))
 	}
 	u.RawQuery = q.Encode()
-	resp, err := httpClient.Get(u.String())
+	resp, err := c.httpClient.Get(u.String())
 	if err != nil {
 		return err
 	}
