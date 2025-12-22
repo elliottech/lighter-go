@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -50,7 +51,10 @@ typedef struct {
 */
 import "C"
 
-var chainId uint32
+var (
+	chainIdMu sync.Mutex
+	chainId   uint32
+)
 
 func wrapErr(err any) *C.char {
 	if err == nil {
@@ -60,11 +64,15 @@ func wrapErr(err any) *C.char {
 }
 
 func messageToSign(txInfo txtypes.TxInfo) string {
+	chainIdMu.Lock()
+	localChainId := chainId
+	chainIdMu.Unlock()
+
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
-		return typed.GetL1SignatureBody(chainId)
+		return typed.GetL1SignatureBody(localChainId)
 	default:
 		return ""
 	}
@@ -147,13 +155,18 @@ func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyInde
 
 	url := C.GoString(cUrl)
 	privateKey := C.GoString(cPrivateKey)
-	chainId = uint32(cChainId)
+	localChainId := uint32(cChainId)
 	apiKeyIndex := uint8(cApiKeyIndex)
 	accountIndex := int64(cAccountIndex)
 
 	httpClient := http.NewClient(url)
 
-	_, err := client.CreateClient(httpClient, privateKey, chainId, apiKeyIndex, accountIndex)
+	_, err := client.CreateClient(httpClient, privateKey, localChainId, apiKeyIndex, accountIndex)
+
+	chainIdMu.Lock()
+	chainId = localChainId
+	chainIdMu.Unlock()
+
 	return wrapErr(err)
 }
 
