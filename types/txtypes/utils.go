@@ -71,6 +71,10 @@ func calculateL1AddressBySignature(signatureBody, l1Signature string) common.Add
 		return [20]byte{}
 	}
 
+	if len(signatureContent) != L1SignatureLength {
+		return [20]byte{}
+	}
+
 	// Transform yellow paper V from 27/28 to 0/1
 	if signatureContent[64] >= 27 {
 		signatureContent[64] -= 27
