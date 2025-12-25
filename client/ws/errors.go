@@ -10,6 +10,7 @@ var (
 	ErrNotConnected                 = errors.New("websocket not connected")
 	ErrAlreadyConnected             = errors.New("websocket already connected")
 	ErrConnectionClosed             = errors.New("websocket connection closed")
+	ErrConnectionTimeout            = errors.New("connection timeout waiting for server acknowledgment")
 	ErrMaxReconnectAttemptsExceeded = errors.New("max reconnect attempts exceeded")
 	ErrSubscriptionFailed           = errors.New("subscription failed")
 	ErrUnsubscribeFailed            = errors.New("unsubscribe failed")

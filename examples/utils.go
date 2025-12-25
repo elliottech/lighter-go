@@ -16,7 +16,7 @@ const (
 const DefaultAPIURL = "https://mainnet.zklighter.elliot.ai"
 
 // DefaultWSURL is the default mainnet WebSocket URL
-const DefaultWSURL = "wss://mainnet.zklighter.elliot.ai/ws"
+const DefaultWSURL = "wss://mainnet.zklighter.elliot.ai/stream"
 
 // GetPrivateKey returns the private key from environment
 func GetPrivateKey() string {

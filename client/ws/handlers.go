@@ -3,6 +3,8 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // handleMessage routes incoming messages to appropriate handlers
@@ -14,206 +16,208 @@ func (c *wsClient) handleMessage(msg []byte) error {
 
 	switch base.Type {
 	case MessageTypeConnected:
-		return c.handleConnected(base.Data)
-	case MessageTypeSubscribed:
-		return c.handleSubscribed(base.Data)
-	case MessageTypeUnsubscribed:
-		return c.handleUnsubscribed(base.Data)
-	case MessageTypeOrderBookUpdate:
-		return c.handleOrderBookUpdate(base.Data)
-	case MessageTypeAccountUpdate:
-		return c.handleAccountUpdate(base.Data)
-	case MessageTypePong:
-		return c.handlePong()
+		return c.handleConnected()
+	case MessageTypeSubscribedOrderBook:
+		return c.handleSubscribedOrderBook(base.Channel, base.Data)
+	case MessageTypeUpdateOrderBook:
+		return c.handleOrderBookUpdate(base.Channel, base.Data)
+	case MessageTypeSubscribedAccountAll:
+		return c.handleSubscribedAccount(base.Channel)
+	case MessageTypeUpdateAccountAll:
+		return c.handleAccountUpdate(base.Channel, base.Data)
+	case MessageTypePing:
+		return c.sendPong()
 	case MessageTypeError:
 		return c.handleError(base.Data)
 	default:
-		return fmt.Errorf("unknown message type: %s", base.Type)
+		// Ignore unknown message types
+		return nil
 	}
 }
 
-func (c *wsClient) handleConnected(data json.RawMessage) error {
-	var connData ConnectedData
-	if err := json.Unmarshal(data, &connData); err != nil {
-		return fmt.Errorf("failed to parse connected data: %w", err)
-	}
-
-	c.connected.Store(true)
+func (c *wsClient) handleConnected() error {
 	c.reconnectAttempts = 0
 
-	// Call callback if set
-	if c.options.OnConnect != nil {
-		c.options.OnConnect()
+	// Signal that we received the connected message
+	c.readyOnce.Do(func() {
+		close(c.readyCh)
+	})
+
+	return nil
+}
+
+// parseMarketFromChannel extracts market index from channel like "order_book/0"
+func parseMarketFromChannel(channel string) (int16, error) {
+	parts := strings.Split(channel, "/")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid channel format: %s", channel)
+	}
+	idx, err := strconv.ParseInt(parts[1], 10, 16)
+	if err != nil {
+		return 0, fmt.Errorf("invalid market index: %s", parts[1])
+	}
+	return int16(idx), nil
+}
+
+// parseAccountFromChannel extracts account index from channel like "account_all/123"
+func parseAccountFromChannel(channel string) (int64, error) {
+	parts := strings.Split(channel, "/")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid channel format: %s", channel)
+	}
+	idx, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid account index: %s", parts[1])
+	}
+	return idx, nil
+}
+
+func (c *wsClient) handleSubscribedOrderBook(channel string, data json.RawMessage) error {
+	marketIndex, err := parseMarketFromChannel(channel)
+	if err != nil {
+		return err
+	}
+
+	key := orderBookKey(marketIndex)
+	c.subscriptions.ConfirmSubscription(key, nil)
+
+	// The initial snapshot comes with the subscribed message
+	if len(data) > 0 {
+		return c.handleOrderBookData(marketIndex, data, true)
 	}
 
 	return nil
 }
 
-func (c *wsClient) handleSubscribed(data json.RawMessage) error {
-	var subData SubscribedData
-	if err := json.Unmarshal(data, &subData); err != nil {
-		return fmt.Errorf("failed to parse subscribed data: %w", err)
+func (c *wsClient) handleOrderBookUpdate(channel string, data json.RawMessage) error {
+	marketIndex, err := parseMarketFromChannel(channel)
+	if err != nil {
+		return err
 	}
 
-	var key string
-	switch subData.Channel {
-	case "orderbook":
-		key = orderBookKey(subData.Market)
-	case "account":
-		key = accountKey(subData.Account)
-	default:
-		return fmt.Errorf("unknown channel: %s", subData.Channel)
+	return c.handleOrderBookData(marketIndex, data, false)
+}
+
+func (c *wsClient) handleOrderBookData(marketIndex int16, data json.RawMessage, isInitial bool) error {
+	// Parse order book data - format from Python: {"bids": [...], "asks": [...]}
+	var obData struct {
+		Bids [][]string `json:"bids"` // [[price, size], ...]
+		Asks [][]string `json:"asks"`
+	}
+	if err := json.Unmarshal(data, &obData); err != nil {
+		return fmt.Errorf("failed to parse order book data: %w", err)
 	}
 
+	c.orderBookMu.Lock()
+	state, exists := c.orderBooks[marketIndex]
+	if !exists {
+		state = NewOrderBookState(marketIndex)
+		c.orderBooks[marketIndex] = state
+	}
+	c.orderBookMu.Unlock()
+
+	// Convert to our format and update state
+	bids := make([]OrderBookLevel, 0, len(obData.Bids))
+	for _, b := range obData.Bids {
+		if len(b) >= 2 {
+			bids = append(bids, OrderBookLevel{Price: b[0], Size: b[1]})
+		}
+	}
+
+	asks := make([]OrderBookLevel, 0, len(obData.Asks))
+	for _, a := range obData.Asks {
+		if len(a) >= 2 {
+			asks = append(asks, OrderBookLevel{Price: a[0], Size: a[1]})
+		}
+	}
+
+	if isInitial {
+		// Apply as snapshot
+		snapshot := &OrderBookSnapshot{
+			MarketIndex: marketIndex,
+			Bids:        bids,
+			Asks:        asks,
+		}
+		if err := state.ApplySnapshot(snapshot); err != nil {
+			return err
+		}
+
+		update := &OrderBookUpdate{
+			MarketIndex: marketIndex,
+			IsSnapshot:  true,
+			Snapshot:    snapshot,
+			State:       state.Clone(),
+		}
+
+		select {
+		case c.orderBookCh <- update:
+		default:
+		}
+
+		if c.options.OnOrderBookUpdate != nil {
+			c.options.OnOrderBookUpdate(update)
+		}
+	} else {
+		// Apply as delta - merge updates
+		delta := &OrderBookDelta{
+			MarketIndex: marketIndex,
+			BidUpdates:  bids,
+			AskUpdates:  asks,
+		}
+
+		state.MergeUpdates(bids, asks)
+
+		update := &OrderBookUpdate{
+			MarketIndex: marketIndex,
+			IsSnapshot:  false,
+			Delta:       delta,
+			State:       state.Clone(),
+		}
+
+		select {
+		case c.orderBookCh <- update:
+		default:
+		}
+
+		if c.options.OnOrderBookUpdate != nil {
+			c.options.OnOrderBookUpdate(update)
+		}
+	}
+
+	return nil
+}
+
+func (c *wsClient) handleSubscribedAccount(channel string) error {
+	accountIndex, err := parseAccountFromChannel(channel)
+	if err != nil {
+		return err
+	}
+
+	key := accountKey(accountIndex)
 	c.subscriptions.ConfirmSubscription(key, nil)
 	return nil
 }
 
-func (c *wsClient) handleUnsubscribed(data json.RawMessage) error {
-	var subData SubscribedData
-	if err := json.Unmarshal(data, &subData); err != nil {
-		return fmt.Errorf("failed to parse unsubscribed data: %w", err)
-	}
-
-	var key string
-	switch subData.Channel {
-	case "orderbook":
-		key = orderBookKey(subData.Market)
-		c.orderBookMu.Lock()
-		delete(c.orderBooks, subData.Market)
-		c.orderBookMu.Unlock()
-	case "account":
-		key = accountKey(subData.Account)
-	}
-
-	c.subscriptions.Remove(key)
-	return nil
-}
-
-func (c *wsClient) handleOrderBookUpdate(data json.RawMessage) error {
-	// Try parsing as snapshot first
-	var snapshot OrderBookSnapshot
-	if err := json.Unmarshal(data, &snapshot); err == nil && len(snapshot.Bids) > 0 || len(snapshot.Asks) > 0 {
-		return c.handleOrderBookSnapshot(&snapshot)
-	}
-
-	// Try parsing as delta
-	var delta OrderBookDelta
-	if err := json.Unmarshal(data, &delta); err != nil {
-		return fmt.Errorf("failed to parse order book update: %w", err)
-	}
-
-	return c.handleOrderBookDelta(&delta)
-}
-
-func (c *wsClient) handleOrderBookSnapshot(snapshot *OrderBookSnapshot) error {
-	c.orderBookMu.Lock()
-
-	state, exists := c.orderBooks[snapshot.MarketIndex]
-	if !exists {
-		state = NewOrderBookState(snapshot.MarketIndex)
-		c.orderBooks[snapshot.MarketIndex] = state
-	}
-
-	c.orderBookMu.Unlock()
-
-	if err := state.ApplySnapshot(snapshot); err != nil {
+func (c *wsClient) handleAccountUpdate(channel string, data json.RawMessage) error {
+	accountIndex, err := parseAccountFromChannel(channel)
+	if err != nil {
 		return err
-	}
-
-	update := &OrderBookUpdate{
-		MarketIndex: snapshot.MarketIndex,
-		IsSnapshot:  true,
-		Snapshot:    snapshot,
-		State:       state.Clone(),
-	}
-
-	// Send to channel
-	select {
-	case c.orderBookCh <- update:
-	default:
-		// Channel full, drop update
-	}
-
-	// Call callback if set
-	if c.options.OnOrderBookUpdate != nil {
-		c.options.OnOrderBookUpdate(update)
-	}
-
-	return nil
-}
-
-func (c *wsClient) handleOrderBookDelta(delta *OrderBookDelta) error {
-	c.orderBookMu.RLock()
-	state, exists := c.orderBooks[delta.MarketIndex]
-	c.orderBookMu.RUnlock()
-
-	if !exists {
-		return ErrOrderBookNotFound
-	}
-
-	if err := state.ApplyDelta(delta); err != nil {
-		if err == ErrSequenceGap {
-			c.sendError(err)
-			// TODO: Request snapshot recovery
-		}
-		return err
-	}
-
-	update := &OrderBookUpdate{
-		MarketIndex: delta.MarketIndex,
-		IsSnapshot:  false,
-		Delta:       delta,
-		State:       state.Clone(),
-	}
-
-	// Send to channel
-	select {
-	case c.orderBookCh <- update:
-	default:
-		// Channel full, drop update
-	}
-
-	// Call callback if set
-	if c.options.OnOrderBookUpdate != nil {
-		c.options.OnOrderBookUpdate(update)
-	}
-
-	return nil
-}
-
-func (c *wsClient) handleAccountUpdate(data json.RawMessage) error {
-	var updateData AccountUpdateData
-	if err := json.Unmarshal(data, &updateData); err != nil {
-		return fmt.Errorf("failed to parse account update: %w", err)
 	}
 
 	update := &AccountUpdate{
-		AccountIndex: updateData.AccountIndex,
-		Type:         updateData.Type,
-		Data:         updateData.Data,
-		Timestamp:    updateData.Timestamp,
+		AccountIndex: accountIndex,
+		Data:         data,
 	}
 
-	// Send to channel
 	select {
 	case c.accountCh <- update:
 	default:
-		// Channel full, drop update
 	}
 
-	// Call callback if set
 	if c.options.OnAccountUpdate != nil {
 		c.options.OnAccountUpdate(update)
 	}
 
-	return nil
-}
-
-func (c *wsClient) handlePong() error {
-	c.pingMu.Lock()
-	c.lastPongTime = c.lastPingTime
-	c.pingMu.Unlock()
 	return nil
 }
 
@@ -225,7 +229,6 @@ func (c *wsClient) handleError(data json.RawMessage) error {
 
 	wsErr := NewWsError(errData.Code, errData.Message)
 
-	// If this is a subscription error, notify the pending subscription
 	if errData.Channel != "" {
 		c.subscriptions.ConfirmSubscription(errData.Channel, wsErr)
 	}
@@ -235,14 +238,11 @@ func (c *wsClient) handleError(data json.RawMessage) error {
 }
 
 func (c *wsClient) sendError(err error) {
-	// Send to channel
 	select {
 	case c.errorCh <- err:
 	default:
-		// Channel full, drop error
 	}
 
-	// Call callback if set
 	if c.options.OnError != nil {
 		c.options.OnError(err)
 	}

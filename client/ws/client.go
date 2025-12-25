@@ -67,18 +67,15 @@ type wsClient struct {
 	errorCh     chan error
 
 	// Lifecycle
-	done   chan struct{}
-	wg     sync.WaitGroup
-	ctx    context.Context
-	cancel context.CancelFunc
+	done      chan struct{}
+	wg        sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
+	readyCh   chan struct{} // Signals when "connected" message received
+	readyOnce sync.Once
 
 	// Reconnection
 	reconnectAttempts int
-
-	// Ping/pong
-	lastPingTime time.Time
-	lastPongTime time.Time
-	pingMu       sync.Mutex
 }
 
 // NewClient creates a new WebSocket client
@@ -115,20 +112,31 @@ func (c *wsClient) Connect(ctx context.Context) error {
 	c.conn = conn
 	c.ctx, c.cancel = context.WithCancel(ctx)
 	c.done = make(chan struct{})
+	c.readyCh = make(chan struct{})
+	c.readyOnce = sync.Once{}
+
+	// Start read loop
+	c.wg.Add(1)
+	go c.readLoop()
+
+	// Wait for "connected" message from server
+	select {
+	case <-c.readyCh:
+		// Server acknowledged connection
+	case <-time.After(10 * time.Second):
+		c.conn.Close(websocket.StatusGoingAway, "connection timeout")
+		return ErrConnectionTimeout
+	case <-ctx.Done():
+		c.conn.Close(websocket.StatusGoingAway, "context cancelled")
+		return ctx.Err()
+	}
+
 	c.connected.Store(true)
 
 	// Notify connect callback
 	if c.options.OnConnect != nil {
 		c.options.OnConnect()
 	}
-
-	// Start read loop
-	c.wg.Add(1)
-	go c.readLoop()
-
-	// Start ping loop
-	c.wg.Add(1)
-	go c.pingLoop()
 
 	return nil
 }
@@ -202,9 +210,8 @@ func (c *wsClient) SubscribeOrderBook(marketIndex int16) error {
 	}
 
 	req := SubscribeRequest{
-		Action:  "subscribe",
-		Channel: "orderbook",
-		Market:  marketIndex,
+		Type:    "subscribe",
+		Channel: fmt.Sprintf("order_book/%d", marketIndex),
 	}
 
 	if err := c.sendJSON(req); err != nil {
@@ -234,9 +241,8 @@ func (c *wsClient) UnsubscribeOrderBook(marketIndex int16) error {
 	}
 
 	req := SubscribeRequest{
-		Action:  "unsubscribe",
-		Channel: "orderbook",
-		Market:  marketIndex,
+		Type:    "unsubscribe",
+		Channel: fmt.Sprintf("order_book/%d", marketIndex),
 	}
 
 	return c.sendJSON(req)
@@ -253,11 +259,11 @@ func (c *wsClient) SubscribeAccount(accountIndex int64, authToken string) error 
 		return err
 	}
 
+	// TODO: Account subscriptions may require auth token in a different format
+	// For now, just send the channel subscription
 	req := SubscribeRequest{
-		Action:    "subscribe",
-		Channel:   "account",
-		Account:   accountIndex,
-		AuthToken: authToken,
+		Type:    "subscribe",
+		Channel: fmt.Sprintf("account_all/%d", accountIndex),
 	}
 
 	if err := c.sendJSON(req); err != nil {
@@ -287,9 +293,8 @@ func (c *wsClient) UnsubscribeAccount(accountIndex int64) error {
 	}
 
 	req := SubscribeRequest{
-		Action:  "unsubscribe",
-		Channel: "account",
-		Account: accountIndex,
+		Type:    "unsubscribe",
+		Channel: fmt.Sprintf("account_all/%d", accountIndex),
 	}
 
 	return c.sendJSON(req)
@@ -353,30 +358,9 @@ func (c *wsClient) readLoop() {
 	}
 }
 
-func (c *wsClient) pingLoop() {
-	defer c.wg.Done()
-
-	ticker := time.NewTicker(c.options.PingInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-c.done:
-			return
-		case <-ticker.C:
-			if err := c.sendPing(); err != nil {
-				c.sendError(err)
-			}
-		}
-	}
-}
-
-func (c *wsClient) sendPing() error {
-	c.pingMu.Lock()
-	c.lastPingTime = time.Now()
-	c.pingMu.Unlock()
-
-	return c.sendJSON(PingMessage{Action: "ping"})
+// sendPong responds to server ping
+func (c *wsClient) sendPong() error {
+	return c.sendJSON(PongMessage{Type: "pong"})
 }
 
 func (c *wsClient) sendJSON(v interface{}) error {

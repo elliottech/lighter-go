@@ -8,13 +8,13 @@ import (
 type MessageType string
 
 const (
-	MessageTypeConnected       MessageType = "connected"
-	MessageTypeSubscribed      MessageType = "subscribed"
-	MessageTypeUnsubscribed    MessageType = "unsubscribed"
-	MessageTypeOrderBookUpdate MessageType = "order_book_update"
-	MessageTypeAccountUpdate   MessageType = "account_update"
-	MessageTypePong            MessageType = "pong"
-	MessageTypeError           MessageType = "error"
+	MessageTypeConnected              MessageType = "connected"
+	MessageTypeSubscribedOrderBook    MessageType = "subscribed/order_book"
+	MessageTypeUpdateOrderBook        MessageType = "update/order_book"
+	MessageTypeSubscribedAccountAll   MessageType = "subscribed/account_all"
+	MessageTypeUpdateAccountAll       MessageType = "update/account_all"
+	MessageTypePing                   MessageType = "ping"
+	MessageTypeError                  MessageType = "error"
 )
 
 // BaseMessage is the envelope for all WebSocket messages
@@ -25,17 +25,15 @@ type BaseMessage struct {
 }
 
 // SubscribeRequest is sent to subscribe to a channel
+// Format: {"type": "subscribe", "channel": "order_book/0"}
 type SubscribeRequest struct {
-	Action    string `json:"action"`               // "subscribe" or "unsubscribe"
-	Channel   string `json:"channel"`              // "orderbook" or "account"
-	Market    int16  `json:"market,omitempty"`     // For orderbook subscriptions
-	Account   int64  `json:"account,omitempty"`    // For account subscriptions
-	AuthToken string `json:"auth_token,omitempty"` // For authenticated subscriptions
+	Type    string `json:"type"`    // "subscribe" or "unsubscribe"
+	Channel string `json:"channel"` // "order_book/{market_id}" or "account_all/{account_id}"
 }
 
-// PingMessage is sent to keep the connection alive
-type PingMessage struct {
-	Action string `json:"action"`
+// PongMessage is sent in response to server ping
+type PongMessage struct {
+	Type string `json:"type"` // "pong"
 }
 
 // OrderBookLevel represents a price level in the order book

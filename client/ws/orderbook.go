@@ -80,6 +80,33 @@ func (obs *OrderBookState) ApplyDelta(delta *OrderBookDelta) error {
 	return nil
 }
 
+// MergeUpdates merges bid and ask updates into the order book
+// This is used for updates that don't have sequence numbers
+func (obs *OrderBookState) MergeUpdates(bids, asks []OrderBookLevel) {
+	obs.mu.Lock()
+	defer obs.mu.Unlock()
+
+	// Apply bid updates
+	for _, level := range bids {
+		if level.Size == "0" || level.Size == "" {
+			delete(obs.Bids, level.Price)
+		} else {
+			obs.Bids[level.Price] = level
+		}
+	}
+
+	// Apply ask updates
+	for _, level := range asks {
+		if level.Size == "0" || level.Size == "" {
+			delete(obs.Asks, level.Price)
+		} else {
+			obs.Asks[level.Price] = level
+		}
+	}
+
+	obs.LastUpdate = time.Now()
+}
+
 // GetBestBid returns the highest bid price level
 func (obs *OrderBookState) GetBestBid() *OrderBookLevel {
 	obs.mu.RLock()
