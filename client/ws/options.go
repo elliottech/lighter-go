@@ -14,29 +14,41 @@ type Options struct {
 	MaxReconnectAttempts int           // Default: 10 (0 = unlimited)
 
 	// Channel buffer sizes
-	OrderBookBufferSize int // Default: 100
-	AccountBufferSize   int // Default: 100
-	ErrorBufferSize     int // Default: 10
+	OrderBookBufferSize   int // Default: 100
+	TradeBufferSize       int // Default: 100
+	MarketStatsBufferSize int // Default: 100
+	HeightBufferSize      int // Default: 10
+	AccountBufferSize     int // Default: 100
+	TxResultBufferSize    int // Default: 100
+	ErrorBufferSize       int // Default: 10
 
 	// Callbacks (optional, for Python-style usage)
-	OnConnect         func()
-	OnDisconnect      func(error)
-	OnOrderBookUpdate func(*OrderBookUpdate)
-	OnAccountUpdate   func(*AccountUpdate)
-	OnError           func(error)
+	OnConnect           func()
+	OnDisconnect        func(error)
+	OnOrderBookUpdate   func(*OrderBookUpdate)
+	OnTradeUpdate       func(*TradeUpdate)
+	OnMarketStatsUpdate func(*MarketStatsUpdate)
+	OnHeightUpdate      func(*HeightUpdate)
+	OnAccountUpdate     func(*AccountUpdate)
+	OnTxResult          func(*TxResult)
+	OnError             func(error)
 }
 
 // DefaultOptions returns the default WebSocket client options
 func DefaultOptions() *Options {
 	return &Options{
-		PingInterval:         30 * time.Second,
-		PongTimeout:          10 * time.Second,
-		ReconnectDelay:       1 * time.Second,
-		MaxReconnectDelay:    30 * time.Second,
-		MaxReconnectAttempts: 10,
-		OrderBookBufferSize:  100,
-		AccountBufferSize:    100,
-		ErrorBufferSize:      10,
+		PingInterval:          30 * time.Second,
+		PongTimeout:           10 * time.Second,
+		ReconnectDelay:        1 * time.Second,
+		MaxReconnectDelay:     30 * time.Second,
+		MaxReconnectAttempts:  10,
+		OrderBookBufferSize:   100,
+		TradeBufferSize:       100,
+		MarketStatsBufferSize: 100,
+		HeightBufferSize:      10,
+		AccountBufferSize:     100,
+		TxResultBufferSize:    100,
+		ErrorBufferSize:       10,
 	}
 }
 
@@ -88,9 +100,33 @@ func (o *Options) WithOnOrderBookUpdate(fn func(*OrderBookUpdate)) *Options {
 	return o
 }
 
+// WithOnTradeUpdate sets the trade update callback
+func (o *Options) WithOnTradeUpdate(fn func(*TradeUpdate)) *Options {
+	o.OnTradeUpdate = fn
+	return o
+}
+
+// WithOnMarketStatsUpdate sets the market stats update callback
+func (o *Options) WithOnMarketStatsUpdate(fn func(*MarketStatsUpdate)) *Options {
+	o.OnMarketStatsUpdate = fn
+	return o
+}
+
+// WithOnHeightUpdate sets the height update callback
+func (o *Options) WithOnHeightUpdate(fn func(*HeightUpdate)) *Options {
+	o.OnHeightUpdate = fn
+	return o
+}
+
 // WithOnAccountUpdate sets the account update callback
 func (o *Options) WithOnAccountUpdate(fn func(*AccountUpdate)) *Options {
 	o.OnAccountUpdate = fn
+	return o
+}
+
+// WithOnTxResult sets the transaction result callback
+func (o *Options) WithOnTxResult(fn func(*TxResult)) *Options {
+	o.OnTxResult = fn
 	return o
 }
 

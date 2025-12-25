@@ -17,10 +17,11 @@ var (
 	ErrInvalidMessage               = errors.New("invalid message format")
 	ErrSequenceGap                  = errors.New("order book sequence gap detected")
 	ErrOrderBookNotFound            = errors.New("order book state not found")
-	ErrAuthTokenRequired            = errors.New("auth token required for account subscription")
+	ErrAuthTokenRequired            = errors.New("auth token required for private channel subscription")
 	ErrSubscriptionTimeout          = errors.New("subscription confirmation timeout")
 	ErrAlreadySubscribed            = errors.New("already subscribed")
 	ErrNotSubscribed                = errors.New("not subscribed")
+	ErrBatchTooLarge                = errors.New("transaction batch exceeds maximum of 50")
 )
 
 // WsError represents an error from the WebSocket server
