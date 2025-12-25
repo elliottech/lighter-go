@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -258,7 +257,7 @@ func getSubscriptionKey(channel string, channelType ChannelType) string {
 
 // Order book handlers
 
-func (c *wsClient) handleSubscribedOrderBook(channel string, data json.RawMessage) error {
+func (c *wsClient) handleSubscribedOrderBook(channel string, data RawMessage) error {
 	marketIndex, err := parseMarketFromChannel(channel)
 	if err != nil {
 		return err
@@ -275,7 +274,7 @@ func (c *wsClient) handleSubscribedOrderBook(channel string, data json.RawMessag
 	return nil
 }
 
-func (c *wsClient) handleOrderBookUpdate(channel string, data json.RawMessage) error {
+func (c *wsClient) handleOrderBookUpdate(channel string, data RawMessage) error {
 	marketIndex, err := parseMarketFromChannel(channel)
 	if err != nil {
 		return err
@@ -284,7 +283,7 @@ func (c *wsClient) handleOrderBookUpdate(channel string, data json.RawMessage) e
 	return c.handleOrderBookData(marketIndex, data, false)
 }
 
-func (c *wsClient) handleOrderBookData(marketIndex int16, data json.RawMessage, isInitial bool) error {
+func (c *wsClient) handleOrderBookData(marketIndex int16, data RawMessage, isInitial bool) error {
 	// Parse order book data - format: {"bids": [{"price": "...", "size": "..."}, ...], "asks": [...]}
 	var obData struct {
 		Bids []OrderBookLevel `json:"bids"`
@@ -374,7 +373,7 @@ func (c *wsClient) handleSubscribedTrade(channel string) error {
 	return nil
 }
 
-func (c *wsClient) handleTradeUpdate(channel string, data json.RawMessage) error {
+func (c *wsClient) handleTradeUpdate(channel string, data RawMessage) error {
 	marketIndex, err := parseMarketFromChannel(channel)
 	if err != nil {
 		return err
@@ -423,7 +422,7 @@ func (c *wsClient) handleSubscribedMarketStats(channel string) error {
 	return nil
 }
 
-func (c *wsClient) handleMarketStatsUpdate(channel string, data json.RawMessage) error {
+func (c *wsClient) handleMarketStatsUpdate(channel string, data RawMessage) error {
 	parts := parseChannelParts(channel)
 	isAll := len(parts) >= 2 && parts[1] == "all"
 
@@ -473,7 +472,7 @@ func (c *wsClient) handleSubscribedHeight() error {
 	return nil
 }
 
-func (c *wsClient) handleHeightUpdate(data json.RawMessage) error {
+func (c *wsClient) handleHeightUpdate(data RawMessage) error {
 	var update HeightUpdate
 	if err := sonic.Unmarshal(data, &update); err != nil {
 		return fmt.Errorf("failed to parse height data: %w", err)
@@ -499,7 +498,7 @@ func (c *wsClient) handleSubscribedAccount(channel string, channelType ChannelTy
 	return nil
 }
 
-func (c *wsClient) handleAccountUpdate(channel string, channelType ChannelType, data json.RawMessage) error {
+func (c *wsClient) handleAccountUpdate(channel string, channelType ChannelType, data RawMessage) error {
 	accountIndex, err := parseAccountFromChannel(channel)
 	if err != nil {
 		return err
@@ -525,7 +524,7 @@ func (c *wsClient) handleAccountUpdate(channel string, channelType ChannelType, 
 
 // Transaction result handlers
 
-func (c *wsClient) handleTxResult(data json.RawMessage) error {
+func (c *wsClient) handleTxResult(data RawMessage) error {
 	var result TxResult
 	if err := sonic.Unmarshal(data, &result); err != nil {
 		return fmt.Errorf("failed to parse tx result: %w", err)
@@ -543,7 +542,7 @@ func (c *wsClient) handleTxResult(data json.RawMessage) error {
 	return nil
 }
 
-func (c *wsClient) handleTxBatchResult(data json.RawMessage) error {
+func (c *wsClient) handleTxBatchResult(data RawMessage) error {
 	var batchResult TxBatchResult
 	if err := sonic.Unmarshal(data, &batchResult); err != nil {
 		return fmt.Errorf("failed to parse tx batch result: %w", err)
@@ -567,7 +566,7 @@ func (c *wsClient) handleTxBatchResult(data json.RawMessage) error {
 
 // Error handling
 
-func (c *wsClient) handleError(data json.RawMessage) error {
+func (c *wsClient) handleError(data RawMessage) error {
 	var errData ErrorData
 	if err := sonic.Unmarshal(data, &errData); err != nil {
 		return fmt.Errorf("failed to parse error data: %w", err)

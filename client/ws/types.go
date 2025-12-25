@@ -1,8 +1,8 @@
 package ws
 
-import (
-	"encoding/json"
-)
+// RawMessage is a raw encoded JSON value.
+// It can be used to delay JSON decoding or precompute a JSON encoding.
+type RawMessage = []byte
 
 // MessageType represents WebSocket message types
 type MessageType string
@@ -62,8 +62,8 @@ const (
 type BaseMessage struct {
 	Type      MessageType     `json:"type"`
 	Channel   string          `json:"channel,omitempty"`
-	OrderBook json.RawMessage `json:"order_book,omitempty"`
-	Data      json.RawMessage `json:"data,omitempty"`
+	OrderBook RawMessage `json:"order_book,omitempty"`
+	Data      RawMessage `json:"data,omitempty"`
 }
 
 // SubscribeRequest is sent to subscribe to a channel
@@ -97,7 +97,7 @@ type TxResult struct {
 	Success bool            `json:"success"`
 	TxHash  string          `json:"tx_hash,omitempty"`
 	Error   string          `json:"error,omitempty"`
-	Data    json.RawMessage `json:"data,omitempty"`
+	Data    RawMessage `json:"data,omitempty"`
 }
 
 // TxBatchResult is the response for a batch transaction
@@ -191,7 +191,7 @@ type HeightUpdate struct {
 type AccountUpdateData struct {
 	AccountIndex int64           `json:"account_index"`
 	Type         string          `json:"type"` // "position", "balance", "order", etc.
-	Data         json.RawMessage `json:"data"`
+	Data         RawMessage `json:"data"`
 	Timestamp    int64           `json:"timestamp"`
 }
 
@@ -200,7 +200,7 @@ type AccountUpdate struct {
 	AccountIndex int64
 	Channel      string // which channel this came from
 	Type         string
-	Data         json.RawMessage
+	Data         RawMessage
 	Timestamp    int64
 }
 
@@ -248,13 +248,13 @@ type UserStats struct {
 // PoolData represents pool data update
 type PoolData struct {
 	AccountIndex int64           `json:"account_index"`
-	Data         json.RawMessage `json:"data"`
+	Data         RawMessage `json:"data"`
 }
 
 // PoolInfo represents pool info update
 type PoolInfo struct {
 	AccountIndex int64           `json:"account_index"`
-	Data         json.RawMessage `json:"data"`
+	Data         RawMessage `json:"data"`
 }
 
 // Notification represents a notification
@@ -262,7 +262,7 @@ type Notification struct {
 	AccountIndex int64           `json:"account_index"`
 	Type         string          `json:"type"`
 	Message      string          `json:"message"`
-	Data         json.RawMessage `json:"data,omitempty"`
+	Data         RawMessage `json:"data,omitempty"`
 	Timestamp    int64           `json:"timestamp"`
 }
 
