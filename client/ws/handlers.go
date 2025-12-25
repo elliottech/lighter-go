@@ -15,6 +15,23 @@ func (c *wsClient) handleMessage(msg []byte) error {
 		return fmt.Errorf("failed to parse message: %w", err)
 	}
 
+	// Handle messages with explicit type field
+	if base.Type != "" {
+		return c.handleTypedMessage(base)
+	}
+
+	// Handle messages without type field (initial snapshots from subscriptions)
+	// These messages have a channel field and data
+	if base.Channel != "" {
+		return c.handleChannelMessage(base, msg)
+	}
+
+	// Unknown message format
+	return nil
+}
+
+// handleTypedMessage handles messages that have an explicit type field
+func (c *wsClient) handleTypedMessage(base BaseMessage) error {
 	switch base.Type {
 	// Connection messages
 	case MessageTypeConnected:
@@ -102,6 +119,80 @@ func (c *wsClient) handleMessage(msg []byte) error {
 
 	default:
 		// Ignore unknown message types
+		return nil
+	}
+}
+
+// handleChannelMessage handles messages without a type field (initial subscription snapshots)
+// The server sends the initial data without a type field when a subscription is confirmed
+func (c *wsClient) handleChannelMessage(base BaseMessage, rawMsg []byte) error {
+	parts := parseChannelParts(base.Channel)
+	if len(parts) == 0 {
+		return nil
+	}
+
+	channelPrefix := parts[0]
+
+	switch channelPrefix {
+	case "order_book":
+		// Initial order book snapshot - treat as subscription confirmation with data
+		return c.handleSubscribedOrderBook(base.Channel, base.OrderBook)
+
+	case "trade":
+		// Initial trade subscription
+		if err := c.handleSubscribedTrade(base.Channel); err != nil {
+			return err
+		}
+		// If there's data, also handle it as an update
+		if len(base.Data) > 0 {
+			return c.handleTradeUpdate(base.Channel, base.Data)
+		}
+		return nil
+
+	case "market_stats":
+		// Initial market stats subscription
+		if err := c.handleSubscribedMarketStats(base.Channel); err != nil {
+			return err
+		}
+		if len(base.Data) > 0 {
+			return c.handleMarketStatsUpdate(base.Channel, base.Data)
+		}
+		return nil
+
+	case "height":
+		// Initial height subscription
+		if err := c.handleSubscribedHeight(); err != nil {
+			return err
+		}
+		if len(base.Data) > 0 {
+			return c.handleHeightUpdate(base.Data)
+		}
+		return nil
+
+	case "account_all":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountAll)
+	case "account_market":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountMarket)
+	case "account_orders":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountOrders)
+	case "account_all_orders":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountAllOrders)
+	case "account_all_trades":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountAllTrades)
+	case "account_all_positions":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountAllPositions)
+	case "account_tx":
+		return c.handleSubscribedAccount(base.Channel, ChannelAccountTx)
+	case "user_stats":
+		return c.handleSubscribedAccount(base.Channel, ChannelUserStats)
+	case "pool_data":
+		return c.handleSubscribedAccount(base.Channel, ChannelPoolData)
+	case "pool_info":
+		return c.handleSubscribedAccount(base.Channel, ChannelPoolInfo)
+	case "notification":
+		return c.handleSubscribedAccount(base.Channel, ChannelNotification)
+
+	default:
 		return nil
 	}
 }

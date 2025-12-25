@@ -1,8 +1,11 @@
 package ws
 
+import "github.com/bytedance/sonic"
+
 // RawMessage is a raw encoded JSON value.
 // It can be used to delay JSON decoding or precompute a JSON encoding.
-type RawMessage = []byte
+// Uses sonic's NoCopyRawMessage for efficient JSON handling.
+type RawMessage = sonic.NoCopyRawMessage
 
 // MessageType represents WebSocket message types
 type MessageType string
