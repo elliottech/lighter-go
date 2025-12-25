@@ -14,12 +14,12 @@ package ws
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"nhooyr.io/websocket"
 )
 
@@ -1110,7 +1110,7 @@ func (c *wsClient) sendJSON(v interface{}) error {
 		return ErrNotConnected
 	}
 
-	data, err := json.Marshal(v)
+	data, err := sonic.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}

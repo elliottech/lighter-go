@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/bytedance/sonic"
 )
 
 // handleMessage routes incoming messages to appropriate handlers
 func (c *wsClient) handleMessage(msg []byte) error {
 	var base BaseMessage
-	if err := json.Unmarshal(msg, &base); err != nil {
+	if err := sonic.Unmarshal(msg, &base); err != nil {
 		return fmt.Errorf("failed to parse message: %w", err)
 	}
 
@@ -288,7 +290,7 @@ func (c *wsClient) handleOrderBookData(marketIndex int16, data json.RawMessage, 
 		Bids []OrderBookLevel `json:"bids"`
 		Asks []OrderBookLevel `json:"asks"`
 	}
-	if err := json.Unmarshal(data, &obData); err != nil {
+	if err := sonic.Unmarshal(data, &obData); err != nil {
 		return fmt.Errorf("failed to parse order book data: %w", err)
 	}
 
@@ -379,10 +381,10 @@ func (c *wsClient) handleTradeUpdate(channel string, data json.RawMessage) error
 	}
 
 	var trades []Trade
-	if err := json.Unmarshal(data, &trades); err != nil {
+	if err := sonic.Unmarshal(data, &trades); err != nil {
 		// Try single trade
 		var trade Trade
-		if err := json.Unmarshal(data, &trade); err != nil {
+		if err := sonic.Unmarshal(data, &trade); err != nil {
 			return fmt.Errorf("failed to parse trade data: %w", err)
 		}
 		trades = []Trade{trade}
@@ -429,7 +431,7 @@ func (c *wsClient) handleMarketStatsUpdate(channel string, data json.RawMessage)
 
 	if isAll {
 		var allStats []MarketStats
-		if err := json.Unmarshal(data, &allStats); err != nil {
+		if err := sonic.Unmarshal(data, &allStats); err != nil {
 			return fmt.Errorf("failed to parse market stats data: %w", err)
 		}
 		update = &MarketStatsUpdate{
@@ -443,7 +445,7 @@ func (c *wsClient) handleMarketStatsUpdate(channel string, data json.RawMessage)
 		}
 
 		var stats MarketStats
-		if err := json.Unmarshal(data, &stats); err != nil {
+		if err := sonic.Unmarshal(data, &stats); err != nil {
 			return fmt.Errorf("failed to parse market stats data: %w", err)
 		}
 		update = &MarketStatsUpdate{
@@ -473,7 +475,7 @@ func (c *wsClient) handleSubscribedHeight() error {
 
 func (c *wsClient) handleHeightUpdate(data json.RawMessage) error {
 	var update HeightUpdate
-	if err := json.Unmarshal(data, &update); err != nil {
+	if err := sonic.Unmarshal(data, &update); err != nil {
 		return fmt.Errorf("failed to parse height data: %w", err)
 	}
 
@@ -525,7 +527,7 @@ func (c *wsClient) handleAccountUpdate(channel string, channelType ChannelType, 
 
 func (c *wsClient) handleTxResult(data json.RawMessage) error {
 	var result TxResult
-	if err := json.Unmarshal(data, &result); err != nil {
+	if err := sonic.Unmarshal(data, &result); err != nil {
 		return fmt.Errorf("failed to parse tx result: %w", err)
 	}
 
@@ -543,7 +545,7 @@ func (c *wsClient) handleTxResult(data json.RawMessage) error {
 
 func (c *wsClient) handleTxBatchResult(data json.RawMessage) error {
 	var batchResult TxBatchResult
-	if err := json.Unmarshal(data, &batchResult); err != nil {
+	if err := sonic.Unmarshal(data, &batchResult); err != nil {
 		return fmt.Errorf("failed to parse tx batch result: %w", err)
 	}
 
@@ -567,7 +569,7 @@ func (c *wsClient) handleTxBatchResult(data json.RawMessage) error {
 
 func (c *wsClient) handleError(data json.RawMessage) error {
 	var errData ErrorData
-	if err := json.Unmarshal(data, &errData); err != nil {
+	if err := sonic.Unmarshal(data, &errData); err != nil {
 		return fmt.Errorf("failed to parse error data: %w", err)
 	}
 

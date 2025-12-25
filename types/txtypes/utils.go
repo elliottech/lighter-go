@@ -1,10 +1,10 @@
 package txtypes
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	gQuint "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -39,7 +39,7 @@ func IsZeroByteSlice(bytes []byte) bool {
 }
 
 func getTxInfo(tx interface{}) (string, error) {
-	txInfoBytes, err := json.Marshal(tx)
+	txInfoBytes, err := sonic.Marshal(tx)
 	if err != nil {
 		return "", err
 	}

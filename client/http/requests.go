@@ -2,17 +2,18 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/bytedance/sonic"
 )
 
 func (c *client) parseResultStatus(respBody []byte) error {
 	resultStatus := &ResultCode{}
-	if err := json.Unmarshal(respBody, resultStatus); err != nil {
+	if err := sonic.Unmarshal(respBody, resultStatus); err != nil {
 		return err
 	}
 	if resultStatus.Code != CodeOK {
@@ -48,7 +49,7 @@ func (c *client) getAndParseL2HTTPResponse(path string, params map[string]any, r
 	if err = c.parseResultStatus(body); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(body, result); err != nil {
+	if err := sonic.Unmarshal(body, result); err != nil {
 		return err
 	}
 	return nil
@@ -83,7 +84,7 @@ func (c *client) postAndParseL2HTTPResponse(path string, body interface{}, resul
 	}
 	u.Path = path
 
-	jsonBody, err := json.Marshal(body)
+	jsonBody, err := sonic.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
@@ -113,7 +114,7 @@ func (c *client) postAndParseL2HTTPResponse(path string, body interface{}, resul
 		return err
 	}
 
-	if err := json.Unmarshal(respBody, result); err != nil {
+	if err := sonic.Unmarshal(respBody, result); err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 	return nil
@@ -164,7 +165,7 @@ func (c *client) getAuthenticatedL2HTTPResponse(path string, params map[string]a
 		return err
 	}
 
-	if err := json.Unmarshal(body, result); err != nil {
+	if err := sonic.Unmarshal(body, result); err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 	return nil
@@ -178,7 +179,7 @@ func (c *client) postAuthenticatedL2HTTPResponse(path string, body interface{}, 
 	}
 	u.Path = path
 
-	jsonBody, err := json.Marshal(body)
+	jsonBody, err := sonic.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
@@ -215,7 +216,7 @@ func (c *client) postAuthenticatedL2HTTPResponse(path string, body interface{}, 
 		return err
 	}
 
-	if err := json.Unmarshal(respBody, result); err != nil {
+	if err := sonic.Unmarshal(respBody, result); err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 	return nil
