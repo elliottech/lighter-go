@@ -1,23 +1,183 @@
 # lighter-go
 
-This repository serves as the reference implementation of signing & hashing of Lighter transactions.
-The sharedlib is compiled for a variety of platforms.
-- macOS (darwin) dynamic library (.dylib) for arm architecture (M processor, not Intel)
-- linux shared object (.so) for both amd64 and arm architectures
-- windows .ddl (dynamic-link library) for amd64 architecture
+The official Go SDK for the Lighter trading platform. This SDK provides full feature parity with the [Python SDK](https://github.com/elliottech/lighter-python), including:
 
-The go SDK implements just the core signing, as well as a small HTTP client so that users can:
-- not specify the nonce of the transaction (this will result in an HTTP call, so beware)
-- check that a client was initialized correctly, by verifying that the given API key matches the one on the server 
+- **Transaction signing** - Sign all Lighter L2 transactions
+- **Full HTTP API client** - Access all REST endpoints
+- **WebSocket client** - Real-time order book and account streaming
+- **Convenience methods** - High-level trading functions
+- **Nonce management** - Optimistic and API-based nonce strategies
 
-The [Python SDK](https://github.com/elliottech/lighter-python) offers support for HTTP and WebSocket functionality as well as [examples](https://github.com/elliottech/lighter-python/tree/main/examples) on how to generate the API keys, how to create and cancel orders, generate AUTH tokens for various HTTP/WS endpoints which require them.       
+## Installation
 
-All generated shared libraries follow the naming convention `lighter_signer_{os}_{arch}` where os is linux/windows/darwin and arch is amd64(x86) or arm64.\
-The build & accompanying `.h` files can be found in the release notes [here](https://github.com/elliottech/lighter-go/releases).\
-If you'd like to compile your own binaries, the commands are in the `justfile`.
+```bash
+go get github.com/elliottech/lighter-go
+```
 
+## Quick Start
+
+### HTTP API
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/elliottech/lighter-go/client/http"
+    "github.com/elliottech/lighter-go/types/api"
+)
+
+func main() {
+    // Create HTTP client
+    client := http.NewFullClient("https://mainnet.zklighter.elliot.ai")
+
+    // Get order book
+    marketIndex := int16(0) // ETH-USD
+    orderBooks, _ := client.Order().GetOrderBooks(&marketIndex, api.MarketFilterAll)
+
+    for _, ob := range orderBooks.OrderBooks {
+        fmt.Printf("Best Bid: %s @ %s\n", ob.Bids[0].Size, ob.Bids[0].Price)
+        fmt.Printf("Best Ask: %s @ %s\n", ob.Asks[0].Size, ob.Asks[0].Price)
+    }
+}
+```
+
+### Creating Orders
+
+```go
+package main
+
+import (
+    "github.com/elliottech/lighter-go/client"
+    "github.com/elliottech/lighter-go/client/http"
+    "github.com/elliottech/lighter-go/types"
+)
+
+func main() {
+    httpClient := http.NewFullClient("https://mainnet.zklighter.elliot.ai")
+
+    // Create signer client with your private key
+    signerClient, _ := client.NewSignerClient(
+        httpClient,
+        "your-private-key",
+        1,    // chainId
+        0,    // apiKeyIndex
+        0,    // accountIndex
+        nil,  // nonceManager (nil = use optimistic)
+    )
+
+    // Create a market order
+    txInfo, _ := signerClient.CreateMarketOrder(
+        0,           // marketIndex (ETH-USD)
+        1000000,     // size (0.01 ETH scaled)
+        true,        // isBuy
+        &types.TransactOpts{Nonce: types.NewInt64(-1)},
+    )
+
+    // Submit to API
+    resp, _ := signerClient.SendAndSubmit(txInfo)
+    fmt.Printf("Order submitted: %s\n", resp.TxHash)
+}
+```
+
+### WebSocket Streaming
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/elliottech/lighter-go/client/ws"
+)
+
+func main() {
+    client := ws.NewClient("wss://mainnet.zklighter.elliot.ai/ws", ws.DefaultOptions())
+
+    ctx := context.Background()
+    client.Connect(ctx)
+    defer client.Close()
+
+    // Subscribe to order book
+    client.SubscribeOrderBook(0) // ETH-USD
+
+    // Process updates
+    for update := range client.OrderBookUpdates() {
+        if update.State != nil {
+            bestBid := update.State.GetBestBid()
+            bestAsk := update.State.GetBestAsk()
+            fmt.Printf("Bid: %s @ %s | Ask: %s @ %s\n",
+                bestBid.Size, bestBid.Price,
+                bestAsk.Size, bestAsk.Price)
+        }
+    }
+}
+```
+
+## API Reference
+
+### HTTP Client
+
+The `FullHTTPClient` provides access to all API endpoints organized by domain:
+
+| API Group | Methods |
+|-----------|---------|
+| `Account()` | GetAccount, GetAccountLimits, GetLiquidations, GetPnL, etc. |
+| `Order()` | GetActiveOrders, GetOrderBooks, GetRecentTrades, GetExchangeStats, etc. |
+| `Transaction()` | SendTx, SendTxBatch, GetTx, GetDepositHistory, GetWithdrawHistory, etc. |
+| `Candlestick()` | GetCandlesticks, GetFundings, GetFundingRates |
+| `Block()` | GetBlock, GetBlocks, GetCurrentHeight |
+| `Bridge()` | GetBridges, GetIsNextBridgeFast, GetFastBridgeInfo |
+| `Info()` | GetStatus, GetInfo, GetAnnouncements |
+
+### SignerClient Convenience Methods
+
+| Method | Description |
+|--------|-------------|
+| `CreateMarketOrder()` | Create a market order |
+| `CreateMarketOrderWithSlippage()` | Market order with slippage protection |
+| `CreateLimitOrder()` | Create a limit order |
+| `CreateTakeProfitOrder()` | Create a take-profit order |
+| `CreateStopLossOrder()` | Create a stop-loss order |
+| `CancelAllOrders()` | Cancel all open orders |
+| `SendAndSubmit()` | Sign and submit a transaction |
+| `SendTxBatch()` | Submit multiple transactions |
+
+### WebSocket Client
+
+| Method | Description |
+|--------|-------------|
+| `Connect()` | Establish WebSocket connection |
+| `SubscribeOrderBook()` | Subscribe to order book updates |
+| `SubscribeAccount()` | Subscribe to account updates (requires auth) |
+| `OrderBookUpdates()` | Channel for order book updates |
+| `AccountUpdates()` | Channel for account updates |
+| `GetOrderBookState()` | Get current order book state |
+
+### Nonce Management
+
+Two nonce management strategies are available:
+
+- **OptimisticManager** (default): Assumes transactions succeed, increments locally. Fast but requires failure acknowledgment.
+- **APIManager**: Queries API for every nonce. Slower but always accurate.
+
+```go
+import "github.com/elliottech/lighter-go/nonce"
+
+// Use optimistic (default)
+manager := nonce.NewOptimisticManager(httpClient)
+
+// Use API-based
+manager := nonce.NewAPIManager(httpClient)
+
+// Create signer with custom nonce manager
+signerClient, _ := client.NewSignerClient(httpClient, privateKey, chainId, 0, 0, manager)
+```
 
 ## Transactions
+
+All L2 transaction types are supported:
+
 ```
 === Client ===
 CreateClient
@@ -51,44 +211,40 @@ SignMintShares
 SignBurnShares
 ```
 
-## How to specify an account
-Accounts are loaded into the signer by calling the `CreateClient` method. If you wish to load multiple API keys in the signer, you need to call the method multiple times, each time with the correct private key.
+## Shared Libraries
 
-By default, signer will work out of the box with 1 client and no need to manage nonces in any specific way. Just pass `-1, 255, 0` for all methods (more explanations below).
+Pre-compiled shared libraries are available for FFI usage:
+- macOS (darwin) dynamic library (.dylib) for arm architecture
+- Linux shared object (.so) for amd64 and arm architectures
+- Windows DLL for amd64 architecture
 
-You can call `CheckClient` to verify that the provided Private key & (apiKeyIndex, accountIndex) are configured correctly. 
-This checks that the public key associated with the pair (apiKey,account) matches the one from the exchange.
+All libraries follow the naming convention `lighter_signer_{os}_{arch}`.
 
-The majority of methods receive 3 arguments at the end:
-- `nonce`
-  - default `-1` 
-  - required to be strictly incremental
-  - you can fetch the next nonce using `nextNonce` HTTP call
-  - if default is passed, signer will do the HTTP call automatically
-  - ideally the caller should manage nonces locally to avoid latency
-- `apiKeyIndex`
-  - default `255` 
-  - specified which API key will be used for the specific transaction
-  - all API keys are equal. Orders created by one API key can be canceled by others, for example
-  - each API key has its own nonce
-  - if default is passed, signer will use the default txClient
-- `accountIndex`
-  - default `0`
-  - specified which account will be used for the specific transaction
-  - this can be a subaccount or a different main account all together 
-  - if default is passed, signer will use the default txClient
+The build & accompanying `.h` files can be found in the [releases](https://github.com/elliottech/lighter-go/releases).
 
-**Note:** in order to use the default client, you need to bash both the default values for `apiKeyIndex` and `accountIndex`
+To compile your own binaries, see the commands in the `justfile`.
 
-## Auth tokens
+## Examples
 
-Auth tokens are used to call various HTTP & WS endpoints which hold sensitive information, like open orders.
-An auth token is valid for 8 hours.
+See the [examples](./examples) directory for complete working examples:
 
-`CreateAuthToken(deadline=0)` will result in a token that's valid for 7 hours from now.
+- `examples/orders/` - Order creation and management
+- `examples/account/` - Account information
+- `examples/market_data/` - Market data fetching
+- `examples/websocket/` - Real-time streaming
 
-Calling `CreateAuthToken` with an expiry 20 hours in the future will work, but the token will start to be valid in 12 hours, because the max accepted deadline duration by the server is 8 hours. \
-This still allows you to generate all the tokens ahead of time and use them accordingly. \
-Such an approach (both implementation & how to manage them) can be found in great details in the [python-sdk](https://github.com/elliottech/lighter-python/tree/main/examples/read-only-auth).
+## Auth Tokens
 
-**Note:** auth tokens are bound to an API key. Changing the API key to something else **will invalidate** all generated auth tokens.  
+Auth tokens are used to call HTTP & WS endpoints that require authentication (e.g., open orders).
+
+```go
+// Auth tokens are valid for up to 8 hours
+deadline := time.Now().Add(8 * time.Hour)
+authToken, _ := txClient.GetAuthToken(deadline)
+```
+
+**Note:** Auth tokens are bound to an API key. Changing the API key will invalidate all generated auth tokens.
+
+## License
+
+See [LICENSE](./LICENSE) for details.
