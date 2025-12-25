@@ -18,9 +18,9 @@ func (c *wsClient) handleMessage(msg []byte) error {
 	case MessageTypeConnected:
 		return c.handleConnected()
 	case MessageTypeSubscribedOrderBook:
-		return c.handleSubscribedOrderBook(base.Channel, base.Data)
+		return c.handleSubscribedOrderBook(base.Channel, base.OrderBook)
 	case MessageTypeUpdateOrderBook:
-		return c.handleOrderBookUpdate(base.Channel, base.Data)
+		return c.handleOrderBookUpdate(base.Channel, base.OrderBook)
 	case MessageTypeSubscribedAccountAll:
 		return c.handleSubscribedAccount(base.Channel)
 	case MessageTypeUpdateAccountAll:
@@ -46,9 +46,14 @@ func (c *wsClient) handleConnected() error {
 	return nil
 }
 
-// parseMarketFromChannel extracts market index from channel like "order_book/0"
+// parseMarketFromChannel extracts market index from channel like "order_book:0" or "order_book/0"
 func parseMarketFromChannel(channel string) (int16, error) {
-	parts := strings.Split(channel, "/")
+	// Try colon first (server response format), then slash
+	sep := ":"
+	if !strings.Contains(channel, ":") {
+		sep = "/"
+	}
+	parts := strings.Split(channel, sep)
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("invalid channel format: %s", channel)
 	}
@@ -59,9 +64,14 @@ func parseMarketFromChannel(channel string) (int16, error) {
 	return int16(idx), nil
 }
 
-// parseAccountFromChannel extracts account index from channel like "account_all/123"
+// parseAccountFromChannel extracts account index from channel like "account_all:123" or "account_all/123"
 func parseAccountFromChannel(channel string) (int64, error) {
-	parts := strings.Split(channel, "/")
+	// Try colon first (server response format), then slash
+	sep := ":"
+	if !strings.Contains(channel, ":") {
+		sep = "/"
+	}
+	parts := strings.Split(channel, sep)
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("invalid channel format: %s", channel)
 	}
@@ -99,10 +109,10 @@ func (c *wsClient) handleOrderBookUpdate(channel string, data json.RawMessage) e
 }
 
 func (c *wsClient) handleOrderBookData(marketIndex int16, data json.RawMessage, isInitial bool) error {
-	// Parse order book data - format from Python: {"bids": [...], "asks": [...]}
+	// Parse order book data - format: {"bids": [{"price": "...", "size": "..."}, ...], "asks": [...]}
 	var obData struct {
-		Bids [][]string `json:"bids"` // [[price, size], ...]
-		Asks [][]string `json:"asks"`
+		Bids []OrderBookLevel `json:"bids"`
+		Asks []OrderBookLevel `json:"asks"`
 	}
 	if err := json.Unmarshal(data, &obData); err != nil {
 		return fmt.Errorf("failed to parse order book data: %w", err)
@@ -116,20 +126,8 @@ func (c *wsClient) handleOrderBookData(marketIndex int16, data json.RawMessage, 
 	}
 	c.orderBookMu.Unlock()
 
-	// Convert to our format and update state
-	bids := make([]OrderBookLevel, 0, len(obData.Bids))
-	for _, b := range obData.Bids {
-		if len(b) >= 2 {
-			bids = append(bids, OrderBookLevel{Price: b[0], Size: b[1]})
-		}
-	}
-
-	asks := make([]OrderBookLevel, 0, len(obData.Asks))
-	for _, a := range obData.Asks {
-		if len(a) >= 2 {
-			asks = append(asks, OrderBookLevel{Price: a[0], Size: a[1]})
-		}
-	}
+	bids := obData.Bids
+	asks := obData.Asks
 
 	if isInitial {
 		// Apply as snapshot

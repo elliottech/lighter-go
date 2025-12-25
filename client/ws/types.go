@@ -19,9 +19,10 @@ const (
 
 // BaseMessage is the envelope for all WebSocket messages
 type BaseMessage struct {
-	Type    MessageType     `json:"type"`
-	Channel string          `json:"channel,omitempty"`
-	Data    json.RawMessage `json:"data,omitempty"`
+	Type      MessageType     `json:"type"`
+	Channel   string          `json:"channel,omitempty"`
+	OrderBook json.RawMessage `json:"order_book,omitempty"`
+	Data      json.RawMessage `json:"data,omitempty"`
 }
 
 // SubscribeRequest is sent to subscribe to a channel
