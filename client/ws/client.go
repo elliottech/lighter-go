@@ -115,6 +115,12 @@ func (c *wsClient) Connect(ctx context.Context) error {
 	c.conn = conn
 	c.ctx, c.cancel = context.WithCancel(ctx)
 	c.done = make(chan struct{})
+	c.connected.Store(true)
+
+	// Notify connect callback
+	if c.options.OnConnect != nil {
+		c.options.OnConnect()
+	}
 
 	// Start read loop
 	c.wg.Add(1)
