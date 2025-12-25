@@ -109,6 +109,9 @@ func (c *wsClient) Connect(ctx context.Context) error {
 		return &ConnectionError{Err: err}
 	}
 
+	// Set read limit to 10MB for large order books
+	conn.SetReadLimit(10 * 1024 * 1024)
+
 	c.conn = conn
 	c.ctx, c.cancel = context.WithCancel(ctx)
 	c.done = make(chan struct{})
