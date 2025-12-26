@@ -58,6 +58,9 @@ jobs:
       - name: Build Linux ARM64 (Docker)
         run: just build-linux-arm64-docker
 
+      - name: Build Windows AMD64 (Docker)
+        run: just build-windows-amd64-docker
+
       - name: Upload Linux AMD64
         uses: actions/upload-artifact@v4
         with:
@@ -69,6 +72,12 @@ jobs:
         with:
           name: lighter-linux-arm64
           path: build/lighter-linux-arm64.*
+
+      - name: Upload Windows AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-windows-amd64
+          path: build/lighter-windows-amd64.*
 
   build-darwin:
     name: Build Darwin
