@@ -6,17 +6,26 @@ Run any Go example directly:
 
 ```bash
 # Account information
-go run ./examples/account/get_account.go
+go run ./examples/account/get_account
 
 # Market data
-go run ./examples/market_data/get_orderbook.go
+go run ./examples/market_data/get_orderbook
+go run ./examples/market_data/candlesticks
+go run ./examples/market_data/funding_rates
+go run ./examples/market_data/recent_trades
 
 # Order creation (requires private key)
-LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/create_market_order.go
-LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/create_limit_order.go
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/create_market_order
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/create_limit_order
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/stop_loss_order
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/take_profit_order
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/cancel_order
+LIGHTER_PRIVATE_KEY=your-key go run ./examples/orders/get_active_orders
 
 # WebSocket streaming
-go run ./examples/websocket/orderbook_stream.go
+go run ./examples/websocket/orderbook_stream
+go run ./examples/websocket/trade_stream
+go run ./examples/websocket/market_stats_stream
 ```
 
 ### Environment Variables

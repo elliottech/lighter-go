@@ -28,10 +28,10 @@ jobs:
 
       - name: Build examples
         run: |
-          for f in examples/**/*.go; do
-            if [ -f "$f" ]; then
-              echo "Building $f"
-              go build -o /dev/null "$f"
+          for dir in examples/*/*/; do
+            if [ -f "${dir}main.go" ]; then
+              echo "Building ${dir}"
+              go build -o /dev/null "./${dir}"
             fi
           done
 
