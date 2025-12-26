@@ -81,7 +81,9 @@ func TestOrderBookState_ApplySnapshot_ClearsExisting(t *testing.T) {
 			{Price: "101", Size: "15"},
 		},
 	}
-	obs.ApplySnapshot(snapshot1)
+	if err := obs.ApplySnapshot(snapshot1); err != nil {
+		t.Fatalf("Failed to apply snapshot1: %v", err)
+	}
 
 	// Apply second snapshot with different prices
 	snapshot2 := &OrderBookSnapshot{
@@ -94,7 +96,9 @@ func TestOrderBookState_ApplySnapshot_ClearsExisting(t *testing.T) {
 			{Price: "106", Size: "8"},
 		},
 	}
-	obs.ApplySnapshot(snapshot2)
+	if err := obs.ApplySnapshot(snapshot2); err != nil {
+		t.Fatalf("Failed to apply snapshot2: %v", err)
+	}
 
 	// Old prices should be gone
 	_, exists := obs.Bids["100"]
@@ -123,7 +127,9 @@ func TestOrderBookState_ApplyDelta(t *testing.T) {
 			{Price: "101", Size: "15"},
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	// Apply delta
 	delta := &OrderBookDelta{
@@ -178,7 +184,9 @@ func TestOrderBookState_ApplyDelta_SequenceGap(t *testing.T) {
 		},
 		Asks: []OrderBookLevel{},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	// Apply delta with sequence gap
 	delta := &OrderBookDelta{
@@ -206,7 +214,9 @@ func TestOrderBookState_ApplyDelta_EmptySize(t *testing.T) {
 		},
 		Asks: []OrderBookLevel{},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	// Remove using empty string
 	delta := &OrderBookDelta{
@@ -217,7 +227,9 @@ func TestOrderBookState_ApplyDelta_EmptySize(t *testing.T) {
 		},
 	}
 
-	obs.ApplyDelta(delta)
+	if err := obs.ApplyDelta(delta); err != nil {
+		t.Fatalf("Failed to apply delta: %v", err)
+	}
 
 	_, exists := obs.Bids["99"]
 	if exists {
@@ -239,7 +251,9 @@ func TestOrderBookState_MergeUpdates(t *testing.T) {
 			{Price: "101", Size: "15"},
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	// Merge updates
 	bids := []OrderBookLevel{
@@ -296,7 +310,9 @@ func TestOrderBookState_GetBestBid(t *testing.T) {
 		},
 		Asks: []OrderBookLevel{},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	best = obs.GetBestBid()
 	if best == nil {
@@ -327,7 +343,9 @@ func TestOrderBookState_GetBestAsk(t *testing.T) {
 			{Price: "101", Size: "5"}, // Lowest
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	best = obs.GetBestAsk()
 	if best == nil {
@@ -351,7 +369,9 @@ func TestOrderBookState_GetBids_Sorted(t *testing.T) {
 		},
 		Asks: []OrderBookLevel{},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	bids := obs.GetBids()
 
@@ -381,7 +401,9 @@ func TestOrderBookState_GetAsks_Sorted(t *testing.T) {
 			{Price: "102", Size: "10"},
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	asks := obs.GetAsks()
 
@@ -411,7 +433,9 @@ func TestOrderBookState_Clone(t *testing.T) {
 			{Price: "101", Size: "15"},
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	// Clone
 	clone := obs.Clone()
@@ -444,7 +468,9 @@ func TestOrderBookState_ConcurrentAccess(t *testing.T) {
 			{Price: "101", Size: "15"},
 		},
 	}
-	obs.ApplySnapshot(snapshot)
+	if err := obs.ApplySnapshot(snapshot); err != nil {
+		t.Fatalf("Failed to apply snapshot: %v", err)
+	}
 
 	var wg sync.WaitGroup
 	const goroutines = 50

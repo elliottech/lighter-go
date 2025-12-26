@@ -14,7 +14,7 @@ func main() {
 	apiURL := examples.GetAPIURL()
 	httpClient := http.NewFullClient(apiURL)
 
-	fmt.Println("Fetching current funding rates for all markets...\n")
+	fmt.Println("Fetching current funding rates for all markets...")
 
 	fundingRates, err := httpClient.Candlestick().GetFundingRates()
 	if err != nil {

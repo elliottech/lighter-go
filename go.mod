@@ -6,9 +6,9 @@ toolchain go1.23.1
 
 require (
 	github.com/bytedance/sonic v1.14.2
+	github.com/coder/websocket v1.8.12
 	github.com/elliottech/poseidon_crypto v0.0.11
 	github.com/ethereum/go-ethereum v1.15.6
-	nhooyr.io/websocket v1.8.17
 )
 
 require (

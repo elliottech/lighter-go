@@ -45,7 +45,7 @@ func main() {
 	if err := client.Connect(ctx); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	defer client.Close()
+	defer client.Close() //nolint:errcheck // Cleanup on exit
 
 	// Subscribe to ETH-USD trades
 	marketIndex := int16(0)

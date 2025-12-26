@@ -393,7 +393,7 @@ func TestSubscriptionManager_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func(i int) {
 			defer wg.Done()
-			sm.AddOrderBook(int16(i % 10))
+			_, _ = sm.AddOrderBook(int16(i % 10)) //nolint:errcheck // Concurrent test - errors expected
 		}(i)
 	}
 

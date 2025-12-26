@@ -137,7 +137,7 @@ func TestAPIManager_Reset_NoOp(t *testing.T) {
 	manager := NewAPIManager(fetcher)
 
 	// Get a nonce
-	manager.GetNonce(1, 0)
+	_, _ = manager.GetNonce(1, 0) //nolint:errcheck // Testing side effect
 
 	// Reset (should be no-op)
 	manager.Reset(1, 0)
@@ -156,7 +156,7 @@ func TestAPIManager_ResetAll_NoOp(t *testing.T) {
 	manager := NewAPIManager(fetcher)
 
 	// Get a nonce
-	manager.GetNonce(1, 0)
+	_, _ = manager.GetNonce(1, 0) //nolint:errcheck // Testing side effect
 
 	// Reset all (should be no-op)
 	manager.ResetAll()

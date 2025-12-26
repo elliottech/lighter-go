@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"nhooyr.io/websocket"
+	"github.com/coder/websocket"
 )
 
 // Client defines the WebSocket client interface
@@ -177,10 +177,10 @@ func (c *wsClient) Connect(ctx context.Context) error {
 	case <-c.readyCh:
 		// Server acknowledged connection
 	case <-time.After(10 * time.Second):
-		c.conn.Close(websocket.StatusGoingAway, "connection timeout")
+		c.conn.Close(websocket.StatusGoingAway, "connection timeout") //nolint:errcheck // Already returning timeout error
 		return ErrConnectionTimeout
 	case <-ctx.Done():
-		c.conn.Close(websocket.StatusGoingAway, "context cancelled")
+		c.conn.Close(websocket.StatusGoingAway, "context cancelled") //nolint:errcheck // Already returning context error
 		return ctx.Err()
 	}
 
@@ -285,7 +285,7 @@ func (c *wsClient) SubscribeOrderBook(marketIndex int16) error {
 
 	channel := fmt.Sprintf("order_book/%d", marketIndex)
 	if err := c.subscribe(channel, ""); err != nil {
-		c.subscriptions.Remove(orderBookKey(marketIndex))
+		c.subscriptions.Remove(orderBookKey(marketIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -294,7 +294,7 @@ func (c *wsClient) SubscribeOrderBook(marketIndex int16) error {
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(orderBookKey(marketIndex))
+		c.subscriptions.Remove(orderBookKey(marketIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -331,7 +331,7 @@ func (c *wsClient) SubscribeTrades(marketIndex int16) error {
 
 	channel := fmt.Sprintf("trade/%d", marketIndex)
 	if err := c.subscribe(channel, ""); err != nil {
-		c.subscriptions.Remove(tradeKey(marketIndex))
+		c.subscriptions.Remove(tradeKey(marketIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -339,7 +339,7 @@ func (c *wsClient) SubscribeTrades(marketIndex int16) error {
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(tradeKey(marketIndex))
+		c.subscriptions.Remove(tradeKey(marketIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -376,7 +376,7 @@ func (c *wsClient) SubscribeMarketStats(marketIndex int16) error {
 
 	channel := fmt.Sprintf("market_stats/%d", marketIndex)
 	if err := c.subscribe(channel, ""); err != nil {
-		c.subscriptions.Remove(marketStatsKey(marketIndex))
+		c.subscriptions.Remove(marketStatsKey(marketIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -384,7 +384,7 @@ func (c *wsClient) SubscribeMarketStats(marketIndex int16) error {
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(marketStatsKey(marketIndex))
+		c.subscriptions.Remove(marketStatsKey(marketIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -401,7 +401,7 @@ func (c *wsClient) SubscribeAllMarketStats() error {
 	}
 
 	if err := c.subscribe("market_stats/all", ""); err != nil {
-		c.subscriptions.Remove(marketStatsAllKey())
+		c.subscriptions.Remove(marketStatsAllKey()) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -409,7 +409,7 @@ func (c *wsClient) SubscribeAllMarketStats() error {
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(marketStatsAllKey())
+		c.subscriptions.Remove(marketStatsAllKey()) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -463,7 +463,7 @@ func (c *wsClient) SubscribeHeight() error {
 	}
 
 	if err := c.subscribe("height", ""); err != nil {
-		c.subscriptions.Remove(heightKey())
+		c.subscriptions.Remove(heightKey()) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -471,7 +471,7 @@ func (c *wsClient) SubscribeHeight() error {
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(heightKey())
+		c.subscriptions.Remove(heightKey()) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -507,7 +507,7 @@ func (c *wsClient) SubscribeAccountAll(accountIndex int64, authToken string) err
 
 	channel := fmt.Sprintf("account_all/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountKey(accountIndex))
+		c.subscriptions.Remove(accountKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -515,7 +515,7 @@ func (c *wsClient) SubscribeAccountAll(accountIndex int64, authToken string) err
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountKey(accountIndex))
+		c.subscriptions.Remove(accountKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -552,7 +552,7 @@ func (c *wsClient) SubscribeAccountMarket(marketIndex int16, accountIndex int64,
 
 	channel := fmt.Sprintf("account_market/%d/%d", marketIndex, accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountMarketKey(marketIndex, accountIndex))
+		c.subscriptions.Remove(accountMarketKey(marketIndex, accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -560,7 +560,7 @@ func (c *wsClient) SubscribeAccountMarket(marketIndex int16, accountIndex int64,
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountMarketKey(marketIndex, accountIndex))
+		c.subscriptions.Remove(accountMarketKey(marketIndex, accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -597,7 +597,7 @@ func (c *wsClient) SubscribeAccountOrders(marketIndex int16, accountIndex int64,
 
 	channel := fmt.Sprintf("account_orders/%d/%d", marketIndex, accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountOrdersKey(marketIndex, accountIndex))
+		c.subscriptions.Remove(accountOrdersKey(marketIndex, accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -605,7 +605,7 @@ func (c *wsClient) SubscribeAccountOrders(marketIndex int16, accountIndex int64,
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountOrdersKey(marketIndex, accountIndex))
+		c.subscriptions.Remove(accountOrdersKey(marketIndex, accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -642,7 +642,7 @@ func (c *wsClient) SubscribeAccountAllOrders(accountIndex int64, authToken strin
 
 	channel := fmt.Sprintf("account_all_orders/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountAllOrdersKey(accountIndex))
+		c.subscriptions.Remove(accountAllOrdersKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -650,7 +650,7 @@ func (c *wsClient) SubscribeAccountAllOrders(accountIndex int64, authToken strin
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountAllOrdersKey(accountIndex))
+		c.subscriptions.Remove(accountAllOrdersKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -687,7 +687,7 @@ func (c *wsClient) SubscribeAccountAllTrades(accountIndex int64, authToken strin
 
 	channel := fmt.Sprintf("account_all_trades/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountAllTradesKey(accountIndex))
+		c.subscriptions.Remove(accountAllTradesKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -695,7 +695,7 @@ func (c *wsClient) SubscribeAccountAllTrades(accountIndex int64, authToken strin
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountAllTradesKey(accountIndex))
+		c.subscriptions.Remove(accountAllTradesKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -732,7 +732,7 @@ func (c *wsClient) SubscribeAccountAllPositions(accountIndex int64, authToken st
 
 	channel := fmt.Sprintf("account_all_positions/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountAllPositionsKey(accountIndex))
+		c.subscriptions.Remove(accountAllPositionsKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -740,7 +740,7 @@ func (c *wsClient) SubscribeAccountAllPositions(accountIndex int64, authToken st
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountAllPositionsKey(accountIndex))
+		c.subscriptions.Remove(accountAllPositionsKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -777,7 +777,7 @@ func (c *wsClient) SubscribeAccountTx(accountIndex int64, authToken string) erro
 
 	channel := fmt.Sprintf("account_tx/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(accountTxKey(accountIndex))
+		c.subscriptions.Remove(accountTxKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -785,7 +785,7 @@ func (c *wsClient) SubscribeAccountTx(accountIndex int64, authToken string) erro
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(accountTxKey(accountIndex))
+		c.subscriptions.Remove(accountTxKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -822,7 +822,7 @@ func (c *wsClient) SubscribeUserStats(accountIndex int64, authToken string) erro
 
 	channel := fmt.Sprintf("user_stats/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(userStatsKey(accountIndex))
+		c.subscriptions.Remove(userStatsKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -830,7 +830,7 @@ func (c *wsClient) SubscribeUserStats(accountIndex int64, authToken string) erro
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(userStatsKey(accountIndex))
+		c.subscriptions.Remove(userStatsKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -867,7 +867,7 @@ func (c *wsClient) SubscribePoolData(accountIndex int64, authToken string) error
 
 	channel := fmt.Sprintf("pool_data/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(poolDataKey(accountIndex))
+		c.subscriptions.Remove(poolDataKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -875,7 +875,7 @@ func (c *wsClient) SubscribePoolData(accountIndex int64, authToken string) error
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(poolDataKey(accountIndex))
+		c.subscriptions.Remove(poolDataKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -912,7 +912,7 @@ func (c *wsClient) SubscribePoolInfo(accountIndex int64, authToken string) error
 
 	channel := fmt.Sprintf("pool_info/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(poolInfoKey(accountIndex))
+		c.subscriptions.Remove(poolInfoKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -920,7 +920,7 @@ func (c *wsClient) SubscribePoolInfo(accountIndex int64, authToken string) error
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(poolInfoKey(accountIndex))
+		c.subscriptions.Remove(poolInfoKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
@@ -957,7 +957,7 @@ func (c *wsClient) SubscribeNotification(accountIndex int64, authToken string) e
 
 	channel := fmt.Sprintf("notification/%d", accountIndex)
 	if err := c.subscribe(channel, authToken); err != nil {
-		c.subscriptions.Remove(notificationKey(accountIndex))
+		c.subscriptions.Remove(notificationKey(accountIndex)) //nolint:errcheck // Cleanup on error path
 		return err
 	}
 
@@ -965,7 +965,7 @@ func (c *wsClient) SubscribeNotification(accountIndex int64, authToken string) e
 	case err := <-confirmChan:
 		return err
 	case <-time.After(10 * time.Second):
-		c.subscriptions.Remove(notificationKey(accountIndex))
+		c.subscriptions.Remove(notificationKey(accountIndex)) //nolint:errcheck // Cleanup on timeout
 		return ErrSubscriptionTimeout
 	}
 }
