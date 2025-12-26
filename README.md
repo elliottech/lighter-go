@@ -218,7 +218,7 @@ Pre-compiled shared libraries are available for FFI usage:
 - Linux shared object (.so) for amd64 and arm architectures
 - Windows DLL for amd64 architecture
 
-All libraries follow the naming convention `lighter_signer_{os}_{arch}`.
+All libraries follow the naming convention `lighter-{os}-{arch}`.
 
 The build & accompanying `.h` files can be found in the [releases](https://github.com/elliottech/lighter-go/releases).
 
