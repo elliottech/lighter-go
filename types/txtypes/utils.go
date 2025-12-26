@@ -1,12 +1,11 @@
 package txtypes
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
-	gQuint "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,7 +22,7 @@ const (
 const SignatureLength = 80
 const L1SignatureLength = 65
 const PubKeyLength = gFp5.Bytes
-const HashLength = gQuint.Bytes
+const HashLength = gFp5.Bytes
 
 func IsValidPubKeyLength(bytes []byte) bool {
 	return len(bytes) == gFp5.Bytes
@@ -39,7 +38,7 @@ func IsZeroByteSlice(bytes []byte) bool {
 }
 
 func getTxInfo(tx interface{}) (string, error) {
-	txInfoBytes, err := json.Marshal(tx)
+	txInfoBytes, err := sonic.Marshal(tx)
 	if err != nil {
 		return "", err
 	}

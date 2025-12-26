@@ -20,6 +20,18 @@ type TransactOpts struct {
 	DryRun           bool
 }
 
+// NewInt64 returns a pointer to the int64 value.
+// This is a helper for setting TransactOpts fields.
+func NewInt64(v int64) *int64 {
+	return &v
+}
+
+// NewUint8 returns a pointer to the uint8 value.
+// This is a helper for setting TransactOpts fields.
+func NewUint8(v uint8) *uint8 {
+	return &v
+}
+
 type PublicKey = gFp5.Element
 
 type ChangePubKeyReq struct {
