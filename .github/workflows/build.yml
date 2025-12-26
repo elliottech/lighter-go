@@ -24,7 +24,7 @@ jobs:
           cache: true
 
       - name: Build
-        run: go build -v ./...
+        run: go build -v $(go list ./... | grep -v /examples/)
 
       - name: Build examples
         run: |
