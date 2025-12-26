@@ -35,7 +35,7 @@ The signer example demonstrates FFI usage with the shared library.
 
 Compile (select the correct shared library for your platform):
 ```bash
-clang++ -std=c++20 -O3 ./examples/cpp/example.cpp ./build/lighter-signer-darwin-arm64.dylib -o ./build/example-cpp
+clang++ -std=c++20 -O3 ./examples/cpp/example.cpp ./build/lighter-darwin-arm64.dylib -o ./build/example-cpp
 ```
 
 Run from the `./build` folder:

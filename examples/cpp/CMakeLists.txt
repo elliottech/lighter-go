@@ -34,18 +34,18 @@ target_link_libraries(websocket_example
 target_include_directories(websocket_example PRIVATE ${Boost_INCLUDE_DIRS})
 
 # Signer example (uses the shared library)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-signer-darwin-arm64.h")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-darwin-arm64.h")
     add_executable(signer_example example.cpp)
     target_include_directories(signer_example PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../build")
 
     # Link against the shared library
     if(APPLE)
         target_link_libraries(signer_example PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-signer-darwin-arm64.dylib"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-darwin-arm64.dylib"
         )
     elseif(UNIX)
         target_link_libraries(signer_example PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-signer-linux-amd64.so"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../build/lighter-linux-amd64.so"
         )
     endif()
 endif()

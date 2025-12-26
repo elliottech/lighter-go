@@ -23,7 +23,7 @@ build-windows-local:
 #build-darwin-arm64-docker:
 #    docker run --rm -v ${PWD}:/go/src/sdk -w /go/src/sdk golang:1.23.2-bullseye bash -c " \
 #      cd /go/src/sdk && \
-#      go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib"
+#      go build -buildmode=c-shared -trimpath -o ./build/lighter-darwin-arm64.dylib ./sharedlib"
 
 build-linux-amd64-docker:
     go mod vendor
