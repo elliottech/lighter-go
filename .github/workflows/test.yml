@@ -54,7 +54,6 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          args: --timeout=5m --skip-dirs=examples
 
   vet:
     name: Vet
