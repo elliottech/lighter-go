@@ -29,7 +29,9 @@ go run ./examples/websocket/orderbook_stream.go
 
 ## C++
 
-The C++ example demonstrates FFI usage with the shared library.
+### Signer Example (FFI)
+
+The signer example demonstrates FFI usage with the shared library.
 
 Compile (select the correct shared library for your platform):
 ```bash
@@ -39,4 +41,44 @@ clang++ -std=c++20 -O3 ./examples/cpp/example.cpp ./build/lighter-signer-darwin-
 Run from the `./build` folder:
 ```bash
 ./example-cpp
+```
+
+### WebSocket Example
+
+The WebSocket example demonstrates real-time order book streaming using Boost.Beast.
+
+**Dependencies:**
+- Boost (Beast, Asio)
+- OpenSSL
+- nlohmann/json
+
+**Build with CMake:**
+```bash
+cd examples/cpp
+mkdir build && cd build
+cmake ..
+make
+```
+
+**Build manually (macOS):**
+```bash
+brew install boost openssl nlohmann-json
+clang++ -std=c++17 -o websocket_example websocket_example.cpp \
+  -I/opt/homebrew/include \
+  -L/opt/homebrew/lib \
+  -lssl -lcrypto -pthread
+```
+
+**Build manually (Linux):**
+```bash
+sudo apt-get install libboost-all-dev libssl-dev nlohmann-json3-dev
+g++ -std=c++17 -o websocket_example websocket_example.cpp \
+  -lssl -lcrypto -pthread
+```
+
+**Run:**
+```bash
+./websocket_example
+# Or with custom host:
+LIGHTER_WS_HOST=testnet.zklighter.elliot.ai ./websocket_example
 ```
