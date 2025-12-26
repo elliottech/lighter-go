@@ -1,4 +1,4 @@
-// Example: Creating a limit order
+// Example: Creating a take-profit order
 package main
 
 import (
@@ -26,28 +26,30 @@ func main() {
 		log.Fatalf("Failed to create signer client: %v", err)
 	}
 
-	// Create a limit buy order
-	marketIndex := int16(0)            // ETH-USD perp
-	size := int64(1000000)             // 0.01 ETH (scaled)
-	price := uint32(3000_000000)       // $3000 (scaled) - price is in 6 decimals
-	isBuy := true
-	expiry := time.Now().Add(24 * time.Hour).UnixMilli()
+	// Create a take-profit order
+	// This is typically used to lock in profits on an existing position
+	marketIndex := int16(0)          // ETH-USD perp
+	size := int64(1000000)           // 0.01 ETH (scaled)
+	triggerPrice := uint32(3500_000000) // Trigger when price rises to $3500 (6 decimals)
+	isBuy := false                   // Sell when triggered (closing a long position)
+	expiry := time.Now().Add(7 * 24 * time.Hour).UnixMilli()
 
+	nonce := int64(-1)
 	opts := &types.TransactOpts{
-		Nonce: types.NewInt64(-1),
+		Nonce: &nonce,
 	}
 
-	txInfo, err := signerClient.CreateLimitOrder(marketIndex, size, price, isBuy, expiry, opts)
+	txInfo, err := signerClient.CreateTakeProfitOrder(marketIndex, size, triggerPrice, isBuy, expiry, opts)
 	if err != nil {
-		log.Fatalf("Failed to create limit order: %v", err)
+		log.Fatalf("Failed to create take-profit order: %v", err)
 	}
 
-	fmt.Printf("Limit order created!\n")
+	fmt.Printf("Take-profit order created!\n")
 	fmt.Printf("  TX Hash: %s\n", txInfo.GetTxHash())
 	fmt.Printf("  Market: %d\n", marketIndex)
-	fmt.Printf("  Side: %s\n", map[bool]string{true: "BUY", false: "SELL"}[isBuy])
 	fmt.Printf("  Size: %d\n", size)
-	fmt.Printf("  Price: %d\n", price)
+	fmt.Printf("  Trigger Price: %d (triggers when price >= this)\n", triggerPrice)
+	fmt.Printf("  Side when triggered: SELL\n")
 	fmt.Printf("  Expiry: %s\n", time.UnixMilli(expiry).Format(time.RFC3339))
 
 	// Submit to API
