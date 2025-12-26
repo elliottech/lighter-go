@@ -1,3 +1,27 @@
+// Package client provides the core trading client for the Lighter API.
+//
+// SignerClient is the main entry point for trading operations. It provides
+// high-level methods for creating and submitting orders, managing positions,
+// and interacting with the Lighter exchange.
+//
+// Example:
+//
+//	// Create a client
+//	httpClient := http.NewFullClient("https://mainnet.zklighter.elliot.ai")
+//	client, err := client.NewSignerClient(httpClient, privateKey, chainId, 0, accountIndex, nil)
+//
+//	// Create a market buy order
+//	txInfo, err := client.CreateMarketOrder(0, 100000, true, nil) // Buy 0.01 ETH
+//
+//	// Submit the order
+//	resp, err := client.SendAndSubmit(txInfo)
+//
+//	// Create a limit order
+//	txInfo, err := client.CreateLimitOrder(0, 100000, 350000, true, expiry, nil)
+//
+//	// Create stop loss / take profit orders
+//	txInfo, err := client.CreateStopLossOrder(0, 100000, 340000, false, expiry, nil)
+//	txInfo, err := client.CreateTakeProfitOrder(0, 100000, 360000, false, expiry, nil)
 package client
 
 import (

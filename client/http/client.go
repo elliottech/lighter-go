@@ -1,3 +1,29 @@
+// Package http provides an HTTP client for the Lighter API.
+//
+// The client provides access to all Lighter REST API endpoints through
+// a fluent interface with lazy-initialized API groups.
+//
+// Usage:
+//
+//	client := http.NewFullClient("https://mainnet.zklighter.elliot.ai")
+//
+//	// Get account information
+//	account, err := client.Account().GetAccountByL1Address(ctx, "0x...")
+//
+//	// Get order book
+//	orderbook, err := client.Order().GetOrderBook(ctx, 0, 20)
+//
+//	// Get candlestick data
+//	candles, err := client.Candlestick().GetCandlesticks(ctx, 0, "1h", 100)
+//
+// API Groups:
+//   - Account(): Account and position information
+//   - Order(): Order book and trade data
+//   - Transaction(): Transaction submission and status
+//   - Candlestick(): OHLCV market data
+//   - Block(): Blockchain block data
+//   - Bridge(): Cross-chain bridge operations
+//   - Info(): General system information
 package http
 
 import (
