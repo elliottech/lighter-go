@@ -119,3 +119,48 @@ func (c *client) postAndParseL2HTTPResponse(path string, body interface{}, resul
 	}
 	return nil
 }
+
+// postFormL2HTTPResponse sends a POST request with form-encoded body and parses the response
+func (c *client) postFormL2HTTPResponse(path string, params map[string]any, result interface{}) error {
+	u, err := url.Parse(c.endpoint)
+	if err != nil {
+		return err
+	}
+	u.Path = path
+
+	// Build form data
+	form := url.Values{}
+	for k, v := range params {
+		form.Set(k, fmt.Sprintf("%v", v))
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader([]byte(form.Encode())))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return &ConnectionError{Err: err}
+	}
+	defer resp.Body.Close() //nolint:errcheck // Response body close errors are non-actionable
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return NewAPIErrorWithStatus(int32(resp.StatusCode), string(respBody), resp.StatusCode)
+	}
+
+	if err = c.parseResultStatus(respBody); err != nil {
+		return err
+	}
+
+	if err := sonic.Unmarshal(respBody, result); err != nil {
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	return nil
+}

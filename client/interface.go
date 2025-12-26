@@ -195,6 +195,9 @@ type BridgeAPI interface {
 
 	// GetFastBridgeInfo retrieves fast bridge information
 	GetFastBridgeInfo() (*api.RespGetFastBridgeInfo, error)
+
+	// CreateIntentAddress creates an intent address for external deposits
+	CreateIntentAddress(chainID int64, fromAddr string, amount string, isExternalDeposit bool) (*api.RespCreateIntentAddress, error)
 }
 
 // InfoAPI provides access to general information endpoints

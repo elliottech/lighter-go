@@ -60,3 +60,9 @@ type BridgeNetworks struct {
 	BaseResponse
 	Networks []BridgeSupportedNetwork `json:"networks"`
 }
+
+// RespCreateIntentAddress is the response for creating an intent address
+type RespCreateIntentAddress struct {
+	BaseResponse
+	IntentAddress string `json:"intent_address"`
+}

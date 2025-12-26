@@ -42,3 +42,17 @@ func (b *bridgeAPIImpl) GetFastBridgeInfo() (*api.RespGetFastBridgeInfo, error) 
 	}
 	return result, nil
 }
+
+func (b *bridgeAPIImpl) CreateIntentAddress(chainID int64, fromAddr string, amount string, isExternalDeposit bool) (*api.RespCreateIntentAddress, error) {
+	result := &api.RespCreateIntentAddress{}
+	err := b.client.postFormL2HTTPResponse("api/v1/createIntentAddress", map[string]any{
+		"chain_id":            chainID,
+		"from_addr":           fromAddr,
+		"amount":              amount,
+		"is_external_deposit": isExternalDeposit,
+	}, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
