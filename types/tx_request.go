@@ -109,26 +109,13 @@ type UpdateMarginTxReq struct {
 }
 
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
-	return ConstructAuthTokenInner(key, deadline, ops, false)
-}
-
-func ConstructAuthTokenForWs(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
-	return ConstructAuthTokenInner(key, deadline, ops, true)
-}
-
-func ConstructAuthTokenInner(key signer.Signer, deadline time.Time, ops *TransactOpts, useMilli bool) (string, error) {
 	if ops.FromAccountIndex == nil {
 		return "", fmt.Errorf("missing FromAccountIndex")
 	}
 	if ops.ApiKeyIndex == nil {
 		return "", fmt.Errorf("missing ApiKeyIndex")
 	}
-	var message string
-	if useMilli {
-		message = fmt.Sprintf("%v:%v:%v", deadline.UnixMilli(), *ops.FromAccountIndex, *ops.ApiKeyIndex)
-	} else {
-		message = fmt.Sprintf("%v:%v:%v", deadline.Unix(), *ops.FromAccountIndex, *ops.ApiKeyIndex)
-	}
+	message := fmt.Sprintf("%v:%v:%v", deadline.Unix(), *ops.FromAccountIndex, *ops.ApiKeyIndex)
 
 	msgInField, err := g.ArrayFromCanonicalLittleEndianBytes([]byte(message))
 	if err != nil {

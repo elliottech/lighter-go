@@ -104,17 +104,6 @@ func (c *TxClient) GetAuthToken(deadline time.Time) (string, error) {
 	})
 }
 
-func (c *TxClient) GetAuthTokenForWs(deadline time.Time) (string, error) {
-	if time.Until(deadline) > (7 * time.Hour) {
-		return "", fmt.Errorf("deadline should be within 7 hours")
-	}
-
-	return types.ConstructAuthTokenForWs(c.keyManager, deadline, &types.TransactOpts{
-		ApiKeyIndex:      &c.apiKeyIndex,
-		FromAccountIndex: &c.accountIndex,
-	})
-}
-
 func (c *TxClient) SwitchAPIKey(apiKey uint8) {
 	c.apiKeyIndex = apiKey
 }
