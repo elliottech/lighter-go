@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -103,8 +104,12 @@ func (ws *WSClient) Connect(ctx context.Context) error {
 		headers.Set("Authorization", "Bearer "+ws.authToken)
 	}
 
-	conn, _, err := dialer.Dial(u.String(), headers)
+	conn, resp, err := dialer.Dial(u.String(), headers)
 	if err != nil {
+		if resp != nil {
+			body, _ := io.ReadAll(resp.Body)
+			log.Printf("WS handshake failed, status=%d, body=%s", resp.StatusCode, string(body))
+		}
 		return fmt.Errorf("failed to connect to WebSocket: %v", err)
 	}
 
