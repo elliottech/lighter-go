@@ -35,7 +35,10 @@ func NewClient(baseUrl, proxyUrl, localAddress string) core.MinimalHTTPClient {
 		MaxConnsPerHost:     1000,
 		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     10 * time.Second,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: false},
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
+		},
 	}
 	if proxyUrl != "" || localAddress != "" {
 		var err error
