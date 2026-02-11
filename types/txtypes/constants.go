@@ -51,6 +51,9 @@ const (
 	TxTypeL2CreateGroupedOrders = 28
 	TxTypeL2UpdateMargin        = 29
 	TxTypeL1BurnShares          = 30
+
+	TxTypeL2StakeAssets   = 35
+	TxTypeL2UnstakeAssets = 36
 )
 
 // Order Type

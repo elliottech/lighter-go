@@ -636,6 +636,62 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("SignStakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			stakingPoolIndex := int64(args[0].Int())
+			shareAmount := int64(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			txInfo := &types.StakeAssetsTxReq{
+				StakingPoolIndex: stakingPoolIndex,
+				ShareAmount:      shareAmount,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetStakeAssetsTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignUnstakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			stakingPoolIndex := int64(args[0].Int())
+			shareAmount := int64(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			txInfo := &types.UnstakeAssetsTxReq{
+				StakingPoolIndex: stakingPoolIndex,
+				ShareAmount:      shareAmount,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetUnstakeAssetsTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
 	js.Global().Set("SignUpdateMargin", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {

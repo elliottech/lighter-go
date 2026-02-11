@@ -101,6 +101,16 @@ type BurnSharesTxReq struct {
 	ShareAmount     int64
 }
 
+type StakeAssetsTxReq struct {
+	StakingPoolIndex int64
+	ShareAmount      int64
+}
+
+type UnstakeAssetsTxReq struct {
+	StakingPoolIndex int64
+	ShareAmount      int64
+}
+
 type UpdateLeverageTxReq struct {
 	MarketIndex           int16
 	InitialMarginFraction uint16
@@ -666,5 +676,71 @@ func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2
 		Direction:    tx.Direction,
 		ExpiredAt:    ops.ExpiredAt,
 		Nonce:        *ops.Nonce,
+	}
+}
+
+func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
+	convertedTx := ConvertStakeAssetsTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *UnstakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
+	convertedTx := ConvertUnstakeAssetsTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConvertStakeAssetsTx(tx *StakeAssetsTxReq, ops *TransactOpts) *txtypes.L2StakeAssetsTxInfo {
+	return &txtypes.L2StakeAssetsTxInfo{
+		AccountIndex:     *ops.FromAccountIndex,
+		ApiKeyIndex:      *ops.ApiKeyIndex,
+		StakingPoolIndex: tx.StakingPoolIndex,
+		ShareAmount:      tx.ShareAmount,
+		ExpiredAt:        ops.ExpiredAt,
+		Nonce:            *ops.Nonce,
+	}
+}
+
+func ConvertUnstakeAssetsTx(tx *UnstakeAssetsTxReq, ops *TransactOpts) *txtypes.L2UnstakeAssetsTxInfo {
+	return &txtypes.L2UnstakeAssetsTxInfo{
+		AccountIndex:     *ops.FromAccountIndex,
+		ApiKeyIndex:      *ops.ApiKeyIndex,
+		StakingPoolIndex: tx.StakingPoolIndex,
+		ShareAmount:      tx.ShareAmount,
+		ExpiredAt:        ops.ExpiredAt,
+		Nonce:            *ops.Nonce,
 	}
 }

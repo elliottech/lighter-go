@@ -49,6 +49,10 @@ SignCreatePublicPool
 SignUpdatePublicPool
 SignMintShares
 SignBurnShares
+
+=== Staking ===
+SignStakeAssets
+SignUnstakeAssets
 ```
 
 ## How to specify an account
