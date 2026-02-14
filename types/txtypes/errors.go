@@ -40,7 +40,7 @@ var (
 	ErrPoolStakeShareAmountTooLow      = fmt.Errorf("PoolStakeShareAmount should be larger than %d", MinPoolSharesToMintOrBurn)
 	ErrPoolStakeShareAmountTooHigh     = fmt.Errorf("PoolStakeShareAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
 	ErrPoolUnstakeShareAmountTooLow    = fmt.Errorf("PoolUnstakeShareAmount should be larger than %d", MinPoolSharesToMintOrBurn)
-	ErrPoolUnstakeShareAmountTooHigh   = fmt.Errorf("PoolUnstakeShareAmount should not be larger than %d", MaxPoolSharesToMintOrBurn)
+	ErrPoolUnstakeShareAmountTooHigh   = fmt.Errorf("PoolUnstakeShareAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
 	ErrWithdrawalAmountTooLow          = fmt.Errorf("WithdrawalAmount should be larger than %d", MinWithdrawalAmount)
 	ErrWithdrawalAmountTooHigh         = fmt.Errorf("WithdrawalAmount should not be larger than %d", MaxWithdrawalAmount)
 	ErrTransferAmountTooLow            = fmt.Errorf("TransferAmount should be larger than %d", MinTransferAmount)
