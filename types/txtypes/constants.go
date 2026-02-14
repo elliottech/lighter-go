@@ -159,6 +159,9 @@ const (
 	MinPoolSharesToMintOrBurn int64 = 1
 	MaxPoolSharesToMintOrBurn int64 = (1 << 60) - 1
 
+	MinStakingSharesToMintOrBurn int64 = MinPoolSharesToMintOrBurn
+	MaxStakingSharesToMintOrBurn int64 = MaxPoolSharesToMintOrBurn
+
 	MinNonce int64 = 0
 
 	MinOrderNonce int64 = 0

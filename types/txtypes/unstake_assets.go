@@ -54,10 +54,10 @@ func (txInfo *L2UnstakeAssetsTxInfo) Validate() error {
 		return ErrStakingPoolIndexTooHigh
 	}
 
-	if txInfo.ShareAmount < MinPoolSharesToMintOrBurn {
+	if txInfo.ShareAmount < MinStakingSharesToMintOrBurn {
 		return ErrPoolUnstakeShareAmountTooLow
 	}
-	if txInfo.ShareAmount > MaxPoolSharesToMintOrBurn {
+	if txInfo.ShareAmount > MaxStakingSharesToMintOrBurn {
 		return ErrPoolUnstakeShareAmountTooHigh
 	}
 
