@@ -38,7 +38,7 @@ var (
 	ErrStakingPoolIndexTooLow          = fmt.Errorf("StakingPoolIndex should not be less than %d", MinAccountIndex)
 	ErrStakingPoolIndexTooHigh         = fmt.Errorf("StakingPoolIndex should not be larger than %d", MaxAccountIndex)
 	ErrPoolStakeShareAmountTooLow      = fmt.Errorf("PoolStakeShareAmount should be larger than %d", MinPoolSharesToMintOrBurn)
-	ErrPoolStakeShareAmountTooHigh     = fmt.Errorf("PoolStakeShareAmount should not be larger than %d", MaxPoolSharesToMintOrBurn)
+	ErrPoolStakeShareAmountTooHigh     = fmt.Errorf("PoolStakeShareAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
 	ErrPoolUnstakeShareAmountTooLow    = fmt.Errorf("PoolUnstakeShareAmount should be larger than %d", MinPoolSharesToMintOrBurn)
 	ErrPoolUnstakeShareAmountTooHigh   = fmt.Errorf("PoolUnstakeShareAmount should not be larger than %d", MaxPoolSharesToMintOrBurn)
 	ErrWithdrawalAmountTooLow          = fmt.Errorf("WithdrawalAmount should be larger than %d", MinWithdrawalAmount)
