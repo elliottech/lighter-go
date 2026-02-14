@@ -51,6 +51,9 @@ const (
 	TxTypeL2CreateGroupedOrders = 28
 	TxTypeL2UpdateMargin        = 29
 	TxTypeL1BurnShares          = 30
+
+	TxTypeL2StakeAssets   = 35
+	TxTypeL2UnstakeAssets = 36
 )
 
 // Order Type
@@ -155,6 +158,9 @@ const (
 	MaxPoolEntryUSDC                = (1 << 56) - 1 // 2^56 - 1 max USDC to invest in a pool
 	MinPoolSharesToMintOrBurn int64 = 1
 	MaxPoolSharesToMintOrBurn int64 = (1 << 60) - 1
+
+	MinStakingSharesToMintOrBurn int64 = MinPoolSharesToMintOrBurn
+	MaxStakingSharesToMintOrBurn int64 = MaxPoolSharesToMintOrBurn
 
 	MinNonce int64 = 0
 

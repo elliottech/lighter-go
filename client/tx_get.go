@@ -207,3 +207,27 @@ func (c *TxClient) GetUpdateMarginTransaction(tx *types.UpdateMarginTxReq, ops *
 	}
 	return txInfo, nil
 }
+
+func (c *TxClient) GetStakeAssetsTransaction(tx *types.StakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructStakeAssetsTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetUnstakeAssetsTransaction(tx *types.UnstakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructUnstakeAssetsTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}

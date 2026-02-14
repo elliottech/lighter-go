@@ -686,4 +686,56 @@ func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.i
 	return convertTxInfoToResponse(txInfo, err)
 }
 
+//export SignStakeAssets
+func SignStakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	stakingPoolIndex := int64(cStakingPoolIndex)
+	shareAmount := int64(cShareAmount)
+
+	tx := &types.StakeAssetsTxReq{
+		StakingPoolIndex: stakingPoolIndex,
+		ShareAmount:      shareAmount,
+	}
+	ops := getTransactOpts(cNonce)
+
+	txInfo, err := c.GetStakeAssetsTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignUnstakeAssets
+func SignUnstakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	stakingPoolIndex := int64(cStakingPoolIndex)
+	shareAmount := int64(cShareAmount)
+
+	tx := &types.UnstakeAssetsTxReq{
+		StakingPoolIndex: stakingPoolIndex,
+		ShareAmount:      shareAmount,
+	}
+	ops := getTransactOpts(cNonce)
+
+	txInfo, err := c.GetUnstakeAssetsTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
 func main() {}
