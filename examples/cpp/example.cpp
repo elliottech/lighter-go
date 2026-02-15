@@ -3,7 +3,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
-#include "../build/lighter-signer-darwin-arm64.h"
+#include "../build/lighter-darwin-arm64.h"
 
 using namespace std;
 

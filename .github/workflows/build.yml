@@ -1,0 +1,166 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-go:
+    name: Build Go
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build
+        run: go build -v $(go list ./... | grep -v /examples/)
+
+      - name: Build examples
+        run: |
+          for dir in examples/*/*/; do
+            if [ -f "${dir}main.go" ]; then
+              echo "Building ${dir}"
+              go build -o /dev/null "./${dir}"
+            fi
+          done
+
+  build-shared-libs:
+    name: Build Shared Libraries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Set up Just
+        uses: extractions/setup-just@v2
+
+      - name: Build Linux AMD64 (Docker)
+        run: just build-linux-amd64-docker
+
+      - name: Build Linux ARM64 (Docker)
+        run: just build-linux-arm64-docker
+
+      - name: Build Windows AMD64 (Docker)
+        run: just build-windows-amd64-docker
+
+      - name: Upload Linux AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-linux-amd64
+          path: build/lighter-linux-amd64.*
+
+      - name: Upload Linux ARM64
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-linux-arm64
+          path: build/lighter-linux-arm64.*
+
+      - name: Upload Windows AMD64
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-windows-amd64
+          path: build/lighter-windows-amd64.*
+
+  build-darwin:
+    name: Build Darwin
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Set up Just
+        uses: extractions/setup-just@v2
+
+      - name: Build Darwin ARM64
+        run: just build-darwin-local
+
+      - name: Upload Darwin ARM64
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-darwin-arm64
+          path: build/lighter-darwin-arm64.*
+
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Set up Just
+        uses: extractions/setup-just@v2
+
+      - name: Build WASM
+        run: just build-wasm
+
+      - name: Upload WASM
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighter-wasm
+          path: build/lighter.wasm
+
+  release:
+    name: Release
+    needs: [build-go, build-shared-libs, build-darwin, build-wasm]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            cp "$dir"* release/
+          done
+          ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

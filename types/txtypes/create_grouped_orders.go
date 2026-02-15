@@ -194,9 +194,10 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) ValidateSiblingOrders(orders []*Order
 		if err != nil {
 			return err
 		}
-		if order.Type == StopLossOrder || order.Type == StopLossLimitOrder {
+		switch order.Type {
+		case StopLossOrder, StopLossLimitOrder:
 			slFlag = true
-		} else if order.Type == TakeProfitOrder || order.Type == TakeProfitLimitOrder {
+		case TakeProfitOrder, TakeProfitLimitOrder:
 			tpFlag = true
 		}
 	}
