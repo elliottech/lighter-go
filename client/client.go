@@ -22,7 +22,7 @@ var (
 
 // GenerateAPIKey generates a new API key pair from a seed
 func GenerateAPIKey() (string, string, error) {
-	key := curve.SampleScalar(nil)
+	key := curve.SampleScalar()
 	publicKeyStr := hexutil.Encode(schnorr.SchnorrPkFromSk(key).ToLittleEndianBytes())
 	privateKeyStr := hexutil.Encode(key.ToLittleEndianBytes())
 

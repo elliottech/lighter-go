@@ -17,6 +17,8 @@ type L2CreateOrderTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2CreateOrderTxInfo) GetTxType() uint8 {
@@ -32,6 +34,10 @@ func (txInfo *L2CreateOrderTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2CreateOrderTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	// AccountIndex
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrAccountIndexTooLow
@@ -155,6 +161,21 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 		return ErrOrderTriggerPriceInvalid
 	}
 
+	// Attribute-specific validations
+	integratorFeeCollectorIndex := int64(txInfo.L2TxAttributes[AttributeTypeIntegratorAccountIndex])
+	if integratorFeeCollectorIndex < MinAccountIndex {
+		return ErrAccountIndexTooLow
+	}
+	if integratorFeeCollectorIndex > MaxAccountIndex {
+		return ErrAccountIndexTooHigh
+	}
+	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorTakerFee]) > FeeTick {
+		return ErrFeeTooHigh
+	}
+	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorMakerFee]) > FeeTick {
+		return ErrFeeTooHigh
+	}
+
 	// Nonce
 	if txInfo.Nonce < MinNonce {
 		return ErrNonceTooLow
@@ -188,5 +209,6 @@ func (txInfo *L2CreateOrderTxInfo) Hash(lighterChainId uint32, extra ...g.Elemen
 	elems = append(elems, g.FromUint32(txInfo.TriggerPrice))
 	elems = append(elems, g.FromInt64(txInfo.OrderExpiry))
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }

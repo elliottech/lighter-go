@@ -54,6 +54,8 @@ const (
 
 	TxTypeL2StakeAssets   = 35
 	TxTypeL2UnstakeAssets = 36
+
+	TxTypeL2ApproveIntegrator = 45
 )
 
 // Order Type
@@ -201,6 +203,12 @@ const (
 	MaxGroupedOrderCount int64 = 3
 
 	MaxTimestamp = (1 << 48) - 1
+
+	NilIntegratorIndex    = 0
+	NilIntegratorTakerFee = 0
+	NilIntegratorMakerFee = 0
+
+	NbAttributesPerTx = 4
 )
 
 const (
