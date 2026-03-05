@@ -123,6 +123,15 @@ type UpdateMarginTxReq struct {
 	Direction   uint8
 }
 
+type ApproveIntegratorTxReq struct {
+	IntegratorAccountIndex int64
+	MaxPerpsTakerFee       uint32
+	MaxPerpsMakerFee       uint32
+	MaxSpotTakerFee        uint32
+	MaxSpotMakerFee        uint32
+	ApprovalExpiry         int64
+}
+
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
 	if ops.FromAccountIndex == nil {
 		return "", fmt.Errorf("missing FromAccountIndex")
@@ -478,6 +487,28 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 	return convertedTx, nil
 }
 
+func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *ApproveIntegratorTxReq, ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
+	convertedTx := ConvertApproveIntegratorTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
 	return &txtypes.L2TransferTxInfo{
 		FromAccountIndex: *ops.FromAccountIndex,
@@ -742,5 +773,22 @@ func ConvertUnstakeAssetsTx(tx *UnstakeAssetsTxReq, ops *TransactOpts) *txtypes.
 		ShareAmount:      tx.ShareAmount,
 		ExpiredAt:        ops.ExpiredAt,
 		Nonce:            *ops.Nonce,
+	}
+}
+
+func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
+	return &txtypes.L2ApproveIntegratorTxInfo{
+		AccountIndex: *ops.FromAccountIndex,
+		ApiKeyIndex:  *ops.ApiKeyIndex,
+
+		IntegratorAccountIndex: tx.IntegratorAccountIndex,
+		MaxPerpsTakerFee:       tx.MaxPerpsTakerFee,
+		MaxPerpsMakerFee:       tx.MaxPerpsMakerFee,
+		MaxSpotTakerFee:        tx.MaxSpotTakerFee,
+		MaxSpotMakerFee:        tx.MaxSpotMakerFee,
+		ApprovalExpiry:         tx.ApprovalExpiry,
+
+		ExpiredAt: ops.ExpiredAt,
+		Nonce:     *ops.Nonce,
 	}
 }

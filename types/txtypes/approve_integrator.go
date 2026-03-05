@@ -90,7 +90,6 @@ func (txInfo *L2ApproveIntegratorTxInfo) Validate() error {
 	return nil
 }
 
-// DONE
 func (txInfo *L2ApproveIntegratorTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
 	elems := make([]g.Element, 0, 12)
 
