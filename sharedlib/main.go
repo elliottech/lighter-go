@@ -416,7 +416,7 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.int, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -434,12 +434,19 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 	price := uint32(cPrice)
 	triggerPrice := uint32(cTriggerPrice)
 
+	integratorAccountIndex := int(cIntegratorAccountIndex)
+	integratorMakerFee := int(cIntegratorMakerFee)
+	integratorTakerFee := int(cIntegratorTakerFee)
+
 	tx := &types.ModifyOrderTxReq{
-		MarketIndex:  marketIndex,
-		Index:        index,
-		BaseAmount:   baseAmount,
-		Price:        price,
-		TriggerPrice: triggerPrice,
+		MarketIndex:            marketIndex,
+		Index:                  index,
+		BaseAmount:             baseAmount,
+		Price:                  price,
+		TriggerPrice:           triggerPrice,
+		IntegratorAccountIndex: integratorAccountIndex,
+		IntegratorTakerFee:     integratorTakerFee,
+		IntegratorMakerFee:     integratorMakerFee,
 	}
 	ops := getTransactOpts(cNonce)
 

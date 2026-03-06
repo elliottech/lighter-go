@@ -64,11 +64,14 @@ type CreateGroupedOrdersTxReq struct {
 }
 
 type ModifyOrderTxReq struct {
-	MarketIndex  int16
-	Index        int64
-	BaseAmount   int64
-	Price        uint32
-	TriggerPrice uint32
+	MarketIndex            int16
+	Index                  int64
+	BaseAmount             int64
+	Price                  uint32
+	TriggerPrice           uint32
+	IntegratorAccountIndex int
+	IntegratorMakerFee     int
+	IntegratorTakerFee     int
 }
 
 type CancelOrderTxReq struct {
@@ -602,6 +605,11 @@ func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2Mo
 		TriggerPrice: tx.TriggerPrice,
 		ExpiredAt:    ops.ExpiredAt,
 		Nonce:        *ops.Nonce,
+		L2TxAttributes: txtypes.L2TxAttributes{
+			txtypes.AttributeTypeIntegratorAccountIndex: tx.IntegratorAccountIndex,
+			txtypes.AttributeTypeIntegratorTakerFee:     tx.IntegratorTakerFee,
+			txtypes.AttributeTypeIntegratorMakerFee:     tx.IntegratorMakerFee,
+		},
 	}
 }
 
