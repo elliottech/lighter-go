@@ -1,8 +1,11 @@
 package txtypes
 
 import (
+	"fmt"
+
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var _ (TxInfo) = (*L2ApproveIntegratorTxInfo)(nil)
@@ -88,6 +91,27 @@ func (txInfo *L2ApproveIntegratorTxInfo) Validate() error {
 	}
 
 	return nil
+}
+
+func (txInfo *L2ApproveIntegratorTxInfo) GetL1SignatureBody(chainId uint32) string {
+	signatureBody := fmt.Sprintf(
+		TemplateL2ApproveIntegrator,
+		getHex10FromUint64(uint64(txInfo.Nonce)),        //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.AccountIndex)), //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
+		getHex10FromUint64(uint64(txInfo.IntegratorAccountIndex)), //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.MaxPerpsTakerFee)),       //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.MaxPerpsMakerFee)),       //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.MaxSpotTakerFee)),        //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.MaxSpotMakerFee)),        //nolint:gosec
+		getHex10FromUint64(uint64(txInfo.ApprovalExpiry)),         //nolint:gosec
+		getHex10FromUint64(uint64(chainId)),                       //nolint:gosec
+	)
+	return signatureBody
+}
+
+func (txInfo *L2ApproveIntegratorTxInfo) GetL1AddressBySignature(chainId uint32) common.Address {
+	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(chainId), txInfo.L1Sig)
 }
 
 func (txInfo *L2ApproveIntegratorTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {

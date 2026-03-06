@@ -65,6 +65,8 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
+	case *txtypes.L2ApproveIntegratorTxInfo:
+		return typed.GetL1SignatureBody(chainId)
 	default:
 		return ""
 	}
@@ -735,6 +737,38 @@ func SignUnstakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cN
 	ops := getTransactOpts(cNonce)
 
 	txInfo, err := c.GetUnstakeAssetsTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignApproveIntegrator
+func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint32_t, cMaxPerpsMakerFee C.uint32_t, cMaxSpotTakerFee C.uint32_t, cMaxSpotMakerFee C.uint32_t, cApprovalExpiry C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	IntegratorIndex := int64(cIntegratorIndex)
+	MaxPerpsMakerFee := uint32(cMaxPerpsMakerFee)
+	MaxPerpsTakerFee := uint32(cMaxPerpsTakerFee)
+	MaxSpotMakerFee := uint32(cMaxSpotMakerFee)
+	MaxSpotTakerFee := uint32(cMaxSpotTakerFee)
+	ApprovalExpiry := int64(cApprovalExpiry)
+
+	tx := &types.ApproveIntegratorTxReq{
+		IntegratorAccountIndex: IntegratorIndex,
+		MaxPerpsTakerFee:       MaxPerpsTakerFee,
+		MaxPerpsMakerFee:       MaxPerpsMakerFee,
+		MaxSpotTakerFee:        MaxSpotTakerFee,
+		MaxSpotMakerFee:        MaxSpotMakerFee,
+		ApprovalExpiry:         ApprovalExpiry,
+	}
+	ops := getTransactOpts(cNonce)
+	txInfo, err := c.GetApproveIntegratorTx(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
