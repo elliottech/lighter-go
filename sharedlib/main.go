@@ -46,6 +46,9 @@ typedef struct {
     uint8_t ReduceOnly;
     uint32_t TriggerPrice;
     int64_t OrderExpiry;
+	int64_t IntegratorAccountIndex;
+	int64_t IntegratorMakerFee;
+	int64_t IntegratorTakerFee;
 } CreateOrderTxReq;
 */
 import "C"
@@ -209,7 +212,7 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cA
 }
 
 //export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.int, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -232,21 +235,28 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 	triggerPrice := uint32(cTriggerPrice)
 	orderExpiry := int64(cOrderExpiry)
 
+	integratorAccountIndex := int(cIntegratorAccountIndex)
+	integratorMakerFee := int(cIntegratorMakerFee)
+	integratorTakerFee := int(cIntegratorTakerFee)
+
 	if orderExpiry == -1 {
 		orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli() // 28 days
 	}
 
 	tx := &types.CreateOrderTxReq{
-		MarketIndex:      marketIndex,
-		ClientOrderIndex: clientOrderIndex,
-		BaseAmount:       baseAmount,
-		Price:            price,
-		IsAsk:            isAsk,
-		Type:             orderType,
-		TimeInForce:      timeInForce,
-		ReduceOnly:       reduceOnly,
-		TriggerPrice:     triggerPrice,
-		OrderExpiry:      orderExpiry,
+		MarketIndex:            marketIndex,
+		ClientOrderIndex:       clientOrderIndex,
+		BaseAmount:             baseAmount,
+		Price:                  price,
+		IsAsk:                  isAsk,
+		Type:                   orderType,
+		TimeInForce:            timeInForce,
+		ReduceOnly:             reduceOnly,
+		TriggerPrice:           triggerPrice,
+		OrderExpiry:            orderExpiry,
+		IntegratorAccountIndex: integratorAccountIndex,
+		IntegratorTakerFee:     integratorTakerFee,
+		IntegratorMakerFee:     integratorMakerFee,
 	}
 	ops := getTransactOpts(cNonce)
 
@@ -280,16 +290,19 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		}
 
 		orders[i] = &types.CreateOrderTxReq{
-			MarketIndex:      int16(order.MarketIndex),
-			ClientOrderIndex: int64(order.ClientOrderIndex),
-			BaseAmount:       int64(order.BaseAmount),
-			Price:            uint32(order.Price),
-			IsAsk:            uint8(order.IsAsk),
-			Type:             uint8(order.Type),
-			TimeInForce:      uint8(order.TimeInForce),
-			ReduceOnly:       uint8(order.ReduceOnly),
-			TriggerPrice:     uint32(order.TriggerPrice),
-			OrderExpiry:      orderExpiry,
+			MarketIndex:            int16(order.MarketIndex),
+			ClientOrderIndex:       int64(order.ClientOrderIndex),
+			BaseAmount:             int64(order.BaseAmount),
+			Price:                  uint32(order.Price),
+			IsAsk:                  uint8(order.IsAsk),
+			Type:                   uint8(order.Type),
+			TimeInForce:            uint8(order.TimeInForce),
+			ReduceOnly:             uint8(order.ReduceOnly),
+			TriggerPrice:           uint32(order.TriggerPrice),
+			OrderExpiry:            orderExpiry,
+			IntegratorAccountIndex: int(order.IntegratorAccountIndex),
+			IntegratorTakerFee:     int(order.IntegratorTakerFee),
+			IntegratorMakerFee:     int(order.IntegratorMakerFee),
 		}
 	}
 

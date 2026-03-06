@@ -43,16 +43,19 @@ type WithdrawTxReq struct {
 }
 
 type CreateOrderTxReq struct {
-	MarketIndex      int16
-	ClientOrderIndex int64
-	BaseAmount       int64
-	Price            uint32
-	IsAsk            uint8
-	Type             uint8
-	TimeInForce      uint8
-	ReduceOnly       uint8
-	TriggerPrice     uint32
-	OrderExpiry      int64
+	MarketIndex            int16
+	ClientOrderIndex       int64
+	BaseAmount             int64
+	Price                  uint32
+	IsAsk                  uint8
+	Type                   uint8
+	TimeInForce            uint8
+	ReduceOnly             uint8
+	TriggerPrice           uint32
+	OrderExpiry            int64
+	IntegratorAccountIndex int
+	IntegratorMakerFee     int
+	IntegratorTakerFee     int
 }
 
 type CreateGroupedOrdersTxReq struct {
@@ -542,6 +545,11 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 		},
 		ExpiredAt: ops.ExpiredAt,
 		Nonce:     *ops.Nonce,
+		L2TxAttributes: txtypes.L2TxAttributes{
+			txtypes.AttributeTypeIntegratorAccountIndex: tx.IntegratorAccountIndex,
+			txtypes.AttributeTypeIntegratorTakerFee:     tx.IntegratorTakerFee,
+			txtypes.AttributeTypeIntegratorMakerFee:     tx.IntegratorMakerFee,
+		},
 	}
 }
 
