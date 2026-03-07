@@ -53,6 +53,9 @@ SignBurnShares
 === Staking ===
 SignStakeAssets
 SignUnstakeAssets
+
+=== Integrators ===
+SignApproveIntegrator
 ```
 
 ## How to specify an account

@@ -36,7 +36,7 @@ typedef struct {
 } ApiKeyResponse;
 
 typedef struct {
-    uint8_t MarketIndex;
+    int16_t MarketIndex;
     int64_t ClientOrderIndex;
     int64_t BaseAmount;
     uint32_t Price;
