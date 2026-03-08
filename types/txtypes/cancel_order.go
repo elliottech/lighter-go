@@ -77,7 +77,7 @@ func (txInfo *L2CancelOrderTxInfo) Validate() error {
 }
 
 func (txInfo *L2CancelOrderTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 7)
+	elems := make([]g.Element, 0, 8)
 
 	elems = append(elems, g.FromUint32(lighterChainId))
 	elems = append(elems, g.FromUint32(TxTypeL2CancelOrder))

@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
-	github.com/elliottech/poseidon_crypto v0.0.11
+	github.com/elliottech/poseidon_crypto v0.0.15
 	github.com/ethereum/go-ethereum v1.15.6
 )
 
