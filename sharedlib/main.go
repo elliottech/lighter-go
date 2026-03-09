@@ -212,7 +212,7 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cA
 }
 
 //export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.int, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -416,7 +416,7 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.int, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
