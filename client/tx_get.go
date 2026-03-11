@@ -207,3 +207,47 @@ func (c *TxClient) GetUpdateMarginTransaction(tx *types.UpdateMarginTxReq, ops *
 	}
 	return txInfo, nil
 }
+
+func (c *TxClient) GetStakeAssetsTransaction(tx *types.StakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructStakeAssetsTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetUnstakeAssetsTransaction(tx *types.UnstakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructUnstakeAssetsTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetApproveIntegratorTx(tx *types.ApproveIntegratorTxReq, ops *types.TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructApproveIntegratorTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+
+	pk := c.keyManager.PubKeyBytes()
+	msgHash, _ := txInfo.Hash(c.chainId)
+
+	if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
+		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+	}
+
+	return txInfo, nil
+}

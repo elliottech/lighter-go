@@ -17,7 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-var chainId uint32
+var chainId uint32 = 304 // mainnet
+//var chainId uint32 = 300 // testnet
 
 func wrapErr(err error) js.Value {
 	if err != nil {
@@ -26,12 +27,14 @@ func wrapErr(err error) js.Value {
 	return js.ValueOf(map[string]interface{}{})
 }
 
-func messageToSign(info txtypes.TxInfo) string {
-	switch tx := info.(type) {
+func messageToSign(txInfo txtypes.TxInfo) string {
+	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
-		return tx.GetL1SignatureBody()
+		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
-		return tx.GetL1SignatureBody(chainId)
+		return typed.GetL1SignatureBody(chainId)
+	case *txtypes.L2ApproveIntegratorTxInfo:
+		return typed.GetL1SignatureBody(chainId)
 	default:
 		return ""
 	}
@@ -142,11 +145,7 @@ func recoverPanic(fn func() js.Value) (result js.Value) {
 func main() {
 	js.Global().Set("GenerateAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 1 {
-				return js.ValueOf(map[string]interface{}{"error": "GenerateAPIKey expects 1 arg: seed"})
-			}
-			seed := args[0].String()
-			privateKey, publicKey, err := client.GenerateAPIKey(seed)
+			privateKey, publicKey, err := client.GenerateAPIKey()
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -252,11 +251,11 @@ func main() {
 
 	js.Global().Set("SignCreateOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 13 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 13 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 16 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 16 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
-			for i := 0; i < 13; i++ {
+			for i := 0; i < 16; i++ {
 				if args[i].Type() == js.TypeUndefined {
 					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
 				}
@@ -306,7 +305,19 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[10], 10)
+			integratorAccountIndex, err := safeInt(args[10], 10)
+			if err != nil {
+				return wrapErr(err)
+			}
+			integratorTakerFee, err := safeInt(args[11], 11)
+			if err != nil {
+				return wrapErr(err)
+			}
+			integratorMakerFee, err := safeInt(args[12], 12)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[13], 13)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -316,16 +327,19 @@ func main() {
 			}
 
 			txInfo := &types.CreateOrderTxReq{
-				MarketIndex:      marketIndex,
-				ClientOrderIndex: clientOrderIndex,
-				BaseAmount:       baseAmount,
-				Price:            price,
-				IsAsk:            isAsk,
-				Type:             orderType,
-				TimeInForce:      timeInForce,
-				ReduceOnly:       reduceOnly,
-				TriggerPrice:     triggerPrice,
-				OrderExpiry:      orderExpiry,
+				MarketIndex:            int16(marketIndex),
+				ClientOrderIndex:       clientOrderIndex,
+				BaseAmount:             baseAmount,
+				Price:                  price,
+				IsAsk:                  isAsk,
+				Type:                   orderType,
+				TimeInForce:            timeInForce,
+				ReduceOnly:             reduceOnly,
+				TriggerPrice:           triggerPrice,
+				OrderExpiry:            orderExpiry,
+				IntegratorAccountIndex: int(integratorAccountIndex),
+				IntegratorTakerFee:     int(integratorTakerFee),
+				IntegratorMakerFee:     int(integratorMakerFee),
 			}
 			ops := new(types.TransactOpts)
 			if nonce != -1 {
@@ -575,8 +589,8 @@ func main() {
 
 	js.Global().Set("SignModifyOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 8 {
-				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 8 args: marketIndex, index, baseAmount, price, triggerPrice, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 11 {
+				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 11 args: marketIndex, index, baseAmount, price, triggerPrice, integratorAccountIndex, integratorTakerFee, integratorMakerFee, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -591,14 +605,20 @@ func main() {
 			baseAmount := int64(args[2].Int())
 			price := uint32(args[3].Int())
 			triggerPrice := uint32(args[4].Int())
-			nonce := int64(args[5].Int())
+			integratorAccountIndex := int(args[5].Int())
+			integratorTakerFee := int(args[6].Int())
+			integratorMakerFee := int(args[7].Int())
+			nonce := int64(args[8].Int())
 
 			txInfo := &types.ModifyOrderTxReq{
-				MarketIndex:  marketIndex,
-				Index:        index,
-				BaseAmount:   baseAmount,
-				Price:        price,
-				TriggerPrice: triggerPrice,
+				MarketIndex:            marketIndex,
+				Index:                  index,
+				BaseAmount:             baseAmount,
+				Price:                  price,
+				TriggerPrice:           triggerPrice,
+				IntegratorAccountIndex: integratorAccountIndex,
+				IntegratorTakerFee:     integratorTakerFee,
+				IntegratorMakerFee:     integratorMakerFee,
 			}
 			ops := new(types.TransactOpts)
 			if nonce != -1 {
@@ -759,6 +779,62 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("SignStakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			stakingPoolIndex := int64(args[0].Int())
+			shareAmount := int64(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			txInfo := &types.StakeAssetsTxReq{
+				StakingPoolIndex: stakingPoolIndex,
+				ShareAmount:      shareAmount,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetStakeAssetsTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignUnstakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			stakingPoolIndex := int64(args[0].Int())
+			shareAmount := int64(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			txInfo := &types.UnstakeAssetsTxReq{
+				StakingPoolIndex: stakingPoolIndex,
+				ShareAmount:      shareAmount,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetUnstakeAssetsTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
 	js.Global().Set("SignUpdateMargin", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
@@ -824,16 +900,19 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
-					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
-					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
-					Price:            uint32(orderObj.Get("Price").Int()),
-					IsAsk:            uint8(orderObj.Get("IsAsk").Int()),
-					Type:             uint8(orderObj.Get("Type").Int()),
-					TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
-					ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
-					TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
-					OrderExpiry:      orderExpiry,
+					MarketIndex:            int16(orderObj.Get("MarketIndex").Int()),
+					ClientOrderIndex:       int64(orderObj.Get("ClientOrderIndex").Int()),
+					BaseAmount:             int64(orderObj.Get("BaseAmount").Int()),
+					Price:                  uint32(orderObj.Get("Price").Int()),
+					IsAsk:                  uint8(orderObj.Get("IsAsk").Int()),
+					Type:                   uint8(orderObj.Get("Type").Int()),
+					TimeInForce:            uint8(orderObj.Get("TimeInForce").Int()),
+					ReduceOnly:             uint8(orderObj.Get("ReduceOnly").Int()),
+					TriggerPrice:           uint32(orderObj.Get("TriggerPrice").Int()),
+					OrderExpiry:            orderExpiry,
+					IntegratorAccountIndex: int(orderObj.Get("IntegratorAccountIndex").Int()),
+					IntegratorTakerFee:     int(orderObj.Get("IntegratorTakerFee").Int()),
+					IntegratorMakerFee:     int(orderObj.Get("IntegratorMakerFee").Int()),
 				}
 			}
 
@@ -850,6 +929,42 @@ func main() {
 
 			txInfo, err := c.GetCreateGroupedOrdersTransaction(req, ops)
 			return convertTxInfoToJS(txInfo, err)
+		})
+	}))
+
+	js.Global().Set("SignApproveIntegrator", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 9 {
+				return js.ValueOf(map[string]interface{}{"error": "SignApproveIntegrator expects 9 args: cIntegratorIndex, cMaxPerpsTakerFee, cMaxPerpsMakerFee, cMaxSpotTakerFee, cMaxSpotMakerFee, cApprovalExpiry, cNonce, cApiKeyIndex, cAccountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+			integratorIndex := int64(args[0].Int())
+			maxPerpsTakerFee := uint32(args[1].Int())
+			maxPerpsMakerFee := uint32(args[2].Int())
+			maxSpotTakerFee := uint32(args[3].Int())
+			maxSpotMakerFee := uint32(args[4].Int())
+			approvalExpiry := int64(args[5].Int())
+
+			txInfo := &types.ApproveIntegratorTxReq{
+				IntegratorAccountIndex: integratorIndex,
+				MaxPerpsTakerFee:       maxPerpsTakerFee,
+				MaxPerpsMakerFee:       maxPerpsMakerFee,
+				MaxSpotTakerFee:        maxSpotTakerFee,
+				MaxSpotMakerFee:        maxSpotMakerFee,
+				ApprovalExpiry:         approvalExpiry,
+			}
+
+			ops := new(types.TransactOpts)
+			nonce := int64(args[6].Int())
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetApproveIntegratorTx(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
 		})
 	}))
 

@@ -20,6 +20,8 @@ type L2CreateGroupedOrdersTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2CreateGroupedOrdersTxInfo) GetTxType() uint8 {
@@ -35,6 +37,10 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	// AccountIndex
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrAccountIndexTooLow
@@ -114,6 +120,21 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 		if (order.TriggerPrice < MinOrderTriggerPrice || order.TriggerPrice > MaxOrderTriggerPrice) && order.TriggerPrice != NilOrderTriggerPrice {
 			return ErrOrderTriggerPriceInvalid
 		}
+	}
+
+	// Attribute-specific validations
+	integratorFeeCollectorIndex := int64(txInfo.L2TxAttributes[AttributeTypeIntegratorAccountIndex])
+	if integratorFeeCollectorIndex < MinAccountIndex {
+		return ErrAccountIndexTooLow
+	}
+	if integratorFeeCollectorIndex > MaxAccountIndex {
+		return ErrAccountIndexTooHigh
+	}
+	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorTakerFee]) > FeeTick {
+		return ErrFeeTooHigh
+	}
+	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorMakerFee]) > FeeTick {
+		return ErrFeeTooHigh
 	}
 
 	// Nonce
@@ -329,5 +350,6 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Hash(lighterChainId uint32, extra ...
 	}
 	elems = append(elems, aggregatedOrderHash[:]...)
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }
