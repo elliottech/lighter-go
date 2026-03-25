@@ -792,4 +792,9 @@ func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint
 	return convertTxInfoToResponse(txInfo, err)
 }
 
+//export Free
+func Free(ptr unsafe.Pointer) {
+	C.free(ptr)
+}
+
 func main() {}
