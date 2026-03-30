@@ -115,7 +115,9 @@ func getClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (*client.TxClient, 
 
 func CreateTxAttributesFromIsSkipNonce(skipNonce uint8) *types.L2TxAttributes {
 	attr := types.L2TxAttributes{}
-	attr.SkipNonce = &skipNonce
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
 	return &attr
 }
 
@@ -124,7 +126,9 @@ func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerF
 	attr.IntegratorAccountIndex = &integratorAccountIndex
 	attr.IntegratorTakerFee = &integratorTakerFee
 	attr.IntegratorMakerFee = &integratorMakerFee
-	attr.SkipNonce = &skipNonce
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
 	return &attr
 }
 
