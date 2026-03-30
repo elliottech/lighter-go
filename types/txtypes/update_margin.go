@@ -2,7 +2,7 @@ package txtypes
 
 import (
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
 var _ TxInfo = (*L2UpdateMarginTxInfo)(nil)
@@ -19,6 +19,8 @@ type L2UpdateMarginTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2UpdateMarginTxInfo) GetTxType() uint8 {
@@ -34,6 +36,10 @@ func (txInfo *L2UpdateMarginTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2UpdateMarginTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrFromAccountIndexTooLow
 	}
@@ -54,7 +60,7 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 		return ErrInvalidMarketIndex
 	}
 
-	if txInfo.USDCAmount <= 0 {
+	if txInfo.USDCAmount == 0 {
 		return ErrTransferAmountTooLow
 	}
 	if txInfo.USDCAmount > MaxTransferAmount {
@@ -75,20 +81,21 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 	return nil
 }
 
-func (txInfo *L2UpdateMarginTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 10)
+func (txInfo *L2UpdateMarginTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 10)
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2UpdateMargin))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2UpdateMargin))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromInt64(int64(txInfo.MarketIndex)))
-	elems = append(elems, g.FromUint64(uint64(txInfo.USDCAmount)&0xFFFFFFFF)) //nolint:gosec
-	elems = append(elems, g.FromUint64(uint64(txInfo.USDCAmount)>>32))        //nolint:gosec
-	elems = append(elems, g.FromUint32(uint32(txInfo.Direction)))
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.USDCAmount&0xFFFFFFFF))
+	elems = append(elems, g.GoldilocksField(txInfo.USDCAmount>>32))
+	elems = append(elems, g.GoldilocksField(txInfo.Direction))
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }

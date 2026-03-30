@@ -2,7 +2,7 @@ package txtypes
 
 import (
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
 var _ TxInfo = (*L2UnstakeAssetsTxInfo)(nil)
@@ -18,6 +18,8 @@ type L2UnstakeAssetsTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2UnstakeAssetsTxInfo) GetTxType() uint8 {
@@ -33,6 +35,10 @@ func (txInfo *L2UnstakeAssetsTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2UnstakeAssetsTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrFromAccountIndexTooLow
 	}
@@ -40,6 +46,7 @@ func (txInfo *L2UnstakeAssetsTxInfo) Validate() error {
 		return ErrFromAccountIndexTooHigh
 	}
 
+	// ApiKeyIndex
 	if txInfo.ApiKeyIndex < MinApiKeyIndex {
 		return ErrApiKeyIndexTooLow
 	}
@@ -47,18 +54,19 @@ func (txInfo *L2UnstakeAssetsTxInfo) Validate() error {
 		return ErrApiKeyIndexTooHigh
 	}
 
+	// PublicPoolIndex
 	if txInfo.StakingPoolIndex < MinSubAccountIndex {
-		return ErrStakingPoolIndexTooLow
+		return ErrPublicPoolIndexTooLow
 	}
 	if txInfo.StakingPoolIndex > MaxAccountIndex {
-		return ErrStakingPoolIndexTooHigh
+		return ErrPublicPoolIndexTooHigh
 	}
 
 	if txInfo.ShareAmount < MinStakingSharesToMintOrBurn {
-		return ErrPoolUnstakeShareAmountTooLow
+		return ErrPoolUnstakeAssetsAmountTooLow
 	}
 	if txInfo.ShareAmount > MaxStakingSharesToMintOrBurn {
-		return ErrPoolUnstakeShareAmountTooHigh
+		return ErrPoolUnstakeAssetsAmountTooHigh
 	}
 
 	if txInfo.Nonce < MinNonce {
@@ -71,19 +79,19 @@ func (txInfo *L2UnstakeAssetsTxInfo) Validate() error {
 
 	return nil
 }
+func (txInfo *L2UnstakeAssetsTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 8)
 
-func (txInfo *L2UnstakeAssetsTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 8)
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2UnstakeAssets))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2UnstakeAssets))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.StakingPoolIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ShareAmount))
 
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromInt64(txInfo.StakingPoolIndex))
-	elems = append(elems, g.FromInt64(txInfo.ShareAmount))
-
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }

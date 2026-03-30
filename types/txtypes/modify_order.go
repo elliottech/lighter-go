@@ -2,7 +2,7 @@ package txtypes
 
 import (
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
 var _ TxInfo = (*L2ModifyOrderTxInfo)(nil)
@@ -93,21 +93,6 @@ func (txInfo *L2ModifyOrderTxInfo) Validate() error {
 		return ErrOrderTriggerPriceInvalid
 	}
 
-	// Integrator-specific validations
-	integratorFeeCollectorIndex := int64(txInfo.L2TxAttributes[AttributeTypeIntegratorAccountIndex])
-	if integratorFeeCollectorIndex < MinAccountIndex {
-		return ErrAccountIndexTooLow
-	}
-	if integratorFeeCollectorIndex > MaxAccountIndex {
-		return ErrAccountIndexTooHigh
-	}
-	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorTakerFee]) > FeeTick {
-		return ErrFeeTooHigh
-	}
-	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorMakerFee]) > FeeTick {
-		return ErrFeeTooHigh
-	}
-
 	// Nonce
 	if txInfo.Nonce < MinNonce {
 		return ErrNonceTooLow
@@ -120,21 +105,21 @@ func (txInfo *L2ModifyOrderTxInfo) Validate() error {
 	return nil
 }
 
-func (txInfo *L2ModifyOrderTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 11)
+func (txInfo *L2ModifyOrderTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 11)
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2ModifyOrder))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2ModifyOrder))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.MarketIndex)))
-	elems = append(elems, g.FromInt64(txInfo.Index))
-	elems = append(elems, g.FromInt64(txInfo.BaseAmount))
-	elems = append(elems, g.FromUint32(txInfo.Price))
-	elems = append(elems, g.FromUint32(txInfo.TriggerPrice))
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.Index))
+	elems = append(elems, g.GoldilocksField(txInfo.BaseAmount))
+	elems = append(elems, g.GoldilocksField(txInfo.Price))
+	elems = append(elems, g.GoldilocksField(txInfo.TriggerPrice))
 
 	txHash := p2.HashToQuinticExtension(elems)
 	return txInfo.L2TxAttributes.AggregateTxHash(txHash)

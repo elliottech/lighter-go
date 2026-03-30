@@ -2,7 +2,7 @@ package txtypes
 
 import (
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
 var _ TxInfo = (*L2CreateGroupedOrdersTxInfo)(nil)
@@ -120,21 +120,6 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 		if (order.TriggerPrice < MinOrderTriggerPrice || order.TriggerPrice > MaxOrderTriggerPrice) && order.TriggerPrice != NilOrderTriggerPrice {
 			return ErrOrderTriggerPriceInvalid
 		}
-	}
-
-	// Attribute-specific validations
-	integratorFeeCollectorIndex := int64(txInfo.L2TxAttributes[AttributeTypeIntegratorAccountIndex])
-	if integratorFeeCollectorIndex < MinAccountIndex {
-		return ErrAccountIndexTooLow
-	}
-	if integratorFeeCollectorIndex > MaxAccountIndex {
-		return ErrAccountIndexTooHigh
-	}
-	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorTakerFee]) > FeeTick {
-		return ErrFeeTooHigh
-	}
-	if int64(txInfo.L2TxAttributes[AttributeTypeIntegratorMakerFee]) > FeeTick {
-		return ErrFeeTooHigh
 	}
 
 	// Nonce
@@ -317,30 +302,29 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) ValidateOTOCO() error {
 	return txInfo.ValidateSiblingOrders(txInfo.Orders[1:])
 }
 
-func (txInfo *L2CreateGroupedOrdersTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 11)
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2CreateGroupedOrders))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
-
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.GroupingType)))
+func (txInfo *L2CreateGroupedOrdersTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 11)
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2CreateGroupedOrders))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.GroupingType))
 
 	aggregatedOrderHash := p2.EmptyHashOut()
 	for index, order := range txInfo.Orders {
-		orderHash := p2.HashNoPad([]g.Element{
-			g.FromUint32(uint32(order.MarketIndex)),
-			g.FromInt64(order.ClientOrderIndex),
-			g.FromInt64(order.BaseAmount),
-			g.FromUint32(order.Price),
-			g.FromUint32(uint32(order.IsAsk)),
-			g.FromUint32(uint32(order.Type)),
-			g.FromUint32(uint32(order.TimeInForce)),
-			g.FromUint32(uint32(order.ReduceOnly)),
-			g.FromUint32(order.TriggerPrice),
-			g.FromInt64(order.OrderExpiry),
+		orderHash := p2.HashNoPad([]g.GoldilocksField{
+			g.GoldilocksField(order.MarketIndex),
+			g.GoldilocksField(order.ClientOrderIndex),
+			g.GoldilocksField(order.BaseAmount),
+			g.GoldilocksField(order.Price),
+			g.GoldilocksField(order.IsAsk),
+			g.GoldilocksField(order.Type),
+			g.GoldilocksField(order.TimeInForce),
+			g.GoldilocksField(order.ReduceOnly),
+			g.GoldilocksField(order.TriggerPrice),
+			g.GoldilocksField(order.OrderExpiry),
 		})
 		if index == 0 {
 			aggregatedOrderHash = orderHash

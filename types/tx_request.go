@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/elliottech/lighter-go/signer"
-	"github.com/elliottech/lighter-go/types/txtypes"
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+
+	"github.com/elliottech/lighter-go/types/txtypes"
 )
 
 type TransactOpts struct {
@@ -17,13 +18,30 @@ type TransactOpts struct {
 	ApiKeyIndex      *uint8
 	ExpiredAt        int64
 	Nonce            *int64
+	TxAttributes     *L2TxAttributes
 	DryRun           bool
+}
+
+type L2TxAttributes struct {
+	IntegratorAccountIndex *int64
+	IntegratorTakerFee     *uint32
+	IntegratorMakerFee     *uint32
+	SkipNonce              *uint8
 }
 
 type PublicKey = gFp5.Element
 
 type ChangePubKeyReq struct {
 	PubKey [40]byte
+}
+
+type ApproveIntegratorTxReq struct {
+	IntegratorAccountIndex int64
+	MaxPerpsTakerFee       uint32
+	MaxPerpsMakerFee       uint32
+	MaxSpotTakerFee        uint32
+	MaxSpotMakerFee        uint32
+	ApprovalExpiry         int64
 }
 
 type TransferTxReq struct {
@@ -43,19 +61,16 @@ type WithdrawTxReq struct {
 }
 
 type CreateOrderTxReq struct {
-	MarketIndex            int16
-	ClientOrderIndex       int64
-	BaseAmount             int64
-	Price                  uint32
-	IsAsk                  uint8
-	Type                   uint8
-	TimeInForce            uint8
-	ReduceOnly             uint8
-	TriggerPrice           uint32
-	OrderExpiry            int64
-	IntegratorAccountIndex int
-	IntegratorMakerFee     int
-	IntegratorTakerFee     int
+	MarketIndex      int16
+	ClientOrderIndex int64
+	BaseAmount       int64
+	Price            uint32
+	IsAsk            uint8
+	Type             uint8
+	TimeInForce      uint8
+	ReduceOnly       uint8
+	TriggerPrice     uint32
+	OrderExpiry      int64
 }
 
 type CreateGroupedOrdersTxReq struct {
@@ -64,14 +79,11 @@ type CreateGroupedOrdersTxReq struct {
 }
 
 type ModifyOrderTxReq struct {
-	MarketIndex            int16
-	Index                  int64
-	BaseAmount             int64
-	Price                  uint32
-	TriggerPrice           uint32
-	IntegratorAccountIndex int
-	IntegratorMakerFee     int
-	IntegratorTakerFee     int
+	MarketIndex  int16
+	Index        int64
+	BaseAmount   int64
+	Price        uint32
+	TriggerPrice uint32
 }
 
 type CancelOrderTxReq struct {
@@ -82,6 +94,16 @@ type CancelOrderTxReq struct {
 type CancelAllOrdersTxReq struct {
 	TimeInForce uint8
 	Time        int64
+}
+
+type StakeAssetsTxReq struct {
+	StakingPoolIndex int64
+	ShareAmount      int64
+}
+
+type UnstakeAssetsTxReq struct {
+	StakingPoolIndex int64
+	ShareAmount      int64
 }
 
 type CreatePublicPoolTxReq struct {
@@ -107,16 +129,6 @@ type BurnSharesTxReq struct {
 	ShareAmount     int64
 }
 
-type StakeAssetsTxReq struct {
-	StakingPoolIndex int64
-	ShareAmount      int64
-}
-
-type UnstakeAssetsTxReq struct {
-	StakingPoolIndex int64
-	ShareAmount      int64
-}
-
 type UpdateLeverageTxReq struct {
 	MarketIndex           int16
 	InitialMarginFraction uint16
@@ -127,15 +139,6 @@ type UpdateMarginTxReq struct {
 	MarketIndex int16
 	USDCAmount  int64
 	Direction   uint8
-}
-
-type ApproveIntegratorTxReq struct {
-	IntegratorAccountIndex int64
-	MaxPerpsTakerFee       uint32
-	MaxPerpsMakerFee       uint32
-	MaxSpotTakerFee        uint32
-	MaxSpotMakerFee        uint32
-	ApprovalExpiry         int64
 }
 
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
@@ -161,6 +164,30 @@ func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts
 	signature := ethCommon.Bytes2Hex(signatureBytes)
 
 	return fmt.Sprintf("%v:%v", message, signature), err
+}
+
+func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
+	if attr == nil ||
+		(attr.IntegratorAccountIndex == nil &&
+			attr.IntegratorTakerFee == nil &&
+			attr.IntegratorMakerFee == nil &&
+			attr.SkipNonce == nil) {
+		return nil
+	}
+	l2TxAttributes := txtypes.L2TxAttributes{}
+	if attr.IntegratorAccountIndex != nil {
+		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = int(*attr.IntegratorAccountIndex)
+	}
+	if attr.IntegratorTakerFee != nil {
+		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int(*attr.IntegratorTakerFee)
+	}
+	if attr.IntegratorMakerFee != nil {
+		l2TxAttributes[txtypes.AttributeTypeIntegratorMakerFee] = int(*attr.IntegratorMakerFee)
+	}
+	if attr.SkipNonce != nil {
+		l2TxAttributes[txtypes.AttributeTypeSkipTxNonce] = int(*attr.SkipNonce)
+	}
+	return l2TxAttributes
 }
 
 func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
@@ -361,8 +388,75 @@ func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *Modi
 	return convertedTx, nil
 }
 
+func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
+	convertedTx := ConvertStakeAssetsTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *UnstakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
+	convertedTx := ConvertUnstakeAssetsTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *CancelAllOrdersTxReq, ops *TransactOpts) (*txtypes.L2CancelAllOrdersTxInfo, error) {
 	convertedTx := ConvertCancelAllOrdersTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *ApproveIntegratorTxReq,
+	ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
+	convertedTx := ConvertApproveIntegratorTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
@@ -493,26 +587,20 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 	return convertedTx, nil
 }
 
-func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *ApproveIntegratorTxReq, ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
-	convertedTx := ConvertApproveIntegratorTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
+	return &txtypes.L2ApproveIntegratorTxInfo{
+		IntegratorAccountIndex: tx.IntegratorAccountIndex,
+		MaxPerpsTakerFee:       tx.MaxPerpsTakerFee,
+		MaxPerpsMakerFee:       tx.MaxPerpsMakerFee,
+		MaxSpotTakerFee:        tx.MaxSpotTakerFee,
+		MaxSpotMakerFee:        tx.MaxSpotMakerFee,
+		ApprovalExpiry:         tx.ApprovalExpiry,
+		AccountIndex:           *ops.FromAccountIndex,
+		ApiKeyIndex:            *ops.ApiKeyIndex,
+		ExpiredAt:              ops.ExpiredAt,
+		Nonce:                  *ops.Nonce,
+		L2TxAttributes:         ConstructL2TxAttributes(ops.TxAttributes),
 	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
 }
 
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
@@ -528,6 +616,7 @@ func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2Transfer
 		Memo:             tx.Memo,
 		ExpiredAt:        ops.ExpiredAt,
 		Nonce:            *ops.Nonce,
+		L2TxAttributes:   ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -535,7 +624,8 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 	return &txtypes.L2CreateOrderTxInfo{
 		AccountIndex: *ops.FromAccountIndex,
 		ApiKeyIndex:  *ops.ApiKeyIndex,
-		OrderInfo: &txtypes.OrderInfo{MarketIndex: tx.MarketIndex,
+		OrderInfo: &txtypes.OrderInfo{
+			MarketIndex:      tx.MarketIndex,
 			ClientOrderIndex: tx.ClientOrderIndex,
 			BaseAmount:       tx.BaseAmount,
 			Price:            tx.Price,
@@ -546,24 +636,21 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 			TriggerPrice:     tx.TriggerPrice,
 			OrderExpiry:      tx.OrderExpiry,
 		},
-		ExpiredAt: ops.ExpiredAt,
-		Nonce:     *ops.Nonce,
-		L2TxAttributes: txtypes.L2TxAttributes{
-			txtypes.AttributeTypeIntegratorAccountIndex: tx.IntegratorAccountIndex,
-			txtypes.AttributeTypeIntegratorTakerFee:     tx.IntegratorTakerFee,
-			txtypes.AttributeTypeIntegratorMakerFee:     tx.IntegratorMakerFee,
-		},
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertCreateGroupedOrdersTx(tx *CreateGroupedOrdersTxReq, ops *TransactOpts) *txtypes.L2CreateGroupedOrdersTxInfo {
 	ret := &txtypes.L2CreateGroupedOrdersTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		GroupingType: tx.GroupingType,
-		Orders:       []*txtypes.OrderInfo{},
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		GroupingType:   tx.GroupingType,
+		Orders:         []*txtypes.OrderInfo{},
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 
 	for _, order := range tx.Orders {
@@ -585,42 +672,40 @@ func ConvertCreateGroupedOrdersTx(tx *CreateGroupedOrdersTxReq, ops *TransactOpt
 
 func ConvertCancelOrderTx(tx *CancelOrderTxReq, ops *TransactOpts) *txtypes.L2CancelOrderTxInfo {
 	return &txtypes.L2CancelOrderTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		MarketIndex:  tx.MarketIndex,
-		Index:        tx.Index,
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		MarketIndex:    tx.MarketIndex,
+		Index:          tx.Index,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2ModifyOrderTxInfo {
 	return &txtypes.L2ModifyOrderTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		MarketIndex:  tx.MarketIndex,
-		Index:        tx.Index,
-		BaseAmount:   tx.BaseAmount,
-		Price:        tx.Price,
-		TriggerPrice: tx.TriggerPrice,
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
-		L2TxAttributes: txtypes.L2TxAttributes{
-			txtypes.AttributeTypeIntegratorAccountIndex: tx.IntegratorAccountIndex,
-			txtypes.AttributeTypeIntegratorTakerFee:     tx.IntegratorTakerFee,
-			txtypes.AttributeTypeIntegratorMakerFee:     tx.IntegratorMakerFee,
-		},
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		MarketIndex:    tx.MarketIndex,
+		Index:          tx.Index,
+		BaseAmount:     tx.BaseAmount,
+		Price:          tx.Price,
+		TriggerPrice:   tx.TriggerPrice,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertCancelAllOrdersTx(tx *CancelAllOrdersTxReq, ops *TransactOpts) *txtypes.L2CancelAllOrdersTxInfo {
 	return &txtypes.L2CancelAllOrdersTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		TimeInForce:  tx.TimeInForce,
-		Time:         tx.Time,
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		TimeInForce:    tx.TimeInForce,
+		Time:           tx.Time,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -633,25 +718,52 @@ func ConvertWithdrawTx(tx *WithdrawTxReq, ops *TransactOpts) *txtypes.L2Withdraw
 		Amount:           tx.Amount,
 		ExpiredAt:        ops.ExpiredAt,
 		Nonce:            *ops.Nonce,
+		L2TxAttributes:   ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertChangePubKeyTx(tx *ChangePubKeyReq, ops *TransactOpts) *txtypes.L2ChangePubKeyTxInfo {
 	return &txtypes.L2ChangePubKeyTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		PubKey:       tx.PubKey[:],
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		PubKey:         tx.PubKey[:],
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertCreateSubAccountTx(ops *TransactOpts) *txtypes.L2CreateSubAccountTxInfo {
 	return &txtypes.L2CreateSubAccountTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertStakeAssetsTx(tx *StakeAssetsTxReq, ops *TransactOpts) *txtypes.L2StakeAssetsTxInfo {
+	return &txtypes.L2StakeAssetsTxInfo{
+		AccountIndex:     *ops.FromAccountIndex,
+		ApiKeyIndex:      *ops.ApiKeyIndex,
+		StakingPoolIndex: tx.StakingPoolIndex,
+		ShareAmount:      tx.ShareAmount,
+		ExpiredAt:        ops.ExpiredAt,
+		Nonce:            *ops.Nonce,
+		L2TxAttributes:   ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertUnstakeAssetsTx(tx *UnstakeAssetsTxReq, ops *TransactOpts) *txtypes.L2UnstakeAssetsTxInfo {
+	return &txtypes.L2UnstakeAssetsTxInfo{
+		AccountIndex:     *ops.FromAccountIndex,
+		ApiKeyIndex:      *ops.ApiKeyIndex,
+		StakingPoolIndex: tx.StakingPoolIndex,
+		ShareAmount:      tx.ShareAmount,
+		ExpiredAt:        ops.ExpiredAt,
+		Nonce:            *ops.Nonce,
+		L2TxAttributes:   ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -664,6 +776,7 @@ func ConvertCreatePublicPoolTx(tx *CreatePublicPoolTxReq, ops *TransactOpts) *tx
 		MinOperatorShareRate: tx.MinOperatorShareRate,
 		ExpiredAt:            ops.ExpiredAt,
 		Nonce:                *ops.Nonce,
+		L2TxAttributes:       ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -677,6 +790,7 @@ func ConvertUpdatePublicPoolTx(tx *UpdatePublicPoolTxReq, ops *TransactOpts) *tx
 		MinOperatorShareRate: tx.MinOperatorShareRate,
 		ExpiredAt:            ops.ExpiredAt,
 		Nonce:                *ops.Nonce,
+		L2TxAttributes:       ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -688,6 +802,7 @@ func ConvertMintSharesTx(tx *MintSharesTxReq, ops *TransactOpts) *txtypes.L2Mint
 		ShareAmount:     tx.ShareAmount,
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
+		L2TxAttributes:  ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -699,6 +814,7 @@ func ConvertBurnSharesTx(tx *BurnSharesTxReq, ops *TransactOpts) *txtypes.L2Burn
 		ShareAmount:     tx.ShareAmount,
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
+		L2TxAttributes:  ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -711,100 +827,19 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 		MarginMode:            tx.MarginMode,
 		ExpiredAt:             ops.ExpiredAt,
 		Nonce:                 *ops.Nonce,
+		L2TxAttributes:        ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2UpdateMarginTxInfo {
 	return &txtypes.L2UpdateMarginTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-		MarketIndex:  tx.MarketIndex,
-		USDCAmount:   tx.USDCAmount,
-		Direction:    tx.Direction,
-		ExpiredAt:    ops.ExpiredAt,
-		Nonce:        *ops.Nonce,
-	}
-}
-
-func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
-	convertedTx := ConvertStakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
-func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *UnstakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
-	convertedTx := ConvertUnstakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
-func ConvertStakeAssetsTx(tx *StakeAssetsTxReq, ops *TransactOpts) *txtypes.L2StakeAssetsTxInfo {
-	return &txtypes.L2StakeAssetsTxInfo{
-		AccountIndex:     *ops.FromAccountIndex,
-		ApiKeyIndex:      *ops.ApiKeyIndex,
-		StakingPoolIndex: tx.StakingPoolIndex,
-		ShareAmount:      tx.ShareAmount,
-		ExpiredAt:        ops.ExpiredAt,
-		Nonce:            *ops.Nonce,
-	}
-}
-
-func ConvertUnstakeAssetsTx(tx *UnstakeAssetsTxReq, ops *TransactOpts) *txtypes.L2UnstakeAssetsTxInfo {
-	return &txtypes.L2UnstakeAssetsTxInfo{
-		AccountIndex:     *ops.FromAccountIndex,
-		ApiKeyIndex:      *ops.ApiKeyIndex,
-		StakingPoolIndex: tx.StakingPoolIndex,
-		ShareAmount:      tx.ShareAmount,
-		ExpiredAt:        ops.ExpiredAt,
-		Nonce:            *ops.Nonce,
-	}
-}
-
-func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
-	return &txtypes.L2ApproveIntegratorTxInfo{
-		AccountIndex: *ops.FromAccountIndex,
-		ApiKeyIndex:  *ops.ApiKeyIndex,
-
-		IntegratorAccountIndex: tx.IntegratorAccountIndex,
-		MaxPerpsTakerFee:       tx.MaxPerpsTakerFee,
-		MaxPerpsMakerFee:       tx.MaxPerpsMakerFee,
-		MaxSpotTakerFee:        tx.MaxSpotTakerFee,
-		MaxSpotMakerFee:        tx.MaxSpotMakerFee,
-		ApprovalExpiry:         tx.ApprovalExpiry,
-
-		ExpiredAt: ops.ExpiredAt,
-		Nonce:     *ops.Nonce,
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		MarketIndex:    tx.MarketIndex,
+		USDCAmount:     tx.USDCAmount,
+		Direction:      tx.Direction,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }

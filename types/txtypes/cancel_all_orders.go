@@ -2,7 +2,7 @@ package txtypes
 
 import (
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
 var _ TxInfo = (*L2CancelAllOrdersTxInfo)(nil)
@@ -18,6 +18,8 @@ type L2CancelAllOrdersTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2CancelAllOrdersTxInfo) GetTxType() uint8 {
@@ -33,6 +35,10 @@ func (txInfo *L2CancelAllOrdersTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2CancelAllOrdersTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	// AccountIndex
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrAccountIndexTooLow
@@ -78,18 +84,19 @@ func (txInfo *L2CancelAllOrdersTxInfo) Validate() error {
 	return nil
 }
 
-func (txInfo *L2CancelAllOrdersTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 8)
+func (txInfo *L2CancelAllOrdersTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 8)
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2CancelAllOrders))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2CancelAllOrders))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.TimeInForce)))
-	elems = append(elems, g.FromInt64(txInfo.Time))
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.TimeInForce))
+	elems = append(elems, g.GoldilocksField(txInfo.Time))
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }

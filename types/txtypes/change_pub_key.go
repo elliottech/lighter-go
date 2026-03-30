@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -21,6 +22,8 @@ type L2ChangePubKeyTxInfo struct {
 	Nonce      int64
 	Sig        []byte
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2ChangePubKeyTxInfo) GetTxType() uint8 {
@@ -36,6 +39,10 @@ func (txInfo *L2ChangePubKeyTxInfo) GetTxHash() string {
 }
 
 func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	// AccountIndex
 	if txInfo.AccountIndex < MinAccountIndex {
 		return ErrFromAccountIndexTooLow
@@ -83,21 +90,23 @@ func (txInfo *L2ChangePubKeyTxInfo) GetL1AddressBySignature() common.Address {
 	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(), txInfo.L1Sig)
 }
 
-func (txInfo *L2ChangePubKeyTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 11)
+func (txInfo *L2ChangePubKeyTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 11)
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2ChangePubKey))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
-	elems = append(elems, g.FromInt64(txInfo.AccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2ChangePubKey))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	pubKeyFieldElems, err := g.ArrayFromCanonicalLittleEndianBytes(txInfo.PubKey)
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+
+	pubKey, err := gFp5.FromCanonicalLittleEndianBytes(txInfo.PubKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert bytes to field element. bytes: %v, error: %w", txInfo.PubKey, err)
+		return nil, ErrPubKeyInvalid
 	}
-	elems = append(elems, pubKeyFieldElems...)
+	elems = append(elems, pubKey[:]...)
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }
