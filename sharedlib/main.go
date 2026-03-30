@@ -46,9 +46,6 @@ typedef struct {
     uint8_t ReduceOnly;
     uint32_t TriggerPrice;
     int64_t OrderExpiry;
-	int64_t IntegratorAccountIndex;
-	int64_t IntegratorMakerFee;
-	int64_t IntegratorTakerFee;
 } CreateOrderTxReq;
 */
 import "C"
@@ -116,10 +113,40 @@ func getClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (*client.TxClient, 
 	return client.GetClient(apiKeyIndex, accountIndex)
 }
 
-func getTransactOpts(cNonce C.longlong) *types.TransactOpts {
+func CreateTxAttributesFromIsSkipNonce(skipNonce uint8) *types.L2TxAttributes {
+	attr := types.L2TxAttributes{}
+	attr.SkipNonce = &skipNonce
+	return &attr
+}
+
+func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
+	attr := types.L2TxAttributes{}
+	attr.IntegratorAccountIndex = &integratorAccountIndex
+	attr.IntegratorTakerFee = &integratorTakerFee
+	attr.IntegratorMakerFee = &integratorMakerFee
+	attr.SkipNonce = &skipNonce
+	return &attr
+}
+
+func getTransactOpts(cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
 	nonce := int64(cNonce)
+	txAttributes := CreateTxAttributesFromIsSkipNonce(uint8(cSkipNonce))
 	return &types.TransactOpts{
-		Nonce: &nonce,
+		Nonce:        &nonce,
+		TxAttributes: txAttributes,
+	}
+}
+
+func getIntegratorTransactOptsAll(cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
+	nonce := int64(cNonce)
+	integratorAccountIndex := int64(cIntegratorAccountIndex)
+	integratorTakerFee := uint32(cIntegratorTakerFee)
+	integratorMakerFee := uint32(cIntegratorMakerFee)
+	skipNonce := uint8(cSkipNonce)
+	txAttributes := CreateIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
+	return &types.TransactOpts{
+		Nonce:        &nonce,
+		TxAttributes: txAttributes,
 	}
 }
 
@@ -179,7 +206,7 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 }
 
 //export SignChangePubKey
-func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignChangePubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -205,14 +232,14 @@ func SignChangePubKey(cPubKey *C.char, cNonce C.longlong, cApiKeyIndex C.int, cA
 	tx := &types.ChangePubKeyReq{
 		PubKey: pubKey,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetChangePubKeyTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -235,37 +262,30 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 	triggerPrice := uint32(cTriggerPrice)
 	orderExpiry := int64(cOrderExpiry)
 
-	integratorAccountIndex := int(cIntegratorAccountIndex)
-	integratorMakerFee := int(cIntegratorMakerFee)
-	integratorTakerFee := int(cIntegratorTakerFee)
-
 	if orderExpiry == -1 {
 		orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli() // 28 days
 	}
 
 	tx := &types.CreateOrderTxReq{
-		MarketIndex:            marketIndex,
-		ClientOrderIndex:       clientOrderIndex,
-		BaseAmount:             baseAmount,
-		Price:                  price,
-		IsAsk:                  isAsk,
-		Type:                   orderType,
-		TimeInForce:            timeInForce,
-		ReduceOnly:             reduceOnly,
-		TriggerPrice:           triggerPrice,
-		OrderExpiry:            orderExpiry,
-		IntegratorAccountIndex: integratorAccountIndex,
-		IntegratorTakerFee:     integratorTakerFee,
-		IntegratorMakerFee:     integratorMakerFee,
+		MarketIndex:      marketIndex,
+		ClientOrderIndex: clientOrderIndex,
+		BaseAmount:       baseAmount,
+		Price:            price,
+		IsAsk:            isAsk,
+		Type:             orderType,
+		TimeInForce:      timeInForce,
+		ReduceOnly:       reduceOnly,
+		TriggerPrice:     triggerPrice,
+		OrderExpiry:      orderExpiry,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCreateOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCreateGroupedOrders
-func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -280,7 +300,6 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 	length := int(cLen)
 	orders := make([]*types.CreateOrderTxReq, length)
 	size := unsafe.Sizeof(*cOrders)
-
 	for i := 0; i < length; i++ {
 		order := (*C.CreateOrderTxReq)(unsafe.Pointer(uintptr(unsafe.Pointer(cOrders)) + uintptr(i)*uintptr(size)))
 
@@ -290,19 +309,16 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		}
 
 		orders[i] = &types.CreateOrderTxReq{
-			MarketIndex:            int16(order.MarketIndex),
-			ClientOrderIndex:       int64(order.ClientOrderIndex),
-			BaseAmount:             int64(order.BaseAmount),
-			Price:                  uint32(order.Price),
-			IsAsk:                  uint8(order.IsAsk),
-			Type:                   uint8(order.Type),
-			TimeInForce:            uint8(order.TimeInForce),
-			ReduceOnly:             uint8(order.ReduceOnly),
-			TriggerPrice:           uint32(order.TriggerPrice),
-			OrderExpiry:            orderExpiry,
-			IntegratorAccountIndex: int(order.IntegratorAccountIndex),
-			IntegratorTakerFee:     int(order.IntegratorTakerFee),
-			IntegratorMakerFee:     int(order.IntegratorMakerFee),
+			MarketIndex:      int16(order.MarketIndex),
+			ClientOrderIndex: int64(order.ClientOrderIndex),
+			BaseAmount:       int64(order.BaseAmount),
+			Price:            uint32(order.Price),
+			IsAsk:            uint8(order.IsAsk),
+			Type:             uint8(order.Type),
+			TimeInForce:      uint8(order.TimeInForce),
+			ReduceOnly:       uint8(order.ReduceOnly),
+			TriggerPrice:     uint32(order.TriggerPrice),
+			OrderExpiry:      orderExpiry,
 		}
 	}
 
@@ -310,14 +326,14 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		GroupingType: uint8(cGroupingType),
 		Orders:       orders,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCreateGroupedOrdersTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCancelOrder
-func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -336,14 +352,14 @@ func SignCancelOrder(cMarketIndex C.int, cOrderIndex C.longlong, cNonce C.longlo
 		MarketIndex: marketIndex,
 		Index:       orderIndex,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCancelOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignWithdraw
-func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -364,14 +380,14 @@ func SignWithdraw(cAssetIndex C.int, cRouteType C.int, cAmount C.ulonglong, cNon
 		RouteType:  routeType,
 		Amount:     amount,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetWithdrawTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCreateSubAccount
-func SignCreateSubAccount(cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateSubAccount(cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -382,15 +398,14 @@ func SignCreateSubAccount(cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C
 	if err != nil {
 		return signedTxResponseErr(err)
 	}
-
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCreateSubAccountTransaction(ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCancelAllOrders
-func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -409,14 +424,14 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cNonce C.longlong
 		TimeInForce: timeInForce,
 		Time:        t,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCancelAllOrdersTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -434,28 +449,21 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 	price := uint32(cPrice)
 	triggerPrice := uint32(cTriggerPrice)
 
-	integratorAccountIndex := int(cIntegratorAccountIndex)
-	integratorMakerFee := int(cIntegratorMakerFee)
-	integratorTakerFee := int(cIntegratorTakerFee)
-
 	tx := &types.ModifyOrderTxReq{
-		MarketIndex:            marketIndex,
-		Index:                  index,
-		BaseAmount:             baseAmount,
-		Price:                  price,
-		TriggerPrice:           triggerPrice,
-		IntegratorAccountIndex: integratorAccountIndex,
-		IntegratorTakerFee:     integratorTakerFee,
-		IntegratorMakerFee:     integratorMakerFee,
+		MarketIndex:  marketIndex,
+		Index:        index,
+		BaseAmount:   baseAmount,
+		Price:        price,
+		TriggerPrice: triggerPrice,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
 
 	txInfo, err := c.GetModifyOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignTransfer
-func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteType, cToRouteType C.uint8_t, cAmount, cUsdcFee C.longlong, cMemo *C.char, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteType, cToRouteType C.uint8_t, cAmount, cUsdcFee C.longlong, cMemo *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -510,14 +518,14 @@ func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteT
 		USDCFee:        usdcFee,
 		Memo:           memo,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetTransferTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCreatePublicPool
-func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cMinOperatorShareRate C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cMinOperatorShareRate C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -538,14 +546,14 @@ func SignCreatePublicPool(cOperatorFee C.longlong, cInitialTotalShares C.int, cM
 		InitialTotalShares:   initialTotalShares,
 		MinOperatorShareRate: minOperatorShareRate,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCreatePublicPoolTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignUpdatePublicPool
-func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorFee C.longlong, cMinOperatorShareRate C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -568,14 +576,14 @@ func SignUpdatePublicPool(cPublicPoolIndex C.longlong, cStatus C.int, cOperatorF
 		OperatorFee:          operatorFee,
 		MinOperatorShareRate: minOperatorShareRate,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetUpdatePublicPoolTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignMintShares
-func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -594,14 +602,14 @@ func SignMintShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 		PublicPoolIndex: publicPoolIndex,
 		ShareAmount:     shareAmount,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetMintSharesTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignBurnShares
-func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -620,14 +628,14 @@ func SignBurnShares(cPublicPoolIndex C.longlong, cShareAmount C.longlong, cNonce
 		PublicPoolIndex: publicPoolIndex,
 		ShareAmount:     shareAmount,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetBurnSharesTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignUpdateLeverage
-func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMarginMode C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -648,7 +656,7 @@ func SignUpdateLeverage(cMarketIndex C.int, cInitialMarginFraction C.int, cMargi
 		InitialMarginFraction: initialMarginFraction,
 		MarginMode:            marginMode,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetUpdateLeverageTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
@@ -681,7 +689,7 @@ func CreateAuthToken(cDeadline C.longlong, cApiKeyIndex C.int, cAccountIndex C.l
 }
 
 //export SignUpdateMargin
-func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -702,14 +710,14 @@ func SignUpdateMargin(cMarketIndex C.int, cUSDCAmount C.longlong, cDirection C.i
 		USDCAmount:  usdcAmount,
 		Direction:   direction,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetUpdateMarginTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignStakeAssets
-func SignStakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignStakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -728,14 +736,14 @@ func SignStakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cNon
 		StakingPoolIndex: stakingPoolIndex,
 		ShareAmount:      shareAmount,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetStakeAssetsTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignUnstakeAssets
-func SignUnstakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignUnstakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -754,14 +762,14 @@ func SignUnstakeAssets(cStakingPoolIndex C.longlong, cShareAmount C.longlong, cN
 		StakingPoolIndex: stakingPoolIndex,
 		ShareAmount:      shareAmount,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetUnstakeAssetsTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignApproveIntegrator
-func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint32_t, cMaxPerpsMakerFee C.uint32_t, cMaxSpotTakerFee C.uint32_t, cMaxSpotMakerFee C.uint32_t, cApprovalExpiry C.longlong, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint32_t, cMaxPerpsMakerFee C.uint32_t, cMaxSpotTakerFee C.uint32_t, cMaxSpotMakerFee C.uint32_t, cApprovalExpiry C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -787,7 +795,7 @@ func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint
 		MaxSpotMakerFee:        MaxSpotMakerFee,
 		ApprovalExpiry:         ApprovalExpiry,
 	}
-	ops := getTransactOpts(cNonce)
+	ops := getTransactOpts(cSkipNonce, cNonce)
 	txInfo, err := c.GetApproveIntegratorTx(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }

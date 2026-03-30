@@ -13,9 +13,11 @@ type (
 )
 
 const (
-	NilApiKeyIndex = MaxApiKeyIndex + 1
+	NilApiKeyIndex       = MaxApiKeyIndex + 1
+	TreasuryAccountIndex = int64(0)
 )
 
+// Keep this in sync with sequencer types/tx.go
 const (
 	TxTypeEmpty             = 0
 	TxTypeL1Deposit         = 1
@@ -26,19 +28,23 @@ const (
 	TxTypeL1Withdraw        = 6
 	TxTypeL1CreateOrder     = 7
 
-	TxTypeL2ChangePubKey     = 8
-	TxTypeL2CreateSubAccount = 9
-	TxTypeL2CreatePublicPool = 10
-	TxTypeL2UpdatePublicPool = 11
-	TxTypeL2Transfer         = 12
-	TxTypeL2Withdraw         = 13
-	TxTypeL2CreateOrder      = 14
-	TxTypeL2CancelOrder      = 15
-	TxTypeL2CancelAllOrders  = 16
-	TxTypeL2ModifyOrder      = 17
-	TxTypeL2MintShares       = 18
-	TxTypeL2BurnShares       = 19
-	TxTypeL2UpdateLeverage   = 20
+	TxTypeL2ChangePubKey       = 8
+	TxTypeL2CreateSubAccount   = 9
+	TxTypeL2CreatePublicPool   = 10
+	TxTypeL2UpdatePublicPool   = 11
+	TxTypeL2Transfer           = 12
+	TxTypeL2Withdraw           = 13
+	TxTypeL2CreateOrder        = 14
+	TxTypeL2CancelOrder        = 15
+	TxTypeL2CancelAllOrders    = 16
+	TxTypeL2ModifyOrder        = 17
+	TxTypeL2MintShares         = 18
+	TxTypeL2BurnShares         = 19
+	TxTypeL2UpdateLeverage     = 20
+	TxTypeL2ForceBurnShares    = 40
+	TxTypeL2StrategyTransfer   = 43
+	TxTypeL2UpdateMarketConfig = 44
+	TxTypeL2ApproveIntegrator  = 45
 
 	TxTypeInternalClaimOrder        = 21
 	TxTypeInternalCancelOrder       = 22
@@ -50,12 +56,18 @@ const (
 
 	TxTypeL2CreateGroupedOrders = 28
 	TxTypeL2UpdateMargin        = 29
-	TxTypeL1BurnShares          = 30
+	TxTypeL2UpdateAccountConfig = 41
 
-	TxTypeL2StakeAssets   = 35
-	TxTypeL2UnstakeAssets = 36
+	TxTypeL1BurnShares    = 30
+	TxTypeL1RegisterAsset = 31
+	TxTypeL1UpdateAsset   = 32
 
-	TxTypeL2ApproveIntegrator = 45
+	TxTypeL2CreateStakingPool = 33
+	// TxTypeL2UpdateStakingPool = 34
+	TxTypeL2StakeAssets     = 35
+	TxTypeL2UnstakeAssets   = 36
+	TxTypeL1UnstakeAssets   = 37
+	TxTypeL1SetSystemConfig = 38
 )
 
 // Order Type
@@ -125,12 +137,13 @@ const (
 
 const (
 	OneUSDC = 1000000
+	OneLIT  = 100_000_000
 
 	FeeTick            int64  = 1_000_000
 	MarginFractionTick int64  = 10_000
 	ShareTick          uint16 = 10_000
 
-	MinAccountIndex       int64 = 0
+	MinAccountIndex       int64 = -1
 	MaxAccountIndex       int64 = 281474976710654 // (1 << 48) - 2
 	MaxMasterAccountIndex int64 = 140737488355327 // (1 << 47) - 1
 	MinSubAccountIndex    int64 = 140737488355328 // (1 << 47)
@@ -144,11 +157,20 @@ const (
 	MinSpotMarketIndex  int16 = 2048 // (1 << 11)
 	MaxSpotMarketIndex  int16 = 4094 // (1 << 12) - 2
 
+	NilIntegratorIndex    = 0
+	NilIntegratorTakerFee = 0
+	NilIntegratorMakerFee = 0
+
 	NativeAssetIndex = uint16(1)
 	USDCAssetIndex   = uint16(3)
 	MinAssetIndex    = 1
 	MaxAssetIndex    = (1 << 6) - 2
 	NilAssetIndex    = 0
+
+	DefaultStrategyIndex uint8 = 0
+	MinStrategyIndex     uint8 = 0
+	MaxStrategyIndex     uint8 = 7
+	NilStrategyIndex     uint8 = 8
 
 	MaxInvestedPublicPoolCount int64 = 16
 	InitialPoolShareValue      int64 = 1_000                                             // 0.001 USDC
@@ -161,8 +183,13 @@ const (
 	MinPoolSharesToMintOrBurn int64 = 1
 	MaxPoolSharesToMintOrBurn int64 = (1 << 60) - 1
 
-	MinStakingSharesToMintOrBurn int64 = MinPoolSharesToMintOrBurn
-	MaxStakingSharesToMintOrBurn int64 = MaxPoolSharesToMintOrBurn
+	MinInitialTotalStakingShares int64 = 100_000 * (OneLIT / InitialPoolShareValue)       // 100,000 LIT worth of shares
+	MaxInitialTotalStakingShares int64 = 1_000_000_000 * (OneLIT / InitialPoolShareValue) // 1,000,000,000 LIT worth of shares
+	MinStakingSharesToMintOrBurn int64 = 1
+	MaxStakingSharesToMintOrBurn int64 = (1 << 60) - 1
+	MaxStakingPoolShares         int64 = (1 << 60) - 1
+
+	NbAttributesPerTx = 4
 
 	MinNonce int64 = 0
 
@@ -204,11 +231,7 @@ const (
 
 	MaxTimestamp = (1 << 48) - 1
 
-	NilIntegratorIndex    = 0
-	NilIntegratorTakerFee = 0
-	NilIntegratorMakerFee = 0
-
-	NbAttributesPerTx = 4
+	InsuranceFundOperatorAccountIndex = 1
 )
 
 const (

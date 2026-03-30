@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -28,11 +28,17 @@ type L2TransferTxInfo struct {
 	Sig        []byte
 	L1Sig      string
 	SignedHash string `json:"-"`
+
+	L2TxAttributes
 }
 
 func (txInfo *L2TransferTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
 	// FromAccountIndex
-	if txInfo.FromAccountIndex < MinAccountIndex+1 {
+	if txInfo.FromAccountIndex < MinAccountIndex {
 		return ErrFromAccountIndexTooLow
 	}
 	if txInfo.FromAccountIndex > MaxAccountIndex {
@@ -135,24 +141,25 @@ func (txInfo *L2TransferTxInfo) GetL1AddressBySignature(chainId uint32) common.A
 	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(chainId), txInfo.L1Sig)
 }
 
-func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error) {
-	elems := make([]g.Element, 0, 14)
+func (txInfo *L2TransferTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 14)
 
-	elems = append(elems, g.FromUint32(lighterChainId))
-	elems = append(elems, g.FromUint32(TxTypeL2Transfer))
-	elems = append(elems, g.FromInt64(txInfo.Nonce))
-	elems = append(elems, g.FromInt64(txInfo.ExpiredAt))
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2Transfer))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 
-	elems = append(elems, g.FromInt64(txInfo.FromAccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ApiKeyIndex)))
-	elems = append(elems, g.FromInt64(txInfo.ToAccountIndex))
-	elems = append(elems, g.FromUint32(uint32(txInfo.AssetIndex)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.FromRouteType)))
-	elems = append(elems, g.FromUint32(uint32(txInfo.ToRouteType)))
-	elems = append(elems, g.FromUint64((uint64(txInfo.Amount))&0xFFFFFFFF))  //nolint:gosec
-	elems = append(elems, g.FromUint64(uint64(txInfo.Amount)>>32))           //nolint:gosec
-	elems = append(elems, g.FromUint64((uint64(txInfo.USDCFee))&0xFFFFFFFF)) //nolint:gosec
-	elems = append(elems, g.FromUint64((uint64(txInfo.USDCFee))>>32))        //nolint:gosec
+	elems = append(elems, g.GoldilocksField(txInfo.FromAccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ToAccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.AssetIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.FromRouteType))
+	elems = append(elems, g.GoldilocksField(txInfo.ToRouteType))
+	elems = append(elems, g.GoldilocksField(uint64(txInfo.Amount)&0xFFFFFFFF))  //nolint:gosec
+	elems = append(elems, g.GoldilocksField(uint64(txInfo.Amount)>>32))         //nolint:gosec
+	elems = append(elems, g.GoldilocksField(uint64(txInfo.USDCFee)&0xFFFFFFFF)) //nolint:gosec
+	elems = append(elems, g.GoldilocksField(uint64(txInfo.USDCFee)>>32))        //nolint:gosec
 
-	return p2.HashToQuinticExtension(elems).ToLittleEndianBytes(), nil
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
 }

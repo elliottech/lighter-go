@@ -1,6 +1,8 @@
 package txtypes
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	ErrAssetIndexTooLow                             = fmt.Errorf("AssetIndex should not be less than %d", MinAssetIndex)
@@ -35,12 +37,6 @@ var (
 	ErrPoolMintShareAmountTooHigh                   = fmt.Errorf("PoolMintShareAmount should not be larger than %d", MaxPoolSharesToMintOrBurn)
 	ErrPoolBurnShareAmountTooLow                    = fmt.Errorf("PoolBurnShareAmount should be larger than %d", MinPoolSharesToMintOrBurn)
 	ErrPoolBurnShareAmountTooHigh                   = fmt.Errorf("PoolBurnShareAmount should not be larger than %d", MaxPoolSharesToMintOrBurn)
-	ErrStakingPoolIndexTooLow                       = fmt.Errorf("StakingPoolIndex should not be less than %d", MinAccountIndex)
-	ErrStakingPoolIndexTooHigh                      = fmt.Errorf("StakingPoolIndex should not be larger than %d", MaxAccountIndex)
-	ErrPoolStakeShareAmountTooLow                   = fmt.Errorf("PoolStakeShareAmount should be larger than %d", MinStakingSharesToMintOrBurn)
-	ErrPoolStakeShareAmountTooHigh                  = fmt.Errorf("PoolStakeShareAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
-	ErrPoolUnstakeShareAmountTooLow                 = fmt.Errorf("PoolUnstakeShareAmount should be larger than %d", MinStakingSharesToMintOrBurn)
-	ErrPoolUnstakeShareAmountTooHigh                = fmt.Errorf("PoolUnstakeShareAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
 	ErrWithdrawalAmountTooLow                       = fmt.Errorf("WithdrawalAmount should be larger than %d", MinWithdrawalAmount)
 	ErrWithdrawalAmountTooHigh                      = fmt.Errorf("WithdrawalAmount should not be larger than %d", MaxWithdrawalAmount)
 	ErrTransferAmountTooLow                         = fmt.Errorf("TransferAmount should be larger than %d", MinTransferAmount)
@@ -64,7 +60,6 @@ var (
 	ErrBaseAmountNotNil                             = fmt.Errorf("BaseAmount should be nil")
 	ErrPriceTooLow                                  = fmt.Errorf("OrderPrice should not be less than %d", MinOrderPrice)
 	ErrPriceTooHigh                                 = fmt.Errorf("OrderPrice should not be larger than %d", MaxOrderPrice)
-	ErrFeeTooHigh                                   = fmt.Errorf("MarketFee should not be larger than %d", FeeTick)
 	ErrIsAskInvalid                                 = fmt.Errorf("IsAsk should be 0 or 1")
 	ErrOrderTypeInvalid                             = fmt.Errorf("OrderType is not valid")
 	ErrOrderTimeInForceInvalid                      = fmt.Errorf("OrderTimeInForce is not valid")
@@ -74,6 +69,18 @@ var (
 	ErrInvalidMarginMode                            = fmt.Errorf("MarginMode is not valid")
 	ErrCancelModeInvalid                            = fmt.Errorf("CancelMode is not valid")
 	ErrInvalidUpdateMarginDirection                 = fmt.Errorf("Margin movement direction is not valid")
+	ErrAccountIndexMustBeTreasury                   = fmt.Errorf("AccountIndex must be the treasury account index %d", TreasuryAccountIndex)
+	ErrStakingPoolIndexTooLow                       = fmt.Errorf("StakingPoolIndex should not be less than %d", MinSubAccountIndex)
+	ErrStakingPoolIndexTooHigh                      = fmt.Errorf("StakingPoolIndex should not be larger than %d", MaxAccountIndex)
+	ErrPoolStakeAssetsAmountTooLow                  = fmt.Errorf("StakeAssetsAmount should be larger than %d", MinStakingSharesToMintOrBurn)
+	ErrPoolStakeAssetsAmountTooHigh                 = fmt.Errorf("StakeAssetsAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
+	ErrPoolUnstakeAssetsAmountTooLow                = fmt.Errorf("UnstakeAssetsAmount should be larger than %d", MinStakingSharesToMintOrBurn)
+	ErrPoolUnstakeAssetsAmountTooHigh               = fmt.Errorf("UnstakeAssetsAmount should not be larger than %d", MaxStakingSharesToMintOrBurn)
+	ErrStakingPoolInitialTotalSharesTooLow          = fmt.Errorf("PoolInitialTotalShares should be larger than %d", MinInitialTotalStakingShares)
+	ErrStakingPoolInitialTotalSharesTooHigh         = fmt.Errorf("PoolInitialTotalShares should not be larger than %d", MaxInitialTotalStakingShares)
+	ErrInvalidStrategyIndex                         = fmt.Errorf("StrategyIndex is not valid")
+	ErrAccountIndexMustBtInsuranceFundOperator      = fmt.Errorf("AccountIndex must be the insurance fund operator account index %d", InsuranceFundOperatorAccountIndex)
+	ErrInvalidAccountTradingMode                    = fmt.Errorf("AccountTradingMode is invalid")
 	ErrTooManyAttributes                            = fmt.Errorf("Too many attributes, should not be larger than %d", NbAttributesPerTx)
 	ErrInvalidAttributeType                         = fmt.Errorf("Attribute type is invalid")
 	ErrAttributeValueOutOfRange                     = fmt.Errorf("Attribute value is out of range")
@@ -81,7 +88,9 @@ var (
 	ErrIntegratorAccountIndexTooLow                 = fmt.Errorf("IntegratorAccountIndex should not be less than %d", MinAccountIndex)
 	ErrIntegratorAccountIndexTooHigh                = fmt.Errorf("IntegratorAccountIndex should not be larger than %d", MaxAccountIndex)
 	ErrApprovalExpiryZeroOnRevocation               = fmt.Errorf("ApprovalExpiry should be zero when revoking integrator approval")
-	ErrIntegratorAccountIndexInvalidRange           = fmt.Errorf("IntegratorAccountIndex should be between 0 and %d", MaxAccountIndex)
-	ErrIntegratorFeeInvalidRange                    = fmt.Errorf("Integrator fees should be between 0 and %d", FeeTick)
+	ErrFeeTooHigh                                   = fmt.Errorf("MarketFee should not be larger than %d", FeeTick)
+	ErrIntegratorAccountIndexInvalidRange           = fmt.Errorf("IntegratorAccountIndex is in invalid range")
+	ErrIntegratorFeeInvalidRange                    = fmt.Errorf("Integrator fees are in invalid range")
 	ErrIntegratorAccountIndexRequiredForNonZeroFees = fmt.Errorf("IntegratorAccountIndex should be non-zero when integrator taker fee or maker fee is non-zero")
+	ErrNonceSkipAttributeInvalid                    = fmt.Errorf("Nonce skip attribute is invalid")
 )

@@ -1,7 +1,5 @@
 package txtypes
 
-import g "github.com/elliottech/poseidon_crypto/field/goldilocks"
-
 type TxInfo interface {
 	GetTxType() uint8
 
@@ -17,7 +15,7 @@ type TxInfo interface {
 
 	Validate() error
 
-	Hash(lighterChainId uint32, extra ...g.Element) (msgHash []byte, err error)
+	Hash(lighterChainId uint32) (msgHash []byte, err error)
 }
 
 type OrderInfo struct {

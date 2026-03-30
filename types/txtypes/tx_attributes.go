@@ -31,14 +31,48 @@ const (
 	AttributeTypeIntegratorAccountIndex = 1
 	AttributeTypeIntegratorTakerFee     = 2
 	AttributeTypeIntegratorMakerFee     = 3
+	AttributeTypeSkipTxNonce            = 4
 
-	MaxAttributeType = AttributeTypeIntegratorMakerFee
+	MaxAttributeType = AttributeTypeSkipTxNonce
 )
 
-var AttributeTypeToSize = map[uint8]int{ // Size in bytes
-	AttributeTypeIntegratorAccountIndex: 6,
-	AttributeTypeIntegratorTakerFee:     4,
-	AttributeTypeIntegratorMakerFee:     4,
+type AttibuteConfig struct {
+	ByteSize          int
+	MinValue          int
+	MaxValue          int
+	NilValue          int
+	InvalidRangeError error
+}
+
+var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
+	AttributeTypeIntegratorAccountIndex: {
+		ByteSize:          6,
+		MinValue:          0,
+		MaxValue:          int(MaxAccountIndex),
+		NilValue:          NilIntegratorIndex,
+		InvalidRangeError: ErrIntegratorAccountIndexInvalidRange,
+	},
+	AttributeTypeIntegratorTakerFee: {
+		ByteSize:          4,
+		MinValue:          0,
+		MaxValue:          int(FeeTick),
+		NilValue:          NilIntegratorTakerFee,
+		InvalidRangeError: ErrIntegratorFeeInvalidRange,
+	},
+	AttributeTypeIntegratorMakerFee: {
+		ByteSize:          4,
+		MinValue:          0,
+		MaxValue:          int(FeeTick),
+		NilValue:          NilIntegratorMakerFee,
+		InvalidRangeError: ErrIntegratorFeeInvalidRange,
+	},
+	AttributeTypeSkipTxNonce: {
+		ByteSize:          1,
+		MinValue:          1,
+		MaxValue:          1,
+		NilValue:          0,
+		InvalidRangeError: ErrNonceSkipAttributeInvalid,
+	},
 }
 
 type L2TxAttributes map[uint8]int // Type to value
@@ -53,38 +87,47 @@ func (attr L2TxAttributes) Validate() error {
 	}
 
 	for typ, val := range attr {
-		sizeBytes, ok := AttributeTypeToSize[typ]
+		config, ok := AttributeTypeToConfig[typ]
 		if !ok {
 			return fmt.Errorf("%w: %d", ErrInvalidAttributeType, typ)
 		}
-		minValue, maxValue := 0, 1<<(sizeBytes*8)-1
-		if minValue > val || val > maxValue { // ErrAttributeValueOutOfRange
-			return fmt.Errorf("%w: type %d, value %d, min value %d, max value %d",
-				ErrAttributeValueOutOfRange, typ, val, minValue, maxValue)
+		minValue, maxValue := config.MinValue, config.MaxValue
+		if val < minValue || val > maxValue { // ErrAttributeValueOutOfRange
+			return config.InvalidRangeError
 		}
 	}
 
-	integratorAccountIndex := attr[AttributeTypeIntegratorAccountIndex]
-	if integratorAccountIndex < int(MinAccountIndex) || integratorAccountIndex > int(MaxAccountIndex) {
-		return ErrIntegratorAccountIndexInvalidRange
-	}
-
-	integratorTakerFee := attr[AttributeTypeIntegratorTakerFee]
-	if integratorTakerFee < 0 || integratorTakerFee > int(FeeTick) {
-		return ErrIntegratorFeeInvalidRange
-	}
-
-	integratorMakerFee := attr[AttributeTypeIntegratorMakerFee]
-	if integratorMakerFee < 0 || integratorMakerFee > int(FeeTick) {
-		return ErrIntegratorFeeInvalidRange
-	}
-
-	hasFees := integratorTakerFee != NilIntegratorTakerFee || integratorMakerFee != NilIntegratorMakerFee
-	if hasFees && integratorAccountIndex == NilIntegratorIndex {
+	hasFees := attr[AttributeTypeIntegratorTakerFee] != NilIntegratorTakerFee || attr[AttributeTypeIntegratorMakerFee] != NilIntegratorMakerFee
+	if hasFees && attr[AttributeTypeIntegratorAccountIndex] == NilIntegratorIndex {
 		return ErrIntegratorAccountIndexRequiredForNonZeroFees
 	}
 
 	return nil
+}
+
+func (attr L2TxAttributes) IsEmpty() bool {
+	for _, value := range attr {
+		if value != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Nonzero types in ascending order, padded with zeroes to NbAttributesPerTx
+func (attr L2TxAttributes) getNormalizedTypes() (attrTypes [NbAttributesPerTx]uint8) {
+	i := 0
+	for key, value := range attr {
+		if value == 0 {
+			continue
+		}
+		attrTypes[i] = key
+		i++
+	}
+	sort.Slice(attrTypes[:i], func(i, j int) bool {
+		return attrTypes[i] < attrTypes[j]
+	})
+	return attrTypes
 }
 
 func (attr L2TxAttributes) Hash() (msgHash goldilocks_quintic_extension.Element, err error) {
@@ -114,29 +157,4 @@ func (attr L2TxAttributes) AggregateTxHash(txHash goldilocks_quintic_extension.E
 	combinedElements = append(combinedElements, attributesHash[:]...)
 
 	return p2.HashToQuinticExtension(combinedElements).ToLittleEndianBytes(), nil
-}
-
-func (attr L2TxAttributes) IsEmpty() bool {
-	for _, value := range attr {
-		if value != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-// Nonzero types in ascending order, padded with zeroes to NbAttributesPerTx
-func (attr L2TxAttributes) getNormalizedTypes() (attrTypes [NbAttributesPerTx]uint8) {
-	i := 0
-	for key, value := range attr {
-		if value == 0 {
-			continue
-		}
-		attrTypes[i] = key
-		i++
-	}
-	sort.Slice(attrTypes[:i], func(i, j int) bool {
-		return attrTypes[i] < attrTypes[j]
-	})
-	return attrTypes
 }
