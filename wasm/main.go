@@ -217,7 +217,7 @@ func main() {
 	js.Global().Set("SignChangePubKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignChangePubKey expects 4 args: pubKeyHex, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignChangePubKey expects 5 args: pubKeyHex, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			pubKeyHex := args[0].String()
 			skipNonce := uint8(args[1].Int())
@@ -256,7 +256,7 @@ func main() {
 	js.Global().Set("SignCreateOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 17 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 16 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 17 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
 			for i := 0; i < 17; i++ {
@@ -313,11 +313,11 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			integratorTakerFee, err := safeInt(args[11], 11)
+			integratorTakerFee, err := safeUint32(args[11], 11)
 			if err != nil {
 				return wrapErr(err)
 			}
-			integratorMakerFee, err := safeInt(args[12], 12)
+			integratorMakerFee, err := safeUint32(args[12], 12)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -365,7 +365,7 @@ func main() {
 	js.Global().Set("SignCancelOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCancelOrder expects 5 args: marketIndex, orderIndex, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignCancelOrder expects 6 args: marketIndex, orderIndex, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -400,7 +400,7 @@ func main() {
 	js.Global().Set("SignCancelAllOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 5 args: timeInForce, time, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 6 args: timeInForce, time, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -535,7 +535,7 @@ func main() {
 	js.Global().Set("SignWithdraw", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 7 {
-				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 6 args: assetIndex, routeType, amount, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 7 args: assetIndex, routeType, amount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
 			for i := 0; i < 7; i++ {
@@ -674,7 +674,7 @@ func main() {
 	js.Global().Set("SignCreateSubAccount", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 4 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateSubAccount expects 3 args: skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateSubAccount expects 4 args: skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -779,7 +779,7 @@ func main() {
 	js.Global().Set("SignMintShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignMintShares expects 5 args: publicPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignMintShares expects 6 args: publicPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -811,7 +811,7 @@ func main() {
 	js.Global().Set("SignBurnShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignBurnShares expects 5 args: publicPoolIndex, shareAmount, skipNonce ,nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignBurnShares expects 6 args: publicPoolIndex, shareAmount, skipNonce ,nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -843,7 +843,7 @@ func main() {
 	js.Global().Set("SignStakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 5 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 6 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -875,7 +875,7 @@ func main() {
 	js.Global().Set("SignUnstakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 5 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 6 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -1017,7 +1017,7 @@ func main() {
 	js.Global().Set("SignApproveIntegrator", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 10 {
-				return js.ValueOf(map[string]interface{}{"error": "SignApproveIntegrator expects 9 args: cIntegratorIndex, cMaxPerpsTakerFee, cMaxPerpsMakerFee, cMaxSpotTakerFee, cMaxSpotMakerFee, cApprovalExpiry, cSkipNonce, cNonce, cApiKeyIndex, cAccountIndex"})
+				return js.ValueOf(map[string]interface{}{"error": "SignApproveIntegrator expects 10 args: cIntegratorIndex, cMaxPerpsTakerFee, cMaxPerpsMakerFee, cMaxSpotTakerFee, cMaxSpotMakerFee, cApprovalExpiry, cSkipNonce, cNonce, cApiKeyIndex, cAccountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
