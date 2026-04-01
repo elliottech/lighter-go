@@ -220,7 +220,8 @@ func main() {
 				return js.ValueOf(map[string]interface{}{"error": "SignChangePubKey expects 4 args: pubKeyHex, nonce, apiKeyIndex, accountIndex"})
 			}
 			pubKeyHex := args[0].String()
-			nonce := int64(args[1].Int())
+			skipNonce := args[1].Int()
+			nonce := int64(args[2].Int())
 
 			c, err := getClient(args)
 			if err != nil {
@@ -242,6 +243,9 @@ func main() {
 			}
 			ops := &types.TransactOpts{
 				Nonce: &nonce,
+				TxAttributes: &types.L2TxAttributes{
+					SkipNonce: &skipNonce,
+				},
 			}
 
 			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
@@ -317,7 +321,11 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[13], 13)
+			skipNonce := safeInt(args[13], 13)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[14], 14)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -327,21 +335,24 @@ func main() {
 			}
 
 			txInfo := &types.CreateOrderTxReq{
-				MarketIndex:            int16(marketIndex),
-				ClientOrderIndex:       clientOrderIndex,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				IsAsk:                  isAsk,
-				Type:                   orderType,
-				TimeInForce:            timeInForce,
-				ReduceOnly:             reduceOnly,
-				TriggerPrice:           triggerPrice,
-				OrderExpiry:            orderExpiry,
-				IntegratorAccountIndex: int(integratorAccountIndex),
-				IntegratorTakerFee:     int(integratorTakerFee),
-				IntegratorMakerFee:     int(integratorMakerFee),
+				MarketIndex:      int16(marketIndex),
+				ClientOrderIndex: clientOrderIndex,
+				BaseAmount:       baseAmount,
+				Price:            price,
+				IsAsk:            isAsk,
+				Type:             orderType,
+				TimeInForce:      timeInForce,
+				ReduceOnly:       reduceOnly,
+				TriggerPrice:     triggerPrice,
+				OrderExpiry:      orderExpiry,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				IntegratorAccountIndex: &integratorAccountIndex,
+				IntegratorTakerFee:     &integratorTakerFee,
+				IntegratorMakerFee:     &integratorMakerFee,
+				SkipNonce:              &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -366,13 +377,17 @@ func main() {
 				return wrapErr(err)
 			}
 			orderIndex := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.CancelOrderTxReq{
 				MarketIndex: marketIndex,
 				Index:       orderIndex,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -394,13 +409,17 @@ func main() {
 
 			timeInForce := uint8(args[0].Int())
 			timeVal := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.CancelAllOrdersTxReq{
 				TimeInForce: timeInForce,
 				Time:        timeVal,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -451,7 +470,11 @@ func main() {
 				return wrapErr(err)
 			}
 			memoStr := args[6].String()
-			nonce, err := safeInt(args[7], 7)
+			skipNonce, err := safeUint8(args[7], 7)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[8], 8)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -497,6 +520,9 @@ func main() {
 				Memo:           memoArr,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -534,7 +560,11 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[3], 3)
+			skipNonce, err := safeUint8(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[4], 4)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -545,6 +575,9 @@ func main() {
 				Amount:     amount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -570,7 +603,8 @@ func main() {
 			}
 			fraction := uint16(args[1].Int())
 			marginMode := uint8(args[2].Int())
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdateLeverageTxReq{
 				MarketIndex:           marketIndex,
@@ -578,6 +612,9 @@ func main() {
 				MarginMode:            marginMode,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -608,19 +645,23 @@ func main() {
 			integratorAccountIndex := int(args[5].Int())
 			integratorTakerFee := int(args[6].Int())
 			integratorMakerFee := int(args[7].Int())
-			nonce := int64(args[8].Int())
+			skipNonce := uint8(args[8].Int())
+			nonce := int64(args[9].Int())
 
 			txInfo := &types.ModifyOrderTxReq{
-				MarketIndex:            marketIndex,
-				Index:                  index,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				TriggerPrice:           triggerPrice,
+				MarketIndex:  marketIndex,
+				Index:        index,
+				BaseAmount:   baseAmount,
+				Price:        price,
+				TriggerPrice: triggerPrice,
+			}
+			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
 				IntegratorAccountIndex: integratorAccountIndex,
 				IntegratorTakerFee:     integratorTakerFee,
 				IntegratorMakerFee:     integratorMakerFee,
+				SkipNonce:              &skipNonce,
 			}
-			ops := new(types.TransactOpts)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -640,9 +681,13 @@ func main() {
 				return wrapErr(err)
 			}
 
-			nonce := int64(args[0].Int())
+			skipNonce := uint8(args[0].Int())
+			nonce := int64(args[1].Int())
 
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -668,7 +713,8 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.CreatePublicPoolTxReq{
 				OperatorFee:          operatorFee,
@@ -676,6 +722,9 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -705,7 +754,8 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce := int64(args[4].Int())
+			skipNonce := uint8(args[4].Int())
+			nonce := int64(args[5].Int())
 
 			txInfo := &types.UpdatePublicPoolTxReq{
 				PublicPoolIndex:      publicPoolIndex,
@@ -714,6 +764,9 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -735,13 +788,17 @@ func main() {
 
 			publicPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.MintSharesTxReq{
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -763,13 +820,17 @@ func main() {
 
 			publicPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.BurnSharesTxReq{
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -791,13 +852,17 @@ func main() {
 
 			stakingPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.StakeAssetsTxReq{
 				StakingPoolIndex: stakingPoolIndex,
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -819,13 +884,17 @@ func main() {
 
 			stakingPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.UnstakeAssetsTxReq{
 				StakingPoolIndex: stakingPoolIndex,
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -851,7 +920,8 @@ func main() {
 			}
 			usdcAmount := int64(args[1].Int())
 			direction := uint8(args[2].Int())
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdateMarginTxReq{
 				MarketIndex: marketIndex,
@@ -859,6 +929,9 @@ func main() {
 				Direction:   direction,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -888,6 +961,11 @@ func main() {
 			length := ordersArg.Length()
 			orders := make([]*types.CreateOrderTxReq, length)
 
+			integratorAccountIndex := int(args[3].Int())
+			integratorTakerFee := int(args[4].Int())
+			integratorMakerFee := int(args[5].Int())
+			skipNonce := uint8(args[6].Int())
+
 			for i := 0; i < length; i++ {
 				orderObj := ordersArg.Index(i)
 				if orderObj.Type() != js.TypeObject {
@@ -900,19 +978,16 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:            int16(orderObj.Get("MarketIndex").Int()),
-					ClientOrderIndex:       int64(orderObj.Get("ClientOrderIndex").Int()),
-					BaseAmount:             int64(orderObj.Get("BaseAmount").Int()),
-					Price:                  uint32(orderObj.Get("Price").Int()),
-					IsAsk:                  uint8(orderObj.Get("IsAsk").Int()),
-					Type:                   uint8(orderObj.Get("Type").Int()),
-					TimeInForce:            uint8(orderObj.Get("TimeInForce").Int()),
-					ReduceOnly:             uint8(orderObj.Get("ReduceOnly").Int()),
-					TriggerPrice:           uint32(orderObj.Get("TriggerPrice").Int()),
-					OrderExpiry:            orderExpiry,
-					IntegratorAccountIndex: int(orderObj.Get("IntegratorAccountIndex").Int()),
-					IntegratorTakerFee:     int(orderObj.Get("IntegratorTakerFee").Int()),
-					IntegratorMakerFee:     int(orderObj.Get("IntegratorMakerFee").Int()),
+					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
+					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
+					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
+					Price:            uint32(orderObj.Get("Price").Int()),
+					IsAsk:            uint8(orderObj.Get("IsAsk").Int()),
+					Type:             uint8(orderObj.Get("Type").Int()),
+					TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
+					ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
+					TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
+					OrderExpiry:      orderExpiry,
 				}
 			}
 
@@ -922,7 +997,14 @@ func main() {
 				GroupingType: groupingType,
 				Orders:       orders,
 			}
+
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = &types.L2TxAttributes{
+				IntegratorAccountIndex: &integratorAccountIndex,
+				IntegratorTakerFee:     &integratorTakerFee,
+				IntegratorMakerFee:     &integratorMakerFee,
+				SkipNonce:              &skipNonce,
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -947,6 +1029,7 @@ func main() {
 			maxSpotTakerFee := uint32(args[3].Int())
 			maxSpotMakerFee := uint32(args[4].Int())
 			approvalExpiry := int64(args[5].Int())
+			skipNonce := uint8(args[6].Int())
 
 			txInfo := &types.ApproveIntegratorTxReq{
 				IntegratorAccountIndex: integratorIndex,
@@ -958,7 +1041,10 @@ func main() {
 			}
 
 			ops := new(types.TransactOpts)
-			nonce := int64(args[6].Int())
+			ops.TxAttributes = &types.L2TxAttributes{
+				SkipNonce: &skipNonce,
+			}
+			nonce := int64(args[7].Int())
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
