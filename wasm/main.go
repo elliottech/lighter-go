@@ -943,10 +943,10 @@ func main() {
 			length := ordersArg.Length()
 			orders := make([]*types.CreateOrderTxReq, length)
 
-			integratorAccountIndex := int64(args[3].Int())
-			integratorTakerFee := uint32(args[4].Int())
-			integratorMakerFee := uint32(args[5].Int())
-			skipNonce := uint8(args[6].Int())
+			integratorAccountIndex := int64(args[2].Int())
+			integratorTakerFee := uint32(args[3].Int())
+			integratorMakerFee := uint32(args[4].Int())
+			skipNonce := uint8(args[5].Int())
 
 			for i := 0; i < length; i++ {
 				orderObj := ordersArg.Index(i)
@@ -973,7 +973,7 @@ func main() {
 				}
 			}
 
-			nonce := int64(args[2].Int())
+			nonce := int64(args[6].Int())
 
 			req := &types.CreateGroupedOrdersTxReq{
 				GroupingType: groupingType,
