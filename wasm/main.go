@@ -27,6 +27,26 @@ func wrapErr(err error) js.Value {
 	return js.ValueOf(map[string]interface{}{})
 }
 
+func txAttributesWithSkipNonce(skipNonce uint8) *types.L2TxAttributes {
+	attr := &types.L2TxAttributes{}
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	return attr
+}
+
+func integratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
+	attr := &types.L2TxAttributes{
+		IntegratorAccountIndex: &integratorAccountIndex,
+		IntegratorTakerFee:     &integratorTakerFee,
+		IntegratorMakerFee:     &integratorMakerFee,
+	}
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	return attr
+}
+
 func messageToSign(txInfo txtypes.TxInfo) string {
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
@@ -242,10 +262,8 @@ func main() {
 				PubKey: pubKey,
 			}
 			ops := &types.TransactOpts{
-				Nonce: &nonce,
-				TxAttributes: &types.L2TxAttributes{
-					SkipNonce: &skipNonce,
-				},
+				Nonce:        &nonce,
+				TxAttributes: txAttributesWithSkipNonce(skipNonce),
 			}
 
 			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
@@ -347,12 +365,7 @@ func main() {
 				OrderExpiry:      orderExpiry,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				IntegratorAccountIndex: &integratorAccountIndex,
-				IntegratorTakerFee:     &integratorTakerFee,
-				IntegratorMakerFee:     &integratorMakerFee,
-				SkipNonce:              &skipNonce,
-			}
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -385,9 +398,7 @@ func main() {
 				Index:       orderIndex,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -417,9 +428,7 @@ func main() {
 				Time:        timeVal,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -520,9 +529,7 @@ func main() {
 				Memo:           memoArr,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -575,9 +582,7 @@ func main() {
 				Amount:     amount,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -612,9 +617,7 @@ func main() {
 				MarginMode:            marginMode,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -656,12 +659,7 @@ func main() {
 				TriggerPrice: triggerPrice,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				IntegratorAccountIndex: &integratorAccountIndex,
-				IntegratorTakerFee:     &integratorTakerFee,
-				IntegratorMakerFee:     &integratorMakerFee,
-				SkipNonce:              &skipNonce,
-			}
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -685,9 +683,7 @@ func main() {
 			nonce := int64(args[1].Int())
 
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -722,9 +718,7 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -764,9 +758,7 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -796,9 +788,7 @@ func main() {
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -828,9 +818,7 @@ func main() {
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -860,9 +848,7 @@ func main() {
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -892,9 +878,7 @@ func main() {
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -929,9 +913,7 @@ func main() {
 				Direction:   direction,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -999,12 +981,7 @@ func main() {
 			}
 
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				IntegratorAccountIndex: &integratorAccountIndex,
-				IntegratorTakerFee:     &integratorTakerFee,
-				IntegratorMakerFee:     &integratorMakerFee,
-				SkipNonce:              &skipNonce,
-			}
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -1041,9 +1018,7 @@ func main() {
 			}
 
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = &types.L2TxAttributes{
-				SkipNonce: &skipNonce,
-			}
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			nonce := int64(args[7].Int())
 			if nonce != -1 {
 				ops.Nonce = &nonce
