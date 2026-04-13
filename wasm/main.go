@@ -968,5 +968,37 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("SignUpdateAccountConfig", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 4 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdateAccountConfig expects 4 args: accountTradingMode, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			accountTradingMode, err := safeUint8(args[0], 0)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.UpdateAccountConfigTxReq{
+				AccountTradingMode: accountTradingMode,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetUpdateAccountConfigTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
 	select {}
 }
