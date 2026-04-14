@@ -5,6 +5,8 @@ import (
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 )
 
+var _ TxInfo = (*L2UpdateAccountConfigTxInfo)(nil)
+
 type L2UpdateAccountConfigTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
