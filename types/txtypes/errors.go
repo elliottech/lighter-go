@@ -52,6 +52,7 @@ var (
 	ErrClientOrderIndexTooLow                       = fmt.Errorf("ClientOrderIndex should not be less than %d", MinClientOrderIndex)
 	ErrClientOrderIndexTooHigh                      = fmt.Errorf("ClientOrderIndex should not be larger than %d", MaxClientOrderIndex)
 	ErrClientOrderIndexNotNil                       = fmt.Errorf("ClientOrderIndex should be nil")
+	ErrClientOrderIndexDuplicate                    = fmt.Errorf("ClientOrderIndex should be unique within the group")
 	ErrOrderIndexTooLow                             = fmt.Errorf("OrderIndex should not be less than %d", MinOrderIndex)
 	ErrOrderIndexTooHigh                            = fmt.Errorf("OrderIndex should not be larger than %d", MaxOrderIndex)
 	ErrBaseAmountTooLow                             = fmt.Errorf("BaseAmount should not be less than %d", MinOrderBaseAmount)

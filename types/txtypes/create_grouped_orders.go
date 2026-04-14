@@ -66,6 +66,7 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 	}
 
 	// Perform range checks for all orders
+	uniqueClientOrderIds := make(map[int64]struct{})
 	for _, order := range txInfo.Orders {
 		// MarketIndex
 		if order.MarketIndex != txInfo.Orders[0].MarketIndex {
@@ -73,8 +74,18 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 		}
 
 		// ClientOrderIndex
-		if order.ClientOrderIndex != NilClientOrderIndex {
-			return ErrClientOrderIndexNotNil
+		clientOrderIndex := order.ClientOrderIndex
+		if clientOrderIndex != NilClientOrderIndex {
+			if clientOrderIndex < MinClientOrderIndex {
+				return ErrClientOrderIndexTooLow
+			}
+			if clientOrderIndex > MaxClientOrderIndex {
+				return ErrClientOrderIndexTooHigh
+			}
+			if _, exists := uniqueClientOrderIds[clientOrderIndex]; exists {
+				return ErrClientOrderIndexDuplicate
+			}
+			uniqueClientOrderIds[clientOrderIndex] = struct{}{}
 		}
 
 		// BaseAmount
