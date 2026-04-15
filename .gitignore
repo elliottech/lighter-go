@@ -3,3 +3,6 @@ vendor
 build/*
 !build/.keep
 /build
+
+# Rust
+rust/target/
