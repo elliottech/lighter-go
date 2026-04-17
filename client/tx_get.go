@@ -251,3 +251,15 @@ func (c *TxClient) GetApproveIntegratorTx(tx *types.ApproveIntegratorTxReq, ops 
 
 	return txInfo, nil
 }
+
+func (c *TxClient) GetUpdateAccountConfigTransaction(tx *types.UpdateAccountConfigTxReq, ops *types.TransactOpts) (*txtypes.L2UpdateAccountConfigTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructUpdateAccountConfigTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}

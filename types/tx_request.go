@@ -141,6 +141,10 @@ type UpdateMarginTxReq struct {
 	Direction   uint8
 }
 
+type UpdateAccountConfigTxReq struct {
+	AccountTradingMode uint8
+}
+
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
 	if ops.FromAccountIndex == nil {
 		return "", fmt.Errorf("missing FromAccountIndex")
@@ -587,6 +591,28 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 	return convertedTx, nil
 }
 
+func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountConfigTxInfo, error) {
+	convertedTx := ConvertUpdateAccountConfigTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
 	return &txtypes.L2ApproveIntegratorTxInfo{
 		IntegratorAccountIndex: tx.IntegratorAccountIndex,
@@ -841,5 +867,16 @@ func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2
 		ExpiredAt:      ops.ExpiredAt,
 		Nonce:          *ops.Nonce,
 		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertUpdateAccountConfigTx(tx *UpdateAccountConfigTxReq, ops *TransactOpts) *txtypes.L2UpdateAccountConfigTxInfo {
+	return &txtypes.L2UpdateAccountConfigTxInfo{
+		AccountIndex:       *ops.FromAccountIndex,
+		ApiKeyIndex:        *ops.ApiKeyIndex,
+		AccountTradingMode: tx.AccountTradingMode,
+		ExpiredAt:          ops.ExpiredAt,
+		Nonce:              *ops.Nonce,
+		L2TxAttributes:     ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }

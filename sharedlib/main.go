@@ -804,6 +804,30 @@ func SignApproveIntegrator(cIntegratorIndex C.longlong, cMaxPerpsTakerFee C.uint
 	return convertTxInfoToResponse(txInfo, err)
 }
 
+//export SignUpdateAccountConfig
+func SignUpdateAccountConfig(cAccountTradingMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	accountTradingMode := uint8(cAccountTradingMode)
+
+	tx := &types.UpdateAccountConfigTxReq{
+		AccountTradingMode: accountTradingMode,
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetUpdateAccountConfigTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
 //export Free
 func Free(ptr unsafe.Pointer) {
 	C.free(ptr)
