@@ -327,21 +327,26 @@ func main() {
 			}
 
 			txInfo := &types.CreateOrderTxReq{
-				MarketIndex:            int16(marketIndex),
-				ClientOrderIndex:       clientOrderIndex,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				IsAsk:                  isAsk,
-				Type:                   orderType,
-				TimeInForce:            timeInForce,
-				ReduceOnly:             reduceOnly,
-				TriggerPrice:           triggerPrice,
-				OrderExpiry:            orderExpiry,
-				IntegratorAccountIndex: int(integratorAccountIndex),
-				IntegratorTakerFee:     int(integratorTakerFee),
-				IntegratorMakerFee:     int(integratorMakerFee),
+				MarketIndex:      int16(marketIndex),
+				ClientOrderIndex: clientOrderIndex,
+				BaseAmount:       baseAmount,
+				Price:            price,
+				IsAsk:            isAsk,
+				Type:             orderType,
+				TimeInForce:      timeInForce,
+				ReduceOnly:       reduceOnly,
+				TriggerPrice:     triggerPrice,
+				OrderExpiry:      orderExpiry,
 			}
-			ops := new(types.TransactOpts)
+			integratorTakerFeeU32 := uint32(integratorTakerFee)
+			integratorMakerFeeU32 := uint32(integratorMakerFee)
+			ops := &types.TransactOpts{
+				TxAttributes: &types.L2TxAttributes{
+					IntegratorAccountIndex: &integratorAccountIndex,
+					IntegratorTakerFee:     &integratorTakerFeeU32,
+					IntegratorMakerFee:     &integratorMakerFeeU32,
+				},
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -605,22 +610,25 @@ func main() {
 			baseAmount := int64(args[2].Int())
 			price := uint32(args[3].Int())
 			triggerPrice := uint32(args[4].Int())
-			integratorAccountIndex := int(args[5].Int())
-			integratorTakerFee := int(args[6].Int())
-			integratorMakerFee := int(args[7].Int())
+			integratorAccountIndex := int64(args[5].Int())
+			integratorTakerFee := uint32(args[6].Int())
+			integratorMakerFee := uint32(args[7].Int())
 			nonce := int64(args[8].Int())
 
 			txInfo := &types.ModifyOrderTxReq{
-				MarketIndex:            marketIndex,
-				Index:                  index,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				TriggerPrice:           triggerPrice,
-				IntegratorAccountIndex: integratorAccountIndex,
-				IntegratorTakerFee:     integratorTakerFee,
-				IntegratorMakerFee:     integratorMakerFee,
+				MarketIndex:  marketIndex,
+				Index:        index,
+				BaseAmount:   baseAmount,
+				Price:        price,
+				TriggerPrice: triggerPrice,
 			}
-			ops := new(types.TransactOpts)
+			ops := &types.TransactOpts{
+				TxAttributes: &types.L2TxAttributes{
+					IntegratorAccountIndex: &integratorAccountIndex,
+					IntegratorTakerFee:     &integratorTakerFee,
+					IntegratorMakerFee:     &integratorMakerFee,
+				},
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -888,6 +896,9 @@ func main() {
 			length := ordersArg.Length()
 			orders := make([]*types.CreateOrderTxReq, length)
 
+			var integratorAccountIndex int64
+			var integratorTakerFee, integratorMakerFee uint32
+
 			for i := 0; i < length; i++ {
 				orderObj := ordersArg.Index(i)
 				if orderObj.Type() != js.TypeObject {
@@ -900,19 +911,22 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:            int16(orderObj.Get("MarketIndex").Int()),
-					ClientOrderIndex:       int64(orderObj.Get("ClientOrderIndex").Int()),
-					BaseAmount:             int64(orderObj.Get("BaseAmount").Int()),
-					Price:                  uint32(orderObj.Get("Price").Int()),
-					IsAsk:                  uint8(orderObj.Get("IsAsk").Int()),
-					Type:                   uint8(orderObj.Get("Type").Int()),
-					TimeInForce:            uint8(orderObj.Get("TimeInForce").Int()),
-					ReduceOnly:             uint8(orderObj.Get("ReduceOnly").Int()),
-					TriggerPrice:           uint32(orderObj.Get("TriggerPrice").Int()),
-					OrderExpiry:            orderExpiry,
-					IntegratorAccountIndex: int(orderObj.Get("IntegratorAccountIndex").Int()),
-					IntegratorTakerFee:     int(orderObj.Get("IntegratorTakerFee").Int()),
-					IntegratorMakerFee:     int(orderObj.Get("IntegratorMakerFee").Int()),
+					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
+					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
+					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
+					Price:            uint32(orderObj.Get("Price").Int()),
+					IsAsk:            uint8(orderObj.Get("IsAsk").Int()),
+					Type:             uint8(orderObj.Get("Type").Int()),
+					TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
+					ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
+					TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
+					OrderExpiry:      orderExpiry,
+				}
+
+				if i == 0 {
+					integratorAccountIndex = int64(orderObj.Get("IntegratorAccountIndex").Int())
+					integratorTakerFee = uint32(orderObj.Get("IntegratorTakerFee").Int())
+					integratorMakerFee = uint32(orderObj.Get("IntegratorMakerFee").Int())
 				}
 			}
 
@@ -922,7 +936,13 @@ func main() {
 				GroupingType: groupingType,
 				Orders:       orders,
 			}
-			ops := new(types.TransactOpts)
+			ops := &types.TransactOpts{
+				TxAttributes: &types.L2TxAttributes{
+					IntegratorAccountIndex: &integratorAccountIndex,
+					IntegratorTakerFee:     &integratorTakerFee,
+					IntegratorMakerFee:     &integratorMakerFee,
+				},
+			}
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
