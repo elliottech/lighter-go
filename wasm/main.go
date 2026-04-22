@@ -27,6 +27,26 @@ func wrapErr(err error) js.Value {
 	return js.ValueOf(map[string]interface{}{})
 }
 
+func txAttributesWithSkipNonce(skipNonce uint8) *types.L2TxAttributes {
+	attr := &types.L2TxAttributes{}
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	return attr
+}
+
+func integratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
+	attr := &types.L2TxAttributes{
+		IntegratorAccountIndex: &integratorAccountIndex,
+		IntegratorTakerFee:     &integratorTakerFee,
+		IntegratorMakerFee:     &integratorMakerFee,
+	}
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	return attr
+}
+
 func messageToSign(txInfo txtypes.TxInfo) string {
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
@@ -216,11 +236,12 @@ func main() {
 
 	js.Global().Set("SignChangePubKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 4 {
-				return js.ValueOf(map[string]interface{}{"error": "SignChangePubKey expects 4 args: pubKeyHex, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignChangePubKey expects 5 args: pubKeyHex, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			pubKeyHex := args[0].String()
-			nonce := int64(args[1].Int())
+			skipNonce := uint8(args[1].Int())
+			nonce := int64(args[2].Int())
 
 			c, err := getClient(args)
 			if err != nil {
@@ -241,7 +262,8 @@ func main() {
 				PubKey: pubKey,
 			}
 			ops := &types.TransactOpts{
-				Nonce: &nonce,
+				Nonce:        &nonce,
+				TxAttributes: txAttributesWithSkipNonce(skipNonce),
 			}
 
 			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
@@ -251,11 +273,11 @@ func main() {
 
 	js.Global().Set("SignCreateOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 16 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 16 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 17 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 17 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
-			for i := 0; i < 16; i++ {
+			for i := 0; i < 17; i++ {
 				if args[i].Type() == js.TypeUndefined {
 					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
 				}
@@ -309,15 +331,19 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			integratorTakerFee, err := safeInt(args[11], 11)
+			integratorTakerFee, err := safeUint32(args[11], 11)
 			if err != nil {
 				return wrapErr(err)
 			}
-			integratorMakerFee, err := safeInt(args[12], 12)
+			integratorMakerFee, err := safeUint32(args[12], 12)
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[13], 13)
+			skipNonce, err := safeUint8(args[13], 13)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[14], 14)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -327,21 +353,19 @@ func main() {
 			}
 
 			txInfo := &types.CreateOrderTxReq{
-				MarketIndex:            int16(marketIndex),
-				ClientOrderIndex:       clientOrderIndex,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				IsAsk:                  isAsk,
-				Type:                   orderType,
-				TimeInForce:            timeInForce,
-				ReduceOnly:             reduceOnly,
-				TriggerPrice:           triggerPrice,
-				OrderExpiry:            orderExpiry,
-				IntegratorAccountIndex: int(integratorAccountIndex),
-				IntegratorTakerFee:     int(integratorTakerFee),
-				IntegratorMakerFee:     int(integratorMakerFee),
+				MarketIndex:      int16(marketIndex),
+				ClientOrderIndex: clientOrderIndex,
+				BaseAmount:       baseAmount,
+				Price:            price,
+				IsAsk:            isAsk,
+				Type:             orderType,
+				TimeInForce:      timeInForce,
+				ReduceOnly:       reduceOnly,
+				TriggerPrice:     triggerPrice,
+				OrderExpiry:      orderExpiry,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -353,8 +377,8 @@ func main() {
 
 	js.Global().Set("SignCancelOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCancelOrder expects 5 args: marketIndex, orderIndex, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCancelOrder expects 6 args: marketIndex, orderIndex, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -366,13 +390,15 @@ func main() {
 				return wrapErr(err)
 			}
 			orderIndex := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.CancelOrderTxReq{
 				MarketIndex: marketIndex,
 				Index:       orderIndex,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -384,8 +410,8 @@ func main() {
 
 	js.Global().Set("SignCancelAllOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 5 args: timeInForce, time, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 6 args: timeInForce, time, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -394,13 +420,15 @@ func main() {
 
 			timeInForce := uint8(args[0].Int())
 			timeVal := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.CancelAllOrdersTxReq{
 				TimeInForce: timeInForce,
 				Time:        timeVal,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -412,11 +440,11 @@ func main() {
 
 	js.Global().Set("SignTransfer", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 10 {
-				return js.ValueOf(map[string]interface{}{"error": "SignTransfer expects 10 args: toAccountIndex, assetIndex, fromRouteType, toRouteType, amount, usdcFee, memo, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 11 {
+				return js.ValueOf(map[string]interface{}{"error": "SignTransfer expects 11 args: toAccountIndex, assetIndex, fromRouteType, toRouteType, amount, usdcFee, memo, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 11; i++ {
 				if args[i].Type() == js.TypeUndefined {
 					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
 				}
@@ -451,7 +479,11 @@ func main() {
 				return wrapErr(err)
 			}
 			memoStr := args[6].String()
-			nonce, err := safeInt(args[7], 7)
+			skipNonce, err := safeUint8(args[7], 7)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[8], 8)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -497,6 +529,7 @@ func main() {
 				Memo:           memoArr,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -508,11 +541,11 @@ func main() {
 
 	js.Global().Set("SignWithdraw", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 6 args: assetIndex, routeType, amount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignWithdraw expects 7 args: assetIndex, routeType, amount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
-			for i := 0; i < 6; i++ {
+			for i := 0; i < 7; i++ {
 				if args[i].Type() == js.TypeUndefined {
 					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
 				}
@@ -534,7 +567,11 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[3], 3)
+			skipNonce, err := safeUint8(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[4], 4)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -545,6 +582,7 @@ func main() {
 				Amount:     amount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -556,8 +594,8 @@ func main() {
 
 	js.Global().Set("SignUpdateLeverage", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUpdateLeverage expects 6 args: marketIndex, fraction, marginMode, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdateLeverage expects 7 args: marketIndex, fraction, marginMode, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -570,7 +608,8 @@ func main() {
 			}
 			fraction := uint16(args[1].Int())
 			marginMode := uint8(args[2].Int())
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdateLeverageTxReq{
 				MarketIndex:           marketIndex,
@@ -578,6 +617,7 @@ func main() {
 				MarginMode:            marginMode,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -589,8 +629,8 @@ func main() {
 
 	js.Global().Set("SignModifyOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 11 {
-				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 11 args: marketIndex, index, baseAmount, price, triggerPrice, integratorAccountIndex, integratorTakerFee, integratorMakerFee, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 12 {
+				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 12 args: marketIndex, index, baseAmount, price, triggerPrice, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -605,22 +645,21 @@ func main() {
 			baseAmount := int64(args[2].Int())
 			price := uint32(args[3].Int())
 			triggerPrice := uint32(args[4].Int())
-			integratorAccountIndex := int(args[5].Int())
-			integratorTakerFee := int(args[6].Int())
-			integratorMakerFee := int(args[7].Int())
-			nonce := int64(args[8].Int())
+			integratorAccountIndex := int64(args[5].Int())
+			integratorTakerFee := uint32(args[6].Int())
+			integratorMakerFee := uint32(args[7].Int())
+			skipNonce := uint8(args[8].Int())
+			nonce := int64(args[9].Int())
 
 			txInfo := &types.ModifyOrderTxReq{
-				MarketIndex:            marketIndex,
-				Index:                  index,
-				BaseAmount:             baseAmount,
-				Price:                  price,
-				TriggerPrice:           triggerPrice,
-				IntegratorAccountIndex: integratorAccountIndex,
-				IntegratorTakerFee:     integratorTakerFee,
-				IntegratorMakerFee:     integratorMakerFee,
+				MarketIndex:  marketIndex,
+				Index:        index,
+				BaseAmount:   baseAmount,
+				Price:        price,
+				TriggerPrice: triggerPrice,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -632,17 +671,19 @@ func main() {
 
 	js.Global().Set("SignCreateSubAccount", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 3 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateSubAccount expects 3 args: nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 4 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateSubAccount expects 4 args: skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
 				return wrapErr(err)
 			}
 
-			nonce := int64(args[0].Int())
+			skipNonce := uint8(args[0].Int())
+			nonce := int64(args[1].Int())
 
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -654,8 +695,8 @@ func main() {
 
 	js.Global().Set("SignCreatePublicPool", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreatePublicPool expects 6 args: operatorFee, initialTotalShares, minOperatorShareRate, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreatePublicPool expects 7 args: operatorFee, initialTotalShares, minOperatorShareRate, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -668,7 +709,8 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.CreatePublicPoolTxReq{
 				OperatorFee:          operatorFee,
@@ -676,6 +718,7 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -687,8 +730,8 @@ func main() {
 
 	js.Global().Set("SignUpdatePublicPool", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 7 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUpdatePublicPool expects 7 args: publicPoolIndex, status, operatorFee, minOperatorShareRate, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 8 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdatePublicPool expects 8 args: publicPoolIndex, status, operatorFee, minOperatorShareRate, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -705,7 +748,8 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce := int64(args[4].Int())
+			skipNonce := uint8(args[4].Int())
+			nonce := int64(args[5].Int())
 
 			txInfo := &types.UpdatePublicPoolTxReq{
 				PublicPoolIndex:      publicPoolIndex,
@@ -714,6 +758,7 @@ func main() {
 				MinOperatorShareRate: minOperatorShareRate,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -725,8 +770,8 @@ func main() {
 
 	js.Global().Set("SignMintShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignMintShares expects 5 args: publicPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignMintShares expects 6 args: publicPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -735,13 +780,15 @@ func main() {
 
 			publicPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.MintSharesTxReq{
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -753,8 +800,8 @@ func main() {
 
 	js.Global().Set("SignBurnShares", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignBurnShares expects 5 args: publicPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignBurnShares expects 6 args: publicPoolIndex, shareAmount, skipNonce ,nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -763,13 +810,15 @@ func main() {
 
 			publicPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.BurnSharesTxReq{
 				PublicPoolIndex: publicPoolIndex,
 				ShareAmount:     shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -781,8 +830,8 @@ func main() {
 
 	js.Global().Set("SignStakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignStakeAssets expects 6 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -791,13 +840,15 @@ func main() {
 
 			stakingPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.StakeAssetsTxReq{
 				StakingPoolIndex: stakingPoolIndex,
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -809,8 +860,8 @@ func main() {
 
 	js.Global().Set("SignUnstakeAssets", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 5 args: stakingPoolIndex, shareAmount, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUnstakeAssets expects 6 args: stakingPoolIndex, shareAmount, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -819,13 +870,15 @@ func main() {
 
 			stakingPoolIndex := int64(args[0].Int())
 			shareAmount := int64(args[1].Int())
-			nonce := int64(args[2].Int())
+			skipNonce := uint8(args[2].Int())
+			nonce := int64(args[3].Int())
 
 			txInfo := &types.UnstakeAssetsTxReq{
 				StakingPoolIndex: stakingPoolIndex,
 				ShareAmount:      shareAmount,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -837,8 +890,8 @@ func main() {
 
 	js.Global().Set("SignUpdateMargin", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUpdateMargin expects 6 args: marketIndex, usdcAmount, direction, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdateMargin expects 7 args: marketIndex, usdcAmount, direction, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -851,7 +904,8 @@ func main() {
 			}
 			usdcAmount := int64(args[1].Int())
 			direction := uint8(args[2].Int())
-			nonce := int64(args[3].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.UpdateMarginTxReq{
 				MarketIndex: marketIndex,
@@ -859,6 +913,7 @@ func main() {
 				Direction:   direction,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -870,8 +925,8 @@ func main() {
 
 	js.Global().Set("SignCreateGroupedOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 5 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects 5 args: groupingType, orders array, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 9 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects 9 args: groupingType, orders array, integratoraccountindex, integratortakerfee, integratormakerfee, skipnonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -888,6 +943,11 @@ func main() {
 			length := ordersArg.Length()
 			orders := make([]*types.CreateOrderTxReq, length)
 
+			integratorAccountIndex := int64(args[2].Int())
+			integratorTakerFee := uint32(args[3].Int())
+			integratorMakerFee := uint32(args[4].Int())
+			skipNonce := uint8(args[5].Int())
+
 			for i := 0; i < length; i++ {
 				orderObj := ordersArg.Index(i)
 				if orderObj.Type() != js.TypeObject {
@@ -900,29 +960,28 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:            int16(orderObj.Get("MarketIndex").Int()),
-					ClientOrderIndex:       int64(orderObj.Get("ClientOrderIndex").Int()),
-					BaseAmount:             int64(orderObj.Get("BaseAmount").Int()),
-					Price:                  uint32(orderObj.Get("Price").Int()),
-					IsAsk:                  uint8(orderObj.Get("IsAsk").Int()),
-					Type:                   uint8(orderObj.Get("Type").Int()),
-					TimeInForce:            uint8(orderObj.Get("TimeInForce").Int()),
-					ReduceOnly:             uint8(orderObj.Get("ReduceOnly").Int()),
-					TriggerPrice:           uint32(orderObj.Get("TriggerPrice").Int()),
-					OrderExpiry:            orderExpiry,
-					IntegratorAccountIndex: int(orderObj.Get("IntegratorAccountIndex").Int()),
-					IntegratorTakerFee:     int(orderObj.Get("IntegratorTakerFee").Int()),
-					IntegratorMakerFee:     int(orderObj.Get("IntegratorMakerFee").Int()),
+					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
+					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
+					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
+					Price:            uint32(orderObj.Get("Price").Int()),
+					IsAsk:            uint8(orderObj.Get("IsAsk").Int()),
+					Type:             uint8(orderObj.Get("Type").Int()),
+					TimeInForce:      uint8(orderObj.Get("TimeInForce").Int()),
+					ReduceOnly:       uint8(orderObj.Get("ReduceOnly").Int()),
+					TriggerPrice:     uint32(orderObj.Get("TriggerPrice").Int()),
+					OrderExpiry:      orderExpiry,
 				}
 			}
 
-			nonce := int64(args[2].Int())
+			nonce := int64(args[6].Int())
 
 			req := &types.CreateGroupedOrdersTxReq{
 				GroupingType: groupingType,
 				Orders:       orders,
 			}
+
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -934,8 +993,8 @@ func main() {
 
 	js.Global().Set("SignApproveIntegrator", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 9 {
-				return js.ValueOf(map[string]interface{}{"error": "SignApproveIntegrator expects 9 args: cIntegratorIndex, cMaxPerpsTakerFee, cMaxPerpsMakerFee, cMaxSpotTakerFee, cMaxSpotMakerFee, cApprovalExpiry, cNonce, cApiKeyIndex, cAccountIndex"})
+			if len(args) < 10 {
+				return js.ValueOf(map[string]interface{}{"error": "SignApproveIntegrator expects 10 args: cIntegratorIndex, cMaxPerpsTakerFee, cMaxPerpsMakerFee, cMaxSpotTakerFee, cMaxSpotMakerFee, cApprovalExpiry, cSkipNonce, cNonce, cApiKeyIndex, cAccountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -947,6 +1006,7 @@ func main() {
 			maxSpotTakerFee := uint32(args[3].Int())
 			maxSpotMakerFee := uint32(args[4].Int())
 			approvalExpiry := int64(args[5].Int())
+			skipNonce := uint8(args[6].Int())
 
 			txInfo := &types.ApproveIntegratorTxReq{
 				IntegratorAccountIndex: integratorIndex,
@@ -958,7 +1018,8 @@ func main() {
 			}
 
 			ops := new(types.TransactOpts)
-			nonce := int64(args[6].Int())
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			nonce := int64(args[7].Int())
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
