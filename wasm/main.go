@@ -1031,8 +1031,8 @@ func main() {
 
 	js.Global().Set("SignUpdateAccountConfig", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 4 {
-				return js.ValueOf(map[string]interface{}{"error": "SignUpdateAccountConfig expects 4 args: accountTradingMode, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdateAccountConfig expects 5 args: accountTradingMode, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -1043,7 +1043,11 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[1], 1)
+			skipNonce, err := safeUint8(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[2], 2)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -1052,6 +1056,7 @@ func main() {
 				AccountTradingMode: accountTradingMode,
 			}
 			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
