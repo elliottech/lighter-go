@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: extractions/setup-just@v2
+
+      - run: go test ./...
+
+      - run: just build-linux-local
+
+      - run: just build-wasm
+
+      - name: Install wasm_exec.js
+        run: |
+          SRC="$(go env GOROOT)/lib/wasm/wasm_exec.js"
+          [ -f "$SRC" ] || SRC="$(go env GOROOT)/misc/wasm/wasm_exec.js"
+          cp "$SRC" ./build/wasm_exec.js
+
+      - run: node ./scripts/test_wasm.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighter-go-linux-wasm
+          path: |
+            build/lighter-signer-linux.so
+            build/lighter-signer-linux.h
+            build/lighter-signer.wasm
+            build/wasm_exec.js
+
+  build-darwin:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: extractions/setup-just@v2
+
+      - run: just build-darwin-local
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighter-go-darwin
+          path: build/lighter-signer-darwin-arm64.dylib
