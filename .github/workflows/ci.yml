@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  build-linux-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683        # v4
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: lighter-go-linux-wasm
+          name: lighter-go-linux-windows-wasm
           path: |
             build/lighter-signer-linux.so
             build/lighter-signer-linux.h
