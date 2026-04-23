@@ -47,3 +47,9 @@ build-windows-amd64-docker:
 build-wasm:
     go mod vendor
     GOOS=js GOARCH=wasm go build -trimpath -o ./build/lighter-signer.wasm ./wasm/
+
+build-java:
+    mvn -B -f examples/java/pom.xml clean compile
+
+build-rust:
+    cargo build --release --manifest-path examples/rust/Cargo.toml

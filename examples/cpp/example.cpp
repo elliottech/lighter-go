@@ -3,7 +3,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
-#include "../build/lighter-signer-darwin-arm64.h"
+#include "../../build/lighter-signer-darwin-arm64.h"
 
 using namespace std;
 
@@ -24,7 +24,7 @@ uint64_t now_ms() {
 
 void run_example(int apiKeyIndex) {
     // Example: generate an API key
-    ApiKeyResponse apiResp = GenerateAPIKey(nullptr);
+    ApiKeyResponse apiResp = GenerateAPIKey();
 
     if (apiResp.err != nullptr) {
         return;
@@ -46,7 +46,15 @@ void run_example(int apiKeyIndex) {
     for (int i = 1; i <= 100; i += 1) {
         // create an order to sell 1 ETH @ 4000 w/ a deadline 60 mins in the future
         // limit post only order
-        auto create = SignCreateOrder(0, i, 10000, 400000, true, /* cOrderType */ 0, /* cTimeInForce */ 2, /* cReduceOnly */ 0, /* cTriggerPrice */ 0, now_ms() + 60 * 60 * 1000, nonce, apiKeyIndex, accountIndex);
+        auto create = SignCreateOrder(
+            0, i, 10000, 400000, true,
+            /* cOrderType */ 0, /* cTimeInForce */ 2, /* cReduceOnly */ 0, /* cTriggerPrice */ 0,
+            now_ms() + 60 * 60 * 1000,
+            /* cIntegratorAccountIndex */ 0,
+            /* cIntegratorTakerFee */ 0,
+            /* cIntegratorMakerFee */ 0,
+            /* cSkipNonce */ 0,
+            nonce, apiKeyIndex, accountIndex);
         nonce += 1;
 
         if (create.err != nullptr) {
@@ -54,7 +62,7 @@ void run_example(int apiKeyIndex) {
         }
 
         // cancel order with client order id i on ETH market (market ID 0)
-        auto cancel = SignCancelOrder(0, i, nonce, apiKeyIndex, accountIndex);
+        auto cancel = SignCancelOrder(0, i, /* cSkipNonce */ 0, nonce, apiKeyIndex, accountIndex);
         nonce += 1;
 
         if (cancel.err != nullptr) {
