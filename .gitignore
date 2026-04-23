@@ -4,7 +4,6 @@ build/*
 !build/.keep
 /build
 
-
 # Shared library build outputs
 sharedlib/lighter.dylib
 sharedlib/lighter.so
