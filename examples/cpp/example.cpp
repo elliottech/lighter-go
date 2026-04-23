@@ -3,8 +3,13 @@
 #include <thread>
 #include <vector>
 #include <chrono>
-#include "../../build/lighter-signer-darwin-arm64.h"
-
+#if defined(__APPLE__)
+  #include "../../build/lighter-signer-darwin-arm64.h"
+#elif defined(__linux__)
+  #include "../../build/lighter-signer-linux.h"
+#elif defined(_WIN32)
+  #include "../../build/lighter-signer-windows.h"
+#endif
 using namespace std;
 
 
