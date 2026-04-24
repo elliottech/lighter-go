@@ -82,6 +82,7 @@ var (
 	ErrInvalidStrategyIndex                         = fmt.Errorf("StrategyIndex is not valid")
 	ErrAccountIndexMustBtInsuranceFundOperator      = fmt.Errorf("AccountIndex must be the insurance fund operator account index %d", InsuranceFundOperatorAccountIndex)
 	ErrInvalidAccountTradingMode                    = fmt.Errorf("AccountTradingMode is invalid")
+	ErrInvalidAssetMarginMode                       = fmt.Errorf("AssetMarginMode is invalid")
 	ErrTooManyAttributes                            = fmt.Errorf("Too many attributes, should not be larger than %d", NbAttributesPerTx)
 	ErrInvalidAttributeType                         = fmt.Errorf("Attribute type is invalid")
 	ErrAttributeValueOutOfRange                     = fmt.Errorf("Attribute value is out of range")

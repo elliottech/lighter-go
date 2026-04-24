@@ -145,6 +145,11 @@ type UpdateAccountConfigTxReq struct {
 	AccountTradingMode uint8
 }
 
+type UpdateAccountAssetConfigTxReq struct {
+	AssetIndex      int16
+	AssetMarginMode uint8
+}
+
 func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts) (string, error) {
 	if ops.FromAccountIndex == nil {
 		return "", fmt.Errorf("missing FromAccountIndex")
@@ -613,6 +618,28 @@ func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx
 	return convertedTx, nil
 }
 
+func ConstructUpdateAccountAssetConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountAssetConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountAssetConfigTxInfo, error) {
+	convertedTx := ConvertUpdateAccountAssetConfigTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
 	return &txtypes.L2ApproveIntegratorTxInfo{
 		IntegratorAccountIndex: tx.IntegratorAccountIndex,
@@ -878,5 +905,17 @@ func ConvertUpdateAccountConfigTx(tx *UpdateAccountConfigTxReq, ops *TransactOpt
 		ExpiredAt:          ops.ExpiredAt,
 		Nonce:              *ops.Nonce,
 		L2TxAttributes:     ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertUpdateAccountAssetConfigTx(tx *UpdateAccountAssetConfigTxReq, ops *TransactOpts) *txtypes.L2UpdateAccountAssetConfigTxInfo {
+	return &txtypes.L2UpdateAccountAssetConfigTxInfo{
+		AccountIndex:    *ops.FromAccountIndex,
+		ApiKeyIndex:     *ops.ApiKeyIndex,
+		AssetIndex:      tx.AssetIndex,
+		AssetMarginMode: tx.AssetMarginMode,
+		ExpiredAt:       ops.ExpiredAt,
+		Nonce:           *ops.Nonce,
+		L2TxAttributes:  ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }

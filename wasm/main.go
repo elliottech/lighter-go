@@ -1066,5 +1066,47 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("SignUpdateAccountAssetConfig", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 6 {
+				return js.ValueOf(map[string]interface{}{"error": "SignUpdateAccountAssetConfig expects 6 args: assetIndex, assetMarginMode, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			assetIndexInt, err := safeInt(args[0], 0)
+			if err != nil {
+				return wrapErr(err)
+			}
+			assetMarginMode, err := safeUint8(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+			skipNonce, err := safeUint8(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.UpdateAccountAssetConfigTxReq{
+				AssetIndex:      int16(assetIndexInt),
+				AssetMarginMode: assetMarginMode,
+			}
+			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetUpdateAccountAssetConfigTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
 	select {}
 }

@@ -828,6 +828,29 @@ func SignUpdateAccountConfig(cAccountTradingMode C.uint8_t, cSkipNonce C.uint8_t
 	return convertTxInfoToResponse(txInfo, err)
 }
 
+//export SignUpdateAccountAssetConfig
+func SignUpdateAccountAssetConfig(cAssetIndex C.int16_t, cAssetMarginMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	tx := &types.UpdateAccountAssetConfigTxReq{
+		AssetIndex:      int16(cAssetIndex),
+		AssetMarginMode: uint8(cAssetMarginMode),
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetUpdateAccountAssetConfigTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
 //export Free
 func Free(ptr unsafe.Pointer) {
 	C.free(ptr)
