@@ -89,7 +89,10 @@ func TestCreateClient(t *testing.T) {
 }
 
 func TestSignCancelOrder(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 	req := &types.CancelOrderTxReq{MarketIndex: 0, Index: 12345}
 
@@ -133,7 +136,10 @@ func TestSignCancelOrder(t *testing.T) {
 }
 
 func TestSignCancelAllOrders(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 	req := &types.CancelAllOrdersTxReq{TimeInForce: 0, Time: 0}
 
@@ -154,7 +160,10 @@ func TestSignCancelAllOrders(t *testing.T) {
 }
 
 func TestSignCreateOrder(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 
 	req := &types.CreateOrderTxReq{
@@ -192,7 +201,10 @@ func TestSignCreateOrder(t *testing.T) {
 }
 
 func TestSignCreateSubAccount(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 
 	tx, err := c.GetCreateSubAccountTransaction(opsWithSkipNonce(1, testNonce))
@@ -212,7 +224,10 @@ func TestSignCreateSubAccount(t *testing.T) {
 }
 
 func TestSignUpdateLeverage(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 
 	req := &types.UpdateLeverageTxReq{
@@ -237,7 +252,10 @@ func TestSignUpdateLeverage(t *testing.T) {
 }
 
 func TestSignCreateGroupedOrders(t *testing.T) {
-	priv, _, _ := GenerateAPIKey()
+	priv, _, err := GenerateAPIKey()
+	if err != nil {
+		t.Fatalf("GenerateAPIKey error: %v", err)
+	}
 	c := newTestClient(t, priv)
 
 	const expiry int64 = 7 * 24 * 60 * 60 * 1000

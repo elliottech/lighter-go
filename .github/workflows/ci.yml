@@ -52,6 +52,7 @@ jobs:
 
       - name: Cross-compile Windows DLL
         run: |
+          sudo apt-get update
           sudo apt-get install -y gcc-mingw-w64-x86-64
           CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
             go build -buildmode=c-shared -trimpath \

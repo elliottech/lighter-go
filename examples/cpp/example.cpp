@@ -36,7 +36,7 @@ void run_example(int apiKeyIndex) {
         return;
     }
 
-    CreateClient(nullptr, apiResp.privateKey, 304, apiKeyIndex, 100);
+    auto clientErr = CreateClient(nullptr, apiResp.privateKey, 304, apiKeyIndex, 100);
     Free(apiResp.privateKey);
     Free(apiResp.publicKey);
 
