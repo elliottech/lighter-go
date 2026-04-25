@@ -110,22 +110,32 @@ impl SignedTxResponse {
 // Internal helpers
 // -------------------------------------------------------------------------
 
-unsafe fn ptr_to_string(ptr: *mut c_char) -> Option<String> {
+/// Copy the C string into a Rust `String` and free the original pointer
+/// via the shared library's exported `Free` function.
+unsafe fn ptr_to_string(
+    ptr: *mut c_char,
+    free_fn: unsafe extern "C" fn(*mut std::ffi::c_void),
+) -> Option<String> {
     if ptr.is_null() {
         None
     } else {
-        Some(CStr::from_ptr(ptr).to_string_lossy().into_owned())
+        let s = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+        free_fn(ptr as *mut std::ffi::c_void);
+        Some(s)
     }
 }
 
-fn raw_to_signed_tx(raw: RawSignedTxResponse) -> SignedTxResponse {
+fn raw_to_signed_tx(
+    raw: RawSignedTxResponse,
+    free_fn: unsafe extern "C" fn(*mut std::ffi::c_void),
+) -> SignedTxResponse {
     unsafe {
         SignedTxResponse {
             tx_type: raw.tx_type,
-            tx_info: ptr_to_string(raw.tx_info),
-            tx_hash: ptr_to_string(raw.tx_hash),
-            message_to_sign: ptr_to_string(raw.message_to_sign),
-            err: ptr_to_string(raw.err),
+            tx_info: ptr_to_string(raw.tx_info, free_fn),
+            tx_hash: ptr_to_string(raw.tx_hash, free_fn),
+            message_to_sign: ptr_to_string(raw.message_to_sign, free_fn),
+            err: ptr_to_string(raw.err, free_fn),
         }
     }
 }
@@ -136,6 +146,7 @@ fn raw_to_signed_tx(raw: RawSignedTxResponse) -> SignedTxResponse {
 
 pub struct LighterLib {
     lib: Library,
+    free_fn: unsafe extern "C" fn(*mut std::ffi::c_void),
 }
 
 // The Go shared library uses its own goroutine scheduler and internal locking;
@@ -147,7 +158,12 @@ impl LighterLib {
     /// Load by absolute path.
     pub fn load(path: &str) -> Result<Self, libloading::Error> {
         let lib = unsafe { Library::new(path)? };
-        Ok(Self { lib })
+        let free_fn = unsafe {
+            let f: Symbol<unsafe extern "C" fn(*mut std::ffi::c_void)> =
+                lib.get(b"Free\0")?;
+            *f
+        };
+        Ok(Self { lib, free_fn })
     }
 
     /// Load `lighter.{dylib,so}` from a directory relative to the working directory.
@@ -169,9 +185,9 @@ impl LighterLib {
                 self.lib.get(b"GenerateAPIKey\0").unwrap();
             let raw = f();
             ApiKeyResponse {
-                private_key: ptr_to_string(raw.private_key),
-                public_key: ptr_to_string(raw.public_key),
-                err: ptr_to_string(raw.err),
+                private_key: ptr_to_string(raw.private_key, self.free_fn),
+                public_key: ptr_to_string(raw.public_key, self.free_fn),
+                err: ptr_to_string(raw.err, self.free_fn),
             }
         }
     }
@@ -200,7 +216,7 @@ impl LighterLib {
                 chain_id,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -208,7 +224,7 @@ impl LighterLib {
         unsafe {
             let f: Symbol<unsafe extern "C" fn(i32, i64) -> *mut c_char> =
                 self.lib.get(b"CheckClient\0").unwrap();
-            ptr_to_string(f(api_key_index, account_index))
+            ptr_to_string(f(api_key_index, account_index), self.free_fn)
         }
     }
 
@@ -231,7 +247,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -281,7 +297,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -316,7 +332,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -340,7 +356,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -360,7 +376,7 @@ impl LighterLib {
             > = self.lib.get(b"SignWithdraw\0").unwrap();
             raw_to_signed_tx(f(
                 asset_index, route_type, amount, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -375,7 +391,7 @@ impl LighterLib {
             let f: Symbol<
                 unsafe extern "C" fn(u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCreateSubAccount\0").unwrap();
-            raw_to_signed_tx(f(skip_nonce, nonce, api_key_index, account_index))
+            raw_to_signed_tx(f(skip_nonce, nonce, api_key_index, account_index), self.free_fn)
         }
     }
 
@@ -394,7 +410,7 @@ impl LighterLib {
             > = self.lib.get(b"SignCancelAllOrders\0").unwrap();
             raw_to_signed_tx(f(
                 time_in_force, time, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -425,7 +441,7 @@ impl LighterLib {
                 market_index, index, base_amount, price, trigger_price,
                 integrator_account_index, integrator_taker_fee, integrator_maker_fee,
                 skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -464,7 +480,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -490,7 +506,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -518,7 +534,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -537,7 +553,7 @@ impl LighterLib {
             > = self.lib.get(b"SignMintShares\0").unwrap();
             raw_to_signed_tx(f(
                 public_pool_index, share_amount, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -556,7 +572,7 @@ impl LighterLib {
             > = self.lib.get(b"SignBurnShares\0").unwrap();
             raw_to_signed_tx(f(
                 public_pool_index, share_amount, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -582,7 +598,7 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -597,8 +613,8 @@ impl LighterLib {
                 self.lib.get(b"CreateAuthToken\0").unwrap();
             let raw = f(deadline, api_key_index, account_index);
             StrOrErr {
-                value: ptr_to_string(raw.str_),
-                err: ptr_to_string(raw.err),
+                value: ptr_to_string(raw.str_, self.free_fn),
+                err: ptr_to_string(raw.err, self.free_fn),
             }
         }
     }
@@ -619,7 +635,7 @@ impl LighterLib {
             > = self.lib.get(b"SignUpdateMargin\0").unwrap();
             raw_to_signed_tx(f(
                 market_index, usdc_amount, direction, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -638,7 +654,7 @@ impl LighterLib {
             > = self.lib.get(b"SignStakeAssets\0").unwrap();
             raw_to_signed_tx(f(
                 staking_pool_index, share_amount, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -657,7 +673,7 @@ impl LighterLib {
             > = self.lib.get(b"SignUnstakeAssets\0").unwrap();
             raw_to_signed_tx(f(
                 staking_pool_index, share_amount, skip_nonce, nonce, api_key_index, account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
@@ -692,15 +708,13 @@ impl LighterLib {
                 nonce,
                 api_key_index,
                 account_index,
-            ))
+            ), self.free_fn)
         }
     }
 
     pub fn free(&self, ptr: *mut std::ffi::c_void) {
         unsafe {
-            let f: Symbol<unsafe extern "C" fn(*mut std::ffi::c_void)> =
-                self.lib.get(b"Free\0").unwrap();
-            f(ptr);
+            (self.free_fn)(ptr);
         }
     }
 }

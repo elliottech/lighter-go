@@ -27,27 +27,34 @@ public class LighterLib {
 
     @FieldOrder({"str", "err"})
     public static class StrOrErr extends Structure {
-        public String str;
-        public String err;
+        public Pointer str;
+        public Pointer err;
 
         public static class ByValue extends StrOrErr implements Structure.ByValue {}
 
-        public String unwrap() {
-            if (err != null) throw new RuntimeException(err);
-            return str;
+        public String unwrap(Lib lib) {
+            String errStr = readAndFree(lib, err);
+            String strStr = readAndFree(lib, str);
+            if (errStr != null) throw new RuntimeException(errStr);
+            return strStr;
         }
     }
 
     @FieldOrder({"privateKey", "publicKey", "err"})
     public static class ApiKeyResponse extends Structure {
-        public String privateKey;
-        public String publicKey;
-        public String err;
+        public Pointer privateKey;
+        public Pointer publicKey;
+        public Pointer err;
 
         public static class ByValue extends ApiKeyResponse implements Structure.ByValue {}
 
-        public void check() {
-            if (err != null) throw new RuntimeException(err);
+        /** Read all string fields and free the native pointers. */
+        public String[] readAndFree(Lib lib) {
+            String pk  = LighterLib.readAndFree(lib, privateKey);
+            String pub_ = LighterLib.readAndFree(lib, publicKey);
+            String e   = LighterLib.readAndFree(lib, err);
+            if (e != null) throw new RuntimeException(e);
+            return new String[]{pk, pub_};
         }
     }
 
@@ -55,17 +62,23 @@ public class LighterLib {
     // 8-byte alignment on 64-bit platforms, so 7 bytes of padding follow txType.
     @FieldOrder({"txType", "_pad", "txInfo", "txHash", "messageToSign", "err"})
     public static class SignedTxResponse extends Structure {
-        public byte   txType;
-        public byte[] _pad = new byte[7];
-        public String txInfo;
-        public String txHash;
-        public String messageToSign;
-        public String err;
+        public byte    txType;
+        public byte[]  _pad = new byte[7];
+        public Pointer txInfo;
+        public Pointer txHash;
+        public Pointer messageToSign;
+        public Pointer err;
 
         public static class ByValue extends SignedTxResponse implements Structure.ByValue {}
 
-        public void check() {
-            if (err != null) throw new RuntimeException(err);
+        /** Read all string fields and free the native pointers. Returns {txInfo, txHash, messageToSign}. */
+        public String[] readAndFree(Lib lib) {
+            String info = LighterLib.readAndFree(lib, txInfo);
+            String hash = LighterLib.readAndFree(lib, txHash);
+            String msg  = LighterLib.readAndFree(lib, messageToSign);
+            String e    = LighterLib.readAndFree(lib, err);
+            if (e != null) throw new RuntimeException(e);
+            return new String[]{info, hash, msg};
         }
     }
 
@@ -86,6 +99,17 @@ public class LighterLib {
         public static CreateOrderTxReq[] allocateArray(int size) {
             return (CreateOrderTxReq[]) new CreateOrderTxReq().toArray(size);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper — read a C string from a Pointer and free the native memory
+    // -------------------------------------------------------------------------
+
+    private static String readAndFree(Lib lib, Pointer p) {
+        if (p == null) return null;
+        String s = p.getString(0);
+        lib.Free(p);
+        return s;
     }
 
     // -------------------------------------------------------------------------

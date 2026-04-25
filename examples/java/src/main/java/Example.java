@@ -27,14 +27,19 @@ public class Example {
     static void runExample(LighterLib.Lib lib, int apiKeyIndex) {
         // Generate a fresh API key pair
         LighterLib.ApiKeyResponse.ByValue apiResp = lib.GenerateAPIKey();
-        if (apiResp.err != null) {
-            System.err.println("[" + apiKeyIndex + "] GenerateAPIKey error: " + apiResp.err);
+        String[] keys;
+        try {
+            keys = apiResp.readAndFree(lib);
+        } catch (RuntimeException e) {
+            System.err.println("[" + apiKeyIndex + "] GenerateAPIKey error: " + e.getMessage());
             return;
         }
-        System.out.println("[" + apiKeyIndex + "] publicKey=" + apiResp.publicKey);
+        String privateKey = keys[0];
+        String publicKey  = keys[1];
+        System.out.println("[" + apiKeyIndex + "] publicKey=" + publicKey);
 
         // Create a client bound to the generated key
-        String err = lib.CreateClient(null, apiResp.privateKey, CHAIN_ID, apiKeyIndex, ACCOUNT_INDEX);
+        String err = lib.CreateClient(null, privateKey, CHAIN_ID, apiKeyIndex, ACCOUNT_INDEX);
         if (err != null) {
             System.err.println("[" + apiKeyIndex + "] CreateClient error: " + err);
             return;
@@ -43,11 +48,14 @@ public class Example {
         // Auth token valid for 7 hours
         long tokenDeadline = nowMs() + 7L * 60 * 60 * 1000;
         LighterLib.StrOrErr.ByValue tokenResp = lib.CreateAuthToken(tokenDeadline, apiKeyIndex, ACCOUNT_INDEX);
-        if (tokenResp.err != null) {
-            System.err.println("[" + apiKeyIndex + "] CreateAuthToken error: " + tokenResp.err);
+        String authToken;
+        try {
+            authToken = tokenResp.unwrap(lib);
+        } catch (RuntimeException e) {
+            System.err.println("[" + apiKeyIndex + "] CreateAuthToken error: " + e.getMessage());
             return;
         }
-        System.out.println("[" + apiKeyIndex + "] authToken=" + tokenResp.str);
+        System.out.println("[" + apiKeyIndex + "] authToken=" + authToken);
 
         long nonce = 1L;
         long start = nowUs();
@@ -77,8 +85,10 @@ public class Example {
             );
             nonce++;
 
-            if (create.err != null) {
-                System.err.println("[" + apiKeyIndex + "] SignCreateOrder(" + i + ") error: " + create.err);
+            try {
+                create.readAndFree(lib);
+            } catch (RuntimeException e) {
+                System.err.println("[" + apiKeyIndex + "] SignCreateOrder(" + i + ") error: " + e.getMessage());
             }
 
             // Cancel the same order by client order index
@@ -92,8 +102,10 @@ public class Example {
             );
             nonce++;
 
-            if (cancel.err != null) {
-                System.err.println("[" + apiKeyIndex + "] SignCancelOrder(" + i + ") error: " + cancel.err);
+            try {
+                cancel.readAndFree(lib);
+            } catch (RuntimeException e) {
+                System.err.println("[" + apiKeyIndex + "] SignCancelOrder(" + i + ") error: " + e.getMessage());
             }
         }
 
