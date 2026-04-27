@@ -105,7 +105,7 @@ public class LighterLib {
     // Helper — read a C string from a Pointer and free the native memory
     // -------------------------------------------------------------------------
 
-    private static String readAndFree(Lib lib, Pointer p) {
+    public static String readAndFree(Lib lib, Pointer p) {
         if (p == null) return null;
         String s = p.getString(0);
         lib.Free(p);
@@ -119,10 +119,10 @@ public class LighterLib {
     public interface Lib extends Library {
         ApiKeyResponse.ByValue   GenerateAPIKey();
 
-        String                   CreateClient(String url, String privateKey, int chainId,
+        Pointer                  CreateClient(String url, String privateKey, int chainId,
                                               int apiKeyIndex, long accountIndex);
 
-        String                   CheckClient(int apiKeyIndex, long accountIndex);
+        Pointer                  CheckClient(int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignChangePubKey(String pubKey, byte skipNonce, long nonce,
                                                  int apiKeyIndex, long accountIndex);

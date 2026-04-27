@@ -43,7 +43,7 @@ void run_example(int apiKeyIndex) {
     long long accountIndex = 100;
 
     // create an auth token with expiry 7 hours in the future
-    StrOrErr tokenResp = CreateAuthToken(now_ms() + 7 * 60 * 60 * 1000 , apiKeyIndex, accountIndex);
+    StrOrErr tokenResp = CreateAuthToken(0 , apiKeyIndex, accountIndex);
     if (tokenResp.err != nullptr) {
         Free(tokenResp.err);
         return;

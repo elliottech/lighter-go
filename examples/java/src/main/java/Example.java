@@ -39,14 +39,17 @@ public class Example {
         System.out.println("[" + apiKeyIndex + "] publicKey=" + publicKey);
 
         // Create a client bound to the generated key
-        String err = lib.CreateClient(null, privateKey, CHAIN_ID, apiKeyIndex, ACCOUNT_INDEX);
+        String err = LighterLib.readAndFree(
+            lib,
+            lib.CreateClient(null, privateKey, CHAIN_ID, apiKeyIndex, ACCOUNT_INDEX)
+        );
         if (err != null) {
             System.err.println("[" + apiKeyIndex + "] CreateClient error: " + err);
             return;
         }
 
         // Auth token valid for 7 hours
-        long tokenDeadline = nowMs() + 7L * 60 * 60 * 1000;
+        long tokenDeadline = 0;
         LighterLib.StrOrErr.ByValue tokenResp = lib.CreateAuthToken(tokenDeadline, apiKeyIndex, ACCOUNT_INDEX);
         String authToken;
         try {
