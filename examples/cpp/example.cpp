@@ -39,6 +39,11 @@ void run_example(int apiKeyIndex) {
     auto clientErr = CreateClient(nullptr, apiResp.privateKey, 304, apiKeyIndex, 100);
     Free(apiResp.privateKey);
     Free(apiResp.publicKey);
+    if (clientErr != nullptr) {
+        cerr << "CreateClient" << '\t' << clientErr << '\n';
+        Free(clientErr);
+        return;
+    }
 
     long long accountIndex = 100;
 

@@ -41,7 +41,7 @@ fn run_example(lib: &LighterLib, api_key_index: i32) {
     }
 
     // Auth token valid for 7 hours
-    let token_deadline = now_ms() + 7 * 60 * 60 * 1000;
+    let token_deadline = 0;
     let auth_token = match lib
         .create_auth_token(token_deadline, api_key_index, ACCOUNT_INDEX)
         .unwrap_value()
