@@ -3,3 +3,14 @@ vendor
 build/*
 !build/.keep
 /build
+
+# Shared library build outputs
+sharedlib/lighter.dylib
+sharedlib/lighter.so
+sharedlib/lighter.h
+
+# Maven
+examples/java/target/
+
+# Rust
+examples/rust/target/
