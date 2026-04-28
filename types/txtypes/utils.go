@@ -40,7 +40,7 @@ func IsZeroByteSlice(bytes []byte) bool {
 	return true
 }
 
-func getTxInfo(tx interface{}) (string, error) {
+func getTxInfo(tx any) (string, error) {
 	txInfoBytes, err := json.Marshal(tx)
 	if err != nil {
 		return "", err
