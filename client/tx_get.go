@@ -263,3 +263,15 @@ func (c *TxClient) GetUpdateAccountConfigTransaction(tx *types.UpdateAccountConf
 	}
 	return txInfo, nil
 }
+
+func (c *TxClient) GetUpdateAccountAssetConfigTransaction(tx *types.UpdateAccountAssetConfigTxReq, ops *types.TransactOpts) (*txtypes.L2UpdateAccountAssetConfigTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructUpdateAccountAssetConfigTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
