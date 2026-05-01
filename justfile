@@ -1,5 +1,11 @@
 ### Local builds
 
+build-all:
+    just build-darwin-local
+    just build-linux-amd64-docker
+    just build-linux-arm64-docker
+    just build-windows-amd64-docker
+
 build-darwin-local:
     go mod vendor
     go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib/main.go
