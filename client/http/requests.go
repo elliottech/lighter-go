@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 func (c *client) parseResultStatus(respBody []byte) error {
@@ -62,14 +63,35 @@ func (c *client) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64, err
 	return result.Nonce, nil
 }
 
+var (
+	apiKeyCacheMu sync.RWMutex
+	apiKeyCache   = make(map[uint8]string)
+)
+
 func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error) {
+	// check cache
+	apiKeyCacheMu.RLock()
+	if cached, ok := apiKeyCache[apiKeyIndex]; ok {
+		apiKeyCacheMu.RUnlock()
+		return cached, nil
+	}
+	apiKeyCacheMu.RUnlock()
+
+	// req
 	result := &AccountApiKeys{}
-	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex, "api_key_index": apiKeyIndex}, result)
+	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex}, result)
 	if err != nil {
 		return "", err
 	}
 	if len(result.ApiKeys) == 0 {
 		return "", fmt.Errorf("no api keys returned")
 	}
-	return result.ApiKeys[0].PublicKey, nil
+
+	// cache
+	apiKeyCacheMu.Lock()
+	for _, apiKey := range result.ApiKeys {
+		apiKeyCache[apiKey.ApiKeyIndex] = apiKey.PublicKey
+	}
+	defer apiKeyCacheMu.Unlock()
+	return apiKeyCache[apiKeyIndex], nil
 }
