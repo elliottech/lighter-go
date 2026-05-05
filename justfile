@@ -58,3 +58,7 @@ build-rust:
 
 build-cpp:
     clang++ -std=c++20 -O3 examples/cpp/example.cpp ./build/lighter-signer-linux.so -o ./build/example-cpp
+
+build-darwin-amd64-local:
+    go mod vendor
+    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
