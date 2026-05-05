@@ -16,6 +16,38 @@ import (
 /*
 #include <stdlib.h>
 #include <stdint.h>
+
+#ifdef __linux__
+#include <signal.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#define LARGE_SIGSTACK_SIZE (1 * 1024 * 1024)
+
+static __thread int _sigstack_installed;
+
+static void _ensure_large_sigaltstack() {
+    if (_sigstack_installed) return;
+    stack_t cur;
+    if (sigaltstack(NULL, &cur) != 0) return;
+    if ((cur.ss_flags & SS_DISABLE) == 0 && cur.ss_size >= LARGE_SIGSTACK_SIZE) {
+        _sigstack_installed = 1;
+        return;
+    }
+    long ps = sysconf(_SC_PAGESIZE);
+    size_t total = (size_t)ps + LARGE_SIGSTACK_SIZE;
+    void* base = mmap(NULL, total, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+    if (base == MAP_FAILED) return;
+    mprotect(base, (size_t)ps, PROT_NONE);
+    stack_t ss = { .ss_sp = (char*)base + ps, .ss_flags = 0, .ss_size = LARGE_SIGSTACK_SIZE };
+    if (sigaltstack(&ss, NULL) != 0) { munmap(base, total); return; }
+    _sigstack_installed = 1;
+}
+#else
+static void _ensure_large_sigaltstack() {}
+#endif
+
 typedef struct {
 	char* str;
 	char* err;
@@ -51,6 +83,11 @@ typedef struct {
 import "C"
 
 var chainId uint32
+
+//export InitSignerThread
+func InitSignerThread() {
+	C._ensure_large_sigaltstack()
+}
 
 func wrapErr(err any) *C.char {
 	if err == nil {
