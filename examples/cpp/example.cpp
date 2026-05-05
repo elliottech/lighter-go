@@ -4,7 +4,11 @@
 #include <vector>
 #include <chrono>
 #if defined(__APPLE__)
-  #include "../../build/lighter-signer-darwin-arm64.h"
+  #if defined(__aarch64__)
+    #include "../../build/lighter-signer-darwin-arm64.h"
+  #else
+    #include "../../build/lighter-signer-darwin-amd64.h"
+  #endif
 #elif defined(__linux__)
   #include "../../build/lighter-signer-linux.h"
 #elif defined(_WIN32)
