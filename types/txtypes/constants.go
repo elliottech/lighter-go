@@ -54,9 +54,10 @@ const (
 	TxTypeInternalLiquidatePosition = 26
 	TxTypeInternalCreateOrder       = 27
 
-	TxTypeL2CreateGroupedOrders = 28
-	TxTypeL2UpdateMargin        = 29
-	TxTypeL2UpdateAccountConfig = 41
+	TxTypeL2CreateGroupedOrders      = 28
+	TxTypeL2UpdateMargin             = 29
+	TxTypeL2UpdateAccountConfig      = 41
+	TxTypeL2UpdateAccountAssetConfig = 42
 
 	TxTypeL1BurnShares    = 30
 	TxTypeL1RegisterAsset = 31
@@ -115,6 +116,11 @@ const (
 	AssetMarginMode_Disabled = 0
 	AssetMarginMode_Enabled  = 1
 	AssetMarginMode_Max      = AssetMarginMode_Enabled
+)
+
+const (
+	AccountAssetMarginMode_MarginDisabled = 0 // means account is not using this asset as margin
+	AccountAssetMarginMode_MarginEnabled  = 1 // means account is using this asset as margin
 )
 
 // Asset Route Type
