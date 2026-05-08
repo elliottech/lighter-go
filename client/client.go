@@ -103,9 +103,21 @@ func (c *TxClient) Check() error {
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
+	if publicKey == pubKeyStr {
+		return nil
+	}
+
+	// Cached value may be stale (e.g. api keys were rotated server-side).
+	// Refresh from the server once and re-compare.
+	if err := c.HTTP().RefreshApiKeys(c.accountIndex); err != nil {
+		return fmt.Errorf("failed to refresh Api Keys. err: %v", err)
+	}
+	publicKey, err = c.HTTP().GetApiKey(c.accountIndex, c.apiKeyIndex)
+	if err != nil {
+		return fmt.Errorf("failed to get Api Keys. err: %v", err)
+	}
 	if publicKey != pubKeyStr {
 		return fmt.Errorf("private key does not match the one on Lighter. ownPubKey: %s response: %+v", pubKeyStr, publicKey)
 	}
-
 	return nil
 }
