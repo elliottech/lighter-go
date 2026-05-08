@@ -83,29 +83,34 @@ func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error
 	}
 	apiKeyCacheMu.RUnlock()
 
-	if err := c.RefreshApiKeys(accountIndex); err != nil {
+	result := &AccountApiKeys{}
+	if err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex}, result); err != nil {
 		return "", err
 	}
 
-	apiKeyCacheMu.RLock()
-	defer apiKeyCacheMu.RUnlock()
+	apiKeyCacheMu.Lock()
+	for k := range apiKeyCache {
+		if k.accountIndex == accountIndex {
+			delete(apiKeyCache, k)
+		}
+	}
+	for _, apiKey := range result.ApiKeys {
+		apiKeyCache[apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKey.ApiKeyIndex}] = apiKey.PublicKey
+	}
 	key, ok := apiKeyCache[cacheKey]
+	apiKeyCacheMu.Unlock()
 	if !ok {
 		return "", fmt.Errorf("no api key returned for index %d", apiKeyIndex)
 	}
 	return key, nil
 }
 
-func (c *client) RefreshApiKeys(accountIndex int64) error {
-	result := &AccountApiKeys{}
-	if err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex}, result); err != nil {
-		return err
-	}
-
+func (c *client) InvalidateApiKeys(accountIndex int64) {
 	apiKeyCacheMu.Lock()
 	defer apiKeyCacheMu.Unlock()
-	for _, apiKey := range result.ApiKeys {
-		apiKeyCache[apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKey.ApiKeyIndex}] = apiKey.PublicKey
+	for k := range apiKeyCache {
+		if k.accountIndex == accountIndex {
+			delete(apiKeyCache, k)
+		}
 	}
-	return nil
 }

@@ -108,10 +108,8 @@ func (c *TxClient) Check() error {
 	}
 
 	// Cached value may be stale (e.g. api keys were rotated server-side).
-	// Refresh from the server once and re-compare.
-	if err := c.HTTP().RefreshApiKeys(c.accountIndex); err != nil {
-		return fmt.Errorf("failed to refresh Api Keys. err: %v", err)
-	}
+	// Bust the cache and let GetApiKey refetch.
+	c.HTTP().InvalidateApiKeys(c.accountIndex)
 	publicKey, err = c.HTTP().GetApiKey(c.accountIndex, c.apiKeyIndex)
 	if err != nil {
 		return fmt.Errorf("failed to get Api Keys. err: %v", err)
