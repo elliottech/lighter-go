@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 func (c *client) parseResultStatus(respBody []byte) error {
@@ -62,14 +63,54 @@ func (c *client) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64, err
 	return result.Nonce, nil
 }
 
+type apiKeyCacheKey struct {
+	accountIndex int64
+	apiKeyIndex  uint8
+}
+
+var (
+	apiKeyCacheMu sync.RWMutex
+	apiKeyCache   = make(map[apiKeyCacheKey]string)
+)
+
 func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error) {
+	cacheKey := apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKeyIndex}
+
+	apiKeyCacheMu.RLock()
+	if cached, ok := apiKeyCache[cacheKey]; ok {
+		apiKeyCacheMu.RUnlock()
+		return cached, nil
+	}
+	apiKeyCacheMu.RUnlock()
+
 	result := &AccountApiKeys{}
-	err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex, "api_key_index": apiKeyIndex}, result)
-	if err != nil {
+	if err := c.getAndParseL2HTTPResponse("api/v1/apikeys", map[string]any{"account_index": accountIndex}, result); err != nil {
 		return "", err
 	}
-	if len(result.ApiKeys) == 0 {
-		return "", fmt.Errorf("no api keys returned")
+
+	apiKeyCacheMu.Lock()
+	for k := range apiKeyCache {
+		if k.accountIndex == accountIndex {
+			delete(apiKeyCache, k)
+		}
 	}
-	return result.ApiKeys[0].PublicKey, nil
+	for _, apiKey := range result.ApiKeys {
+		apiKeyCache[apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKey.ApiKeyIndex}] = apiKey.PublicKey
+	}
+	key, ok := apiKeyCache[cacheKey]
+	apiKeyCacheMu.Unlock()
+	if !ok {
+		return "", fmt.Errorf("no api key returned for index %d", apiKeyIndex)
+	}
+	return key, nil
+}
+
+func (c *client) InvalidateApiKeys(accountIndex int64) {
+	apiKeyCacheMu.Lock()
+	defer apiKeyCacheMu.Unlock()
+	for k := range apiKeyCache {
+		if k.accountIndex == accountIndex {
+			delete(apiKeyCache, k)
+		}
+	}
 }

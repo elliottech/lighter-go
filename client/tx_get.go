@@ -34,6 +34,11 @@ func (c *TxClient) GetChangePubKeyTransaction(tx *types.ChangePubKeyReq, ops *ty
 		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
 	}
 
+	// Signing a ChangePubKey is a strong signal that this account's
+	// server-side pubkey is about to change. Drop cached entries so a
+	// subsequent Check refetches from the server.
+	c.apiClient.InvalidateApiKeys(c.accountIndex)
+
 	return txInfo, nil
 }
 
