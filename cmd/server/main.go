@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -110,54 +109,6 @@ func getClient(apiKeyIndex int, accountIndex int64) (*client.TxClient, error) {
 	return client.GetClient(uint8(apiKeyIndex), accountIndex)
 }
 
-func createTxAttributesFromSkipNonce(skipNonce uint8) *types.L2TxAttributes {
-	attr := types.L2TxAttributes{}
-	if skipNonce == 1 {
-		attr.SkipNonce = &skipNonce
-	}
-	return &attr
-}
-
-func createIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
-	attr := types.L2TxAttributes{}
-	attr.IntegratorAccountIndex = &integratorAccountIndex
-	attr.IntegratorTakerFee = &integratorTakerFee
-	attr.IntegratorMakerFee = &integratorMakerFee
-	if skipNonce == 1 {
-		attr.SkipNonce = &skipNonce
-	}
-	return &attr
-}
-
-func getTransactOpts(skipNonce uint8, nonce int64) *types.TransactOpts {
-	txAttributes := createTxAttributesFromSkipNonce(skipNonce)
-	return &types.TransactOpts{
-		Nonce:        &nonce,
-		TxAttributes: txAttributes,
-	}
-}
-
-func getIntegratorTransactOpts(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8, nonce int64) *types.TransactOpts {
-	txAttributes := createIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
-	return &types.TransactOpts{
-		Nonce:        &nonce,
-		TxAttributes: txAttributes,
-	}
-}
-
-func messageToSign(txInfo txtypes.TxInfo) string {
-	switch typed := txInfo.(type) {
-	case *txtypes.L2ChangePubKeyTxInfo:
-		return typed.GetL1SignatureBody()
-	case *txtypes.L2TransferTxInfo:
-		return typed.GetL1SignatureBody(chainId)
-	case *txtypes.L2ApproveIntegratorTxInfo:
-		return typed.GetL1SignatureBody(chainId)
-	default:
-		return ""
-	}
-}
-
 func convertTxInfoToResponse(txInfo txtypes.TxInfo, err error) SignedTxResp {
 	if err != nil {
 		return SignedTxResp{Error: err.Error()}
@@ -177,7 +128,7 @@ func convertTxInfoToResponse(txInfo txtypes.TxInfo, err error) SignedTxResp {
 		TxHash: txInfo.GetTxHash(),
 	}
 
-	if msg := messageToSign(txInfo); msg != "" {
+	if msg := txtypes.MessageToSign(txInfo, chainId); msg != "" {
 		resp.MessageToSign = msg
 	}
 
@@ -263,7 +214,7 @@ func handleSignChangePubKey(w http.ResponseWriter, r *http.Request) {
 	copy(pubKey[:], pubKeyBytes)
 
 	tx := &types.ChangePubKeyReq{PubKey: pubKey}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetChangePubKeyTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -299,7 +250,7 @@ func handleSignCreateOrder(w http.ResponseWriter, r *http.Request) {
 		TriggerPrice:     req.TriggerPrice,
 		OrderExpiry:      orderExpiry,
 	}
-	ops := getIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
+	ops := types.NewIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetCreateOrderTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -342,7 +293,7 @@ func handleSignCreateGroupedOrders(w http.ResponseWriter, r *http.Request) {
 		GroupingType: req.GroupingType,
 		Orders:       orders,
 	}
-	ops := getIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
+	ops := types.NewIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetCreateGroupedOrdersTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -365,7 +316,7 @@ func handleSignCancelOrder(w http.ResponseWriter, r *http.Request) {
 		MarketIndex: req.MarketIndex,
 		Index:       req.OrderIndex,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetCancelOrderTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -389,7 +340,7 @@ func handleSignWithdraw(w http.ResponseWriter, r *http.Request) {
 		RouteType:  req.RouteType,
 		Amount:     req.Amount,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetWithdrawTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -408,7 +359,7 @@ func handleSignCreateSubAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 	txInfo, err := c.GetCreateSubAccountTransaction(ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
 }
@@ -430,7 +381,7 @@ func handleSignCancelAllOrders(w http.ResponseWriter, r *http.Request) {
 		TimeInForce: req.TimeInForce,
 		Time:        req.Time,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetCancelAllOrdersTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -456,7 +407,7 @@ func handleSignModifyOrder(w http.ResponseWriter, r *http.Request) {
 		Price:        req.Price,
 		TriggerPrice: req.TriggerPrice,
 	}
-	ops := getIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
+	ops := types.NewIntegratorTransactOpts(req.IntegratorAccountIndex, req.IntegratorTakerFee, req.IntegratorMakerFee, req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetModifyOrderTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -475,32 +426,9 @@ func handleSignTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var memo [32]byte
-	memoStr := req.Memo
-	if len(memoStr) == 66 {
-		if memoStr[0:2] == "0x" {
-			memoStr = memoStr[2:66]
-		} else {
-			writeJSON(w, http.StatusOK, SignedTxResp{Error: fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr))})
-			return
-		}
-	}
-
-	if len(memoStr) == 64 {
-		b, err := hex.DecodeString(memoStr)
-		if err != nil {
-			writeJSON(w, http.StatusOK, SignedTxResp{Error: fmt.Sprintf("failed to decode hex string. err: %v", err)})
-			return
-		}
-		for i := 0; i < 32; i++ {
-			memo[i] = b[i]
-		}
-	} else if len(memoStr) == 32 {
-		for i := 0; i < 32; i++ {
-			memo[i] = byte(memoStr[i])
-		}
-	} else {
-		writeJSON(w, http.StatusOK, SignedTxResp{Error: fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr))})
+	memo, memoErr := types.ParseMemo(req.Memo)
+	if memoErr != nil {
+		writeJSON(w, http.StatusOK, SignedTxResp{Error: memoErr.Error()})
 		return
 	}
 
@@ -513,7 +441,7 @@ func handleSignTransfer(w http.ResponseWriter, r *http.Request) {
 		USDCFee:        req.USDCFee,
 		Memo:           memo,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetTransferTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -537,7 +465,7 @@ func handleSignCreatePublicPool(w http.ResponseWriter, r *http.Request) {
 		InitialTotalShares:   req.InitialTotalShares,
 		MinOperatorShareRate: req.MinOperatorShareRate,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetCreatePublicPoolTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -562,7 +490,7 @@ func handleSignUpdatePublicPool(w http.ResponseWriter, r *http.Request) {
 		OperatorFee:          req.OperatorFee,
 		MinOperatorShareRate: req.MinOperatorShareRate,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUpdatePublicPoolTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -585,7 +513,7 @@ func handleSignMintShares(w http.ResponseWriter, r *http.Request) {
 		PublicPoolIndex: req.PublicPoolIndex,
 		ShareAmount:     req.ShareAmount,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetMintSharesTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -608,7 +536,7 @@ func handleSignBurnShares(w http.ResponseWriter, r *http.Request) {
 		PublicPoolIndex: req.PublicPoolIndex,
 		ShareAmount:     req.ShareAmount,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetBurnSharesTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -632,7 +560,7 @@ func handleSignUpdateLeverage(w http.ResponseWriter, r *http.Request) {
 		InitialMarginFraction: req.InitialMarginFraction,
 		MarginMode:            req.MarginMode,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUpdateLeverageTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -682,7 +610,7 @@ func handleSignUpdateMargin(w http.ResponseWriter, r *http.Request) {
 		USDCAmount:  req.USDCAmount,
 		Direction:   req.Direction,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUpdateMarginTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -705,7 +633,7 @@ func handleSignStakeAssets(w http.ResponseWriter, r *http.Request) {
 		StakingPoolIndex: req.StakingPoolIndex,
 		ShareAmount:      req.ShareAmount,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetStakeAssetsTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -728,7 +656,7 @@ func handleSignUnstakeAssets(w http.ResponseWriter, r *http.Request) {
 		StakingPoolIndex: req.StakingPoolIndex,
 		ShareAmount:      req.ShareAmount,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUnstakeAssetsTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -755,7 +683,7 @@ func handleSignApproveIntegrator(w http.ResponseWriter, r *http.Request) {
 		MaxSpotMakerFee:        req.MaxSpotMakerFee,
 		ApprovalExpiry:         req.ApprovalExpiry,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetApproveIntegratorTx(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -777,7 +705,7 @@ func handleSignUpdateAccountConfig(w http.ResponseWriter, r *http.Request) {
 	tx := &types.UpdateAccountConfigTxReq{
 		AccountTradingMode: req.AccountTradingMode,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUpdateAccountConfigTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
@@ -800,7 +728,7 @@ func handleSignUpdateAccountAssetConfig(w http.ResponseWriter, r *http.Request) 
 		AssetIndex:      req.AssetIndex,
 		AssetMarginMode: req.AssetMarginMode,
 	}
-	ops := getTransactOpts(req.SkipNonce, req.Nonce)
+	ops := types.NewTransactOpts(req.SkipNonce, req.Nonce)
 
 	txInfo, err := c.GetUpdateAccountAssetConfigTransaction(tx, ops)
 	writeJSON(w, http.StatusOK, convertTxInfoToResponse(txInfo, err))
