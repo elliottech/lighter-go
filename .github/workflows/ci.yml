@@ -100,3 +100,30 @@ jobs:
         with:
           name: lighter-go-darwin
           path: build/lighter-signer-darwin-arm64.dylib
+
+  build-darwin-intel:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: just build-darwin-amd64-local
+
+      - name: Compile C++ example
+        run: clang++ -std=c++20 -O3 ./examples/cpp/example.cpp ./build/lighter-signer-darwin-amd64.dylib -o ./build/example-cpp
+
+      - name: Run C++ example
+        run: DYLD_LIBRARY_PATH=./build ./build/example-cpp
+
+      - run: go test ./...
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lighter-go-darwin-intel
+          path: |
+            build/lighter-signer-darwin-amd64.dylib
+            build/lighter-signer-darwin-amd64.h

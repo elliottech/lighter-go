@@ -48,6 +48,10 @@ build-windows-amd64-docker:
       apt-get install -y gcc-mingw-w64-x86-64 && \
       CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-windows-amd64.dll ./sharedlib"
 
+build-darwin-amd64-local:
+    go mod vendor
+    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
+
 ### WASM builds
 
 build-wasm:
