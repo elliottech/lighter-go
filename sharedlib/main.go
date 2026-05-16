@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"time"
 	"unsafe"
@@ -60,16 +59,7 @@ func wrapErr(err any) *C.char {
 }
 
 func messageToSign(txInfo txtypes.TxInfo) string {
-	switch typed := txInfo.(type) {
-	case *txtypes.L2ChangePubKeyTxInfo:
-		return typed.GetL1SignatureBody()
-	case *txtypes.L2TransferTxInfo:
-		return typed.GetL1SignatureBody(chainId)
-	case *txtypes.L2ApproveIntegratorTxInfo:
-		return typed.GetL1SignatureBody(chainId)
-	default:
-		return ""
-	}
+	return txtypes.MessageToSign(txInfo, chainId)
 }
 
 func signedTxResponseErr(err any) C.SignedTxResponse {
@@ -114,44 +104,19 @@ func getClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (*client.TxClient, 
 }
 
 func CreateTxAttributesFromIsSkipNonce(skipNonce uint8) *types.L2TxAttributes {
-	attr := types.L2TxAttributes{}
-	if skipNonce == 1 {
-		attr.SkipNonce = &skipNonce
-	}
-	return &attr
+	return types.NewTxAttributesFromSkipNonce(skipNonce)
 }
 
 func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
-	attr := types.L2TxAttributes{}
-	attr.IntegratorAccountIndex = &integratorAccountIndex
-	attr.IntegratorTakerFee = &integratorTakerFee
-	attr.IntegratorMakerFee = &integratorMakerFee
-	if skipNonce == 1 {
-		attr.SkipNonce = &skipNonce
-	}
-	return &attr
+	return types.NewIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
 }
 
 func getTransactOpts(cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
-	nonce := int64(cNonce)
-	txAttributes := CreateTxAttributesFromIsSkipNonce(uint8(cSkipNonce))
-	return &types.TransactOpts{
-		Nonce:        &nonce,
-		TxAttributes: txAttributes,
-	}
+	return types.NewTransactOpts(uint8(cSkipNonce), int64(cNonce))
 }
 
 func getIntegratorTransactOptsAll(cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
-	nonce := int64(cNonce)
-	integratorAccountIndex := int64(cIntegratorAccountIndex)
-	integratorTakerFee := uint32(cIntegratorTakerFee)
-	integratorMakerFee := uint32(cIntegratorMakerFee)
-	skipNonce := uint8(cSkipNonce)
-	txAttributes := CreateIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
-	return &types.TransactOpts{
-		Nonce:        &nonce,
-		TxAttributes: txAttributes,
-	}
+	return types.NewIntegratorTransactOpts(int64(cIntegratorAccountIndex), uint32(cIntegratorTakerFee), uint32(cIntegratorMakerFee), uint8(cSkipNonce), int64(cNonce))
 }
 
 //export GenerateAPIKey
@@ -485,32 +450,9 @@ func SignTransfer(cToAccountIndex C.longlong, cAssetIndex C.int16_t, cFromRouteT
 	toRouteType := uint8(cToRouteType)
 	amount := int64(cAmount)
 	usdcFee := int64(cUsdcFee)
-	memo := [32]byte{}
-	memoStr := C.GoString(cMemo)
-	if len(memoStr) == 66 {
-		if memoStr[0:2] == "0x" {
-			memoStr = memoStr[2:66]
-		} else {
-			return signedTxResponseErr(fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr)))
-		}
-	}
-
-	// assume hex encoded here
-	if len(memoStr) == 64 {
-		b, err := hex.DecodeString(memoStr)
-		if err != nil {
-			return signedTxResponseErr(fmt.Sprintf("failed to decode hex string. err: %v", err))
-		}
-
-		for i := 0; i < 32; i += 1 {
-			memo[i] = b[i]
-		}
-	} else if len(memoStr) == 32 {
-		for i := 0; i < 32; i++ {
-			memo[i] = byte(memoStr[i])
-		}
-	} else {
-		return signedTxResponseErr(fmt.Sprintf("memo expected to be 32 bytes or 64 hex encoded or 66 if 0x hex encoded -- long but received %v", len(memoStr)))
+	memo, err := types.ParseMemo(C.GoString(cMemo))
+	if err != nil {
+		return signedTxResponseErr(err)
 	}
 
 	tx := &types.TransferTxReq{
