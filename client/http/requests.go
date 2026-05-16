@@ -21,7 +21,7 @@ func (c *client) parseResultStatus(respBody []byte) error {
 	return nil
 }
 
-func (c *client) getAndParseL2HTTPResponse(path string, params map[string]any, result interface{}) error {
+func (c *client) getAndParseL2HTTPResponse(path string, params map[string]any, result any) error {
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
 		return err
