@@ -17,6 +17,25 @@ The build & accompanying `.h` files can be found in the release notes [here](htt
 If you'd like to compile your own binaries, the commands are in the `justfile`.
 
 
+## HTTP Signing Server (for .NET / C# integration)
+
+If you're integrating from .NET or C#, the recommended approach is to use the **HTTP signing server** instead of loading the shared library directly. Go's `c-shared` libraries embed their own runtime and garbage collector, which conflicts with .NET's GC and causes crashes. The HTTP server runs as a separate process, providing complete runtime isolation.
+
+```bash
+# Build and run
+just build-server
+./build/lighter-server --port 8080
+```
+
+The server exposes the same signing functions as the shared library via JSON/HTTP POST endpoints (e.g. `POST /sign-create-order`). See [examples/csharp/README.md](examples/csharp/README.md) for full documentation, example C# code, and deployment instructions.
+
+**When to use what:**
+| Approach | Use case |
+|---|---|
+| Shared library (`.so`/`.dll`/`.dylib`) | Python, Rust, C++, Java -- languages with compatible FFI |
+| HTTP server | .NET / C# -- or any environment where GC conflicts arise |
+| WASM | Browser-based signing |
+
 ## Transactions
 ```
 === Client ===
@@ -98,4 +117,4 @@ Calling `CreateAuthToken` with an expiry 20 hours in the future will work, but t
 This still allows you to generate all the tokens ahead of time and use them accordingly. \
 Such an approach (both implementation & how to manage them) can be found in great details in the [python-sdk](https://github.com/elliottech/lighter-python/tree/main/examples/read-only-auth).
 
-**Note:** auth tokens are bound to an API key. Changing the API key to something else **will invalidate** all generated auth tokens.  
+**Note:** auth tokens are bound to an API key. Changing the API key to something else **will invalidate** all generated auth tokens.    
