@@ -5,6 +5,7 @@ build-all:
     just build-linux-amd64-docker
     just build-linux-arm64-docker
     just build-windows-amd64-docker
+    just build-darwin-amd64-local
 
 build-darwin-local:
     go mod vendor
