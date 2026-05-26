@@ -10,6 +10,7 @@
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
+    <exec.mainClass>Example</exec.mainClass>
   </properties>
 
   <dependencies>
@@ -27,7 +28,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
-          <mainClass>Example</mainClass>
+          <mainClass>${exec.mainClass}</mainClass>
           <commandlineArgs>--enable-native-access=ALL-UNNAMED</commandlineArgs>
         </configuration>
       </plugin>

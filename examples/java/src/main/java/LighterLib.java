@@ -227,4 +227,92 @@ public class LighterLib {
                         .toAbsolutePath();
         return load(lib.toString());
     }
+
+    // -------------------------------------------------------------------------
+    // BugDemo — demonstrates why every char* MUST be bound as Pointer.
+    //
+    // Run from examples/java/ after building the .so:
+    //   mvn -B exec:java -Dexec.mainClass='LighterLib$BugDemo' -Dexec.args=fixed
+    //   MALLOC_CHECK_=3 mvn -B exec:java \
+    //     -Dexec.mainClass='LighterLib$BugDemo' -Dexec.args=broken
+    // On macOS substitute  MallocScribble=1 MallocGuardEdges=1  for MALLOC_CHECK_=3.
+    // -------------------------------------------------------------------------
+    public static class BugDemo {
+
+        private static final int ITERS = 200_000;
+
+        /**
+         * The broken pattern. Every char* return / struct field is declared as
+         * {@code String} instead of {@code Pointer}, and {@code Free} takes a
+         * {@code String}. Both are wrong:
+         *
+         *  - Struct field as String: JNA copies the bytes from the malloc'd
+         *    C buffer into a fresh JVM String and discards the original
+         *    pointer. The native buffer leaks forever.
+         *  - Free(String): JNA must convert the Java String into a void* to
+         *    satisfy the C signature, so it allocates a fresh com.sun.jna.Memory
+         *    buffer, copies the bytes in, and passes that Memory's address to
+         *    Go's Free. Go calls C.free on it; JNA's Memory finalizer later
+         *    tries to free the same address again → double-free.
+         */
+        public interface BrokenLib extends Library {
+            @FieldOrder({"privateKey", "publicKey", "err"})
+            class ApiKeyResponse extends Structure {
+                public String privateKey;  // WRONG — should be Pointer
+                public String publicKey;   // WRONG
+                public String err;         // WRONG
+                public static class ByValue extends ApiKeyResponse implements Structure.ByValue {}
+            }
+            ApiKeyResponse.ByValue GenerateAPIKey();
+            void Free(String ptr);         // WRONG — should be void Free(Pointer)
+        }
+
+        public static void main(String[] args) {
+            String mode = args.length > 0 ? args[0] : "fixed";
+            String soDir = "../../sharedlib";
+            switch (mode) {
+                case "fixed":  runFixed(soDir); break;
+                case "broken": runBroken(soDir); break;
+                default:
+                    System.err.println("Usage: BugDemo (fixed|broken)");
+                    System.exit(2);
+            }
+        }
+
+        /** The correct pattern: Pointer fields + readAndFree. */
+        public static void runFixed(String soDir) {
+            Lib lib = LighterLib.loadFromDir(soDir);
+            System.out.println("[fixed] running " + ITERS + " GenerateAPIKey iterations");
+            long t0 = System.nanoTime();
+            for (int i = 0; i < ITERS; i++) {
+                ApiKeyResponse.ByValue r = lib.GenerateAPIKey();
+                String[] keys = r.readAndFree(lib);  // reads + frees the original Pointers
+                if (i == 0) {
+                    System.out.println("[fixed]   privateKey[0..16]=" + keys[0].substring(0, Math.min(18, keys[0].length())));
+                    System.out.println("[fixed]   publicKey [0..16]=" + keys[1].substring(0, Math.min(18, keys[1].length())));
+                }
+            }
+            long ms = (System.nanoTime() - t0) / 1_000_000;
+            System.out.printf("[fixed] done — %d iters in %d ms, no leak, no double-free%n", ITERS, ms);
+        }
+
+        /** Demonstrates the broken pattern. Expected: leak then a hard crash. */
+        public static void runBroken(String soDir) {
+            String ext = System.getProperty("os.name").toLowerCase().contains("mac") ? "dylib" : "so";
+            Path libPath = Paths.get(System.getProperty("user.dir")).resolve(soDir).resolve("lighter." + ext).toAbsolutePath();
+            BrokenLib lib = Native.load(libPath.toString(), BrokenLib.class);
+            System.out.println("[broken] loading lib with String-typed bindings (this is the bug pattern)");
+            System.out.println("[broken] expect a leak per call + a double-free crash within a few iters");
+            for (int i = 0; i < ITERS; i++) {
+                BrokenLib.ApiKeyResponse.ByValue r = lib.GenerateAPIKey();
+                // The Java Strings exist, but the original C heap addresses are
+                // GONE — JNA already discarded them when marshaling char* -> String.
+                // Trying to "Free" them is undefined behavior.
+                lib.Free(r.privateKey);
+                lib.Free(r.publicKey);
+                if (i % 50 == 0) System.out.println("[broken]   iter " + i + " (still alive — but leaking + corrupting heap)");
+            }
+            System.out.println("[broken] survived all iters (unlikely — usually crashes earlier)");
+        }
+    }
 }
