@@ -267,6 +267,8 @@ impl LighterLib {
         integrator_account_index: i64,
         integrator_taker_fee: i32,
         integrator_maker_fee: i32,
+        self_trade_behavior_mode: u8,
+        self_trade_equality_mode: u8,
         skip_nonce: u8,
         nonce: i64,
         api_key_index: i32,
@@ -276,7 +278,7 @@ impl LighterLib {
             let f: Symbol<
                 unsafe extern "C" fn(
                     i32, i64, i64, i32, i32, i32, i32, i32, i32, i64,
-                    i64, i32, i32, u8, i64, i32, i64,
+                    i64, i32, i32, u8, u8, u8, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCreateOrder\0").unwrap();
             raw_to_signed_tx(f(
@@ -293,6 +295,8 @@ impl LighterLib {
                 integrator_account_index,
                 integrator_taker_fee,
                 integrator_maker_fee,
+                self_trade_behavior_mode,
+                self_trade_equality_mode,
                 skip_nonce,
                 nonce,
                 api_key_index,
@@ -309,6 +313,8 @@ impl LighterLib {
         integrator_account_index: i64,
         integrator_taker_fee: i32,
         integrator_maker_fee: i32,
+        self_trade_behavior_mode: u8,
+        self_trade_equality_mode: u8,
         skip_nonce: u8,
         nonce: i64,
         api_key_index: i32,
@@ -318,7 +324,7 @@ impl LighterLib {
             let f: Symbol<
                 unsafe extern "C" fn(
                     u8, *const CreateOrderTxReq, i32,
-                    i64, i32, i32, u8, i64, i32, i64,
+                    i64, i32, i32, u8, u8, u8, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCreateGroupedOrders\0").unwrap();
             raw_to_signed_tx(f(
@@ -328,6 +334,8 @@ impl LighterLib {
                 integrator_account_index,
                 integrator_taker_fee,
                 integrator_maker_fee,
+                self_trade_behavior_mode,
+                self_trade_equality_mode,
                 skip_nonce,
                 nonce,
                 api_key_index,
@@ -399,6 +407,7 @@ impl LighterLib {
         &self,
         time_in_force: i32,
         time: i64,
+        cancel_all_market_index: i32,
         skip_nonce: u8,
         nonce: i64,
         api_key_index: i32,
@@ -406,10 +415,10 @@ impl LighterLib {
     ) -> SignedTxResponse {
         unsafe {
             let f: Symbol<
-                unsafe extern "C" fn(i32, i64, u8, i64, i32, i64) -> RawSignedTxResponse,
+                unsafe extern "C" fn(i32, i64, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCancelAllOrders\0").unwrap();
             raw_to_signed_tx(f(
-                time_in_force, time, skip_nonce, nonce, api_key_index, account_index,
+                time_in_force, time, cancel_all_market_index, skip_nonce, nonce, api_key_index, account_index,
             ), self.free_fn)
         }
     }
@@ -425,6 +434,8 @@ impl LighterLib {
         integrator_account_index: i64,
         integrator_taker_fee: i32,
         integrator_maker_fee: i32,
+        self_trade_behavior_mode: u8,
+        self_trade_equality_mode: u8,
         skip_nonce: u8,
         nonce: i64,
         api_key_index: i32,
@@ -434,12 +445,13 @@ impl LighterLib {
             let f: Symbol<
                 unsafe extern "C" fn(
                     i32, i64, i64, i64, i64,
-                    i64, i32, i32, u8, i64, i32, i64,
+                    i64, i32, i32, u8, u8, u8, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignModifyOrder\0").unwrap();
             raw_to_signed_tx(f(
                 market_index, index, base_amount, price, trigger_price,
                 integrator_account_index, integrator_taker_fee, integrator_maker_fee,
+                self_trade_behavior_mode, self_trade_equality_mode,
                 skip_nonce, nonce, api_key_index, account_index,
             ), self.free_fn)
         }

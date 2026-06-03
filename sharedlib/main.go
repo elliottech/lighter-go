@@ -121,11 +121,28 @@ func CreateTxAttributesFromIsSkipNonce(skipNonce uint8) *types.L2TxAttributes {
 	return &attr
 }
 
-func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
+func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8, selfTradeBehaviorMode uint8, selfTradeEqualityMode uint8) *types.L2TxAttributes {
 	attr := types.L2TxAttributes{}
 	attr.IntegratorAccountIndex = &integratorAccountIndex
 	attr.IntegratorTakerFee = &integratorTakerFee
 	attr.IntegratorMakerFee = &integratorMakerFee
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	if selfTradeBehaviorMode != txtypes.SelfTradeBehaviorExpireMaker {
+		attr.SelfTradeBehaviorMode = &selfTradeBehaviorMode
+	}
+	if selfTradeEqualityMode != txtypes.SelfTradeEqualityAccountIndex {
+		attr.SelfTradeEqualityMode = &selfTradeEqualityMode
+	}
+	return &attr
+}
+
+func CreateCancelAllTxAttributes(cancelAllMarketIndex int16, skipNonce uint8) *types.L2TxAttributes {
+	attr := types.L2TxAttributes{}
+	if cancelAllMarketIndex != txtypes.NilMarketIndex {
+		attr.CancelAllMarketIndex = &cancelAllMarketIndex
+	}
 	if skipNonce == 1 {
 		attr.SkipNonce = &skipNonce
 	}
@@ -141,13 +158,26 @@ func getTransactOpts(cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpt
 	}
 }
 
-func getIntegratorTransactOptsAll(cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
+func getIntegratorTransactOptsAll(cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t) *types.TransactOpts {
 	nonce := int64(cNonce)
 	integratorAccountIndex := int64(cIntegratorAccountIndex)
 	integratorTakerFee := uint32(cIntegratorTakerFee)
 	integratorMakerFee := uint32(cIntegratorMakerFee)
 	skipNonce := uint8(cSkipNonce)
-	txAttributes := CreateIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
+	selfTradeBehaviorMode := uint8(cSelfTradeBehaviorMode)
+	selfTradeEqualityMode := uint8(cSelfTradeEqualityMode)
+	txAttributes := CreateIntegratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, selfTradeBehaviorMode, selfTradeEqualityMode)
+	return &types.TransactOpts{
+		Nonce:        &nonce,
+		TxAttributes: txAttributes,
+	}
+}
+
+func getCancelAllTransactOpts(cCancelAllMarketIndex C.int, cSkipNonce C.uint8_t, cNonce C.longlong) *types.TransactOpts {
+	nonce := int64(cNonce)
+	cancelAllMarketIndex := int16(cCancelAllMarketIndex)
+	skipNonce := uint8(cSkipNonce)
+	txAttributes := CreateCancelAllTxAttributes(cancelAllMarketIndex, skipNonce)
 	return &types.TransactOpts{
 		Nonce:        &nonce,
 		TxAttributes: txAttributes,
@@ -243,7 +273,7 @@ func SignChangePubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, 
 }
 
 //export SignCreateOrder
-func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmount C.longlong, cPrice C.int, cIsAsk C.int, cOrderType C.int, cTimeInForce C.int, cReduceOnly C.int, cTriggerPrice C.int, cOrderExpiry C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -282,14 +312,14 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 		TriggerPrice:     triggerPrice,
 		OrderExpiry:      orderExpiry,
 	}
-	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce, cSelfTradeBehaviorMode, cSelfTradeEqualityMode)
 
 	txInfo, err := c.GetCreateOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignCreateGroupedOrders
-func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxReq, cLen C.int, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -330,7 +360,7 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 		GroupingType: uint8(cGroupingType),
 		Orders:       orders,
 	}
-	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce, cSelfTradeBehaviorMode, cSelfTradeEqualityMode)
 
 	txInfo, err := c.GetCreateGroupedOrdersTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
@@ -409,7 +439,7 @@ func SignCreateSubAccount(cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex 
 }
 
 //export SignCancelAllOrders
-func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cCancelAllMarketIndex C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -428,14 +458,14 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cSkipNonce C.uint
 		TimeInForce: timeInForce,
 		Time:        t,
 	}
-	ops := getTransactOpts(cSkipNonce, cNonce)
+	ops := getCancelAllTransactOpts(cCancelAllMarketIndex, cSkipNonce, cNonce)
 
 	txInfo, err := c.GetCancelAllOrdersTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -460,7 +490,7 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 		Price:        price,
 		TriggerPrice: triggerPrice,
 	}
-	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce)
+	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce, cSelfTradeBehaviorMode, cSelfTradeEqualityMode)
 
 	txInfo, err := c.GetModifyOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)

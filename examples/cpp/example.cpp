@@ -72,6 +72,8 @@ void run_example(int apiKeyIndex) {
             /* cIntegratorAccountIndex */ 0,
             /* cIntegratorTakerFee */ 0,
             /* cIntegratorMakerFee */ 0,
+            /* cSelfTradeBehaviorMode */ 0,
+            /* cSelfTradeEqualityMode */ 0,
             /* cSkipNonce */ 0,
             nonce, apiKeyIndex, accountIndex);
         nonce += 1;

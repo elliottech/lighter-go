@@ -35,11 +35,28 @@ func txAttributesWithSkipNonce(skipNonce uint8) *types.L2TxAttributes {
 	return attr
 }
 
-func integratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8) *types.L2TxAttributes {
+func integratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8, selfTradeBehaviorMode uint8, selfTradeEqualityMode uint8) *types.L2TxAttributes {
 	attr := &types.L2TxAttributes{
 		IntegratorAccountIndex: &integratorAccountIndex,
 		IntegratorTakerFee:     &integratorTakerFee,
 		IntegratorMakerFee:     &integratorMakerFee,
+	}
+	if skipNonce == 1 {
+		attr.SkipNonce = &skipNonce
+	}
+	if selfTradeBehaviorMode != txtypes.SelfTradeBehaviorExpireMaker {
+		attr.SelfTradeBehaviorMode = &selfTradeBehaviorMode
+	}
+	if selfTradeEqualityMode != txtypes.SelfTradeEqualityAccountIndex {
+		attr.SelfTradeEqualityMode = &selfTradeEqualityMode
+	}
+	return attr
+}
+
+func cancelAllTxAttributes(cancelAllMarketIndex int16, skipNonce uint8) *types.L2TxAttributes {
+	attr := &types.L2TxAttributes{}
+	if cancelAllMarketIndex != txtypes.NilMarketIndex {
+		attr.CancelAllMarketIndex = &cancelAllMarketIndex
 	}
 	if skipNonce == 1 {
 		attr.SkipNonce = &skipNonce
@@ -273,11 +290,11 @@ func main() {
 
 	js.Global().Set("SignCreateOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 17 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 17 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 19 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateOrder expects 19 args: marketIndex, clientOrderIndex, baseAmount, price, isAsk, orderType, timeInForce, reduceOnly, triggerPrice, orderExpiry, integratorAccountIndex, integratorTakerFee, integratorMakerFee, selfTradeBehaviorMode, selfTradeEqualityMode, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			// Validate all arguments are defined before accessing
-			for i := 0; i < 17; i++ {
+			for i := 0; i < 19; i++ {
 				if args[i].Type() == js.TypeUndefined {
 					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
 				}
@@ -339,11 +356,19 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			skipNonce, err := safeUint8(args[13], 13)
+			selfTradeBehaviorMode, err := safeUint8(args[13], 13)
 			if err != nil {
 				return wrapErr(err)
 			}
-			nonce, err := safeInt(args[14], 14)
+			selfTradeEqualityMode, err := safeUint8(args[14], 14)
+			if err != nil {
+				return wrapErr(err)
+			}
+			skipNonce, err := safeUint8(args[15], 15)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[16], 16)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -365,7 +390,7 @@ func main() {
 				OrderExpiry:      orderExpiry,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, selfTradeBehaviorMode, selfTradeEqualityMode)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -410,8 +435,8 @@ func main() {
 
 	js.Global().Set("SignCancelAllOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 6 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 6 args: timeInForce, time, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCancelAllOrders expects 7 args: timeInForce, time, cancelAllMarketIndex, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -420,15 +445,16 @@ func main() {
 
 			timeInForce := uint8(args[0].Int())
 			timeVal := int64(args[1].Int())
-			skipNonce := uint8(args[2].Int())
-			nonce := int64(args[3].Int())
+			cancelAllMarketIndex := int16(args[2].Int())
+			skipNonce := uint8(args[3].Int())
+			nonce := int64(args[4].Int())
 
 			txInfo := &types.CancelAllOrdersTxReq{
 				TimeInForce: timeInForce,
 				Time:        timeVal,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			ops.TxAttributes = cancelAllTxAttributes(cancelAllMarketIndex, skipNonce)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -629,8 +655,8 @@ func main() {
 
 	js.Global().Set("SignModifyOrder", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 12 {
-				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 12 args: marketIndex, index, baseAmount, price, triggerPrice, integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 14 {
+				return js.ValueOf(map[string]interface{}{"error": "SignModifyOrder expects 14 args: marketIndex, index, baseAmount, price, triggerPrice, integratorAccountIndex, integratorTakerFee, integratorMakerFee, selfTradeBehaviorMode, selfTradeEqualityMode, skipNonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -648,8 +674,10 @@ func main() {
 			integratorAccountIndex := int64(args[5].Int())
 			integratorTakerFee := uint32(args[6].Int())
 			integratorMakerFee := uint32(args[7].Int())
-			skipNonce := uint8(args[8].Int())
-			nonce := int64(args[9].Int())
+			selfTradeBehaviorMode := uint8(args[8].Int())
+			selfTradeEqualityMode := uint8(args[9].Int())
+			skipNonce := uint8(args[10].Int())
+			nonce := int64(args[11].Int())
 
 			txInfo := &types.ModifyOrderTxReq{
 				MarketIndex:  marketIndex,
@@ -659,7 +687,7 @@ func main() {
 				TriggerPrice: triggerPrice,
 			}
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, selfTradeBehaviorMode, selfTradeEqualityMode)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
@@ -925,8 +953,8 @@ func main() {
 
 	js.Global().Set("SignCreateGroupedOrders", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			if len(args) < 9 {
-				return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects 9 args: groupingType, orders array, integratoraccountindex, integratortakerfee, integratormakerfee, skipnonce, nonce, apiKeyIndex, accountIndex"})
+			if len(args) < 11 {
+				return js.ValueOf(map[string]interface{}{"error": "SignCreateGroupedOrders expects 11 args: groupingType, orders array, integratoraccountindex, integratortakerfee, integratormakerfee, selfTradeBehaviorMode, selfTradeEqualityMode, skipnonce, nonce, apiKeyIndex, accountIndex"})
 			}
 			c, err := getClient(args)
 			if err != nil {
@@ -946,7 +974,9 @@ func main() {
 			integratorAccountIndex := int64(args[2].Int())
 			integratorTakerFee := uint32(args[3].Int())
 			integratorMakerFee := uint32(args[4].Int())
-			skipNonce := uint8(args[5].Int())
+			selfTradeBehaviorMode := uint8(args[5].Int())
+			selfTradeEqualityMode := uint8(args[6].Int())
+			skipNonce := uint8(args[7].Int())
 
 			for i := 0; i < length; i++ {
 				orderObj := ordersArg.Index(i)
@@ -973,7 +1003,7 @@ func main() {
 				}
 			}
 
-			nonce := int64(args[6].Int())
+			nonce := int64(args[8].Int())
 
 			req := &types.CreateGroupedOrdersTxReq{
 				GroupingType: groupingType,
@@ -981,7 +1011,7 @@ func main() {
 			}
 
 			ops := new(types.TransactOpts)
-			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce)
+			ops.TxAttributes = integratorTxAttributes(integratorAccountIndex, integratorTakerFee, integratorMakerFee, skipNonce, selfTradeBehaviorMode, selfTradeEqualityMode)
 			if nonce != -1 {
 				ops.Nonce = &nonce
 			}
