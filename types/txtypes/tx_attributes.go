@@ -141,11 +141,25 @@ func (attr L2TxAttributes) Validate() error {
 		}
 	}
 	isNil := attr.getIsNilInfos()
+
+	// Fees and integrator index must be specified together
 	hasFees := !isNil[AttributeTypeIntegratorTakerFee] || !isNil[AttributeTypeIntegratorMakerFee]
 	hasIntegratorIndex := !isNil[AttributeTypeIntegratorAccountIndex]
-
 	if hasFees != hasIntegratorIndex {
 		return ErrIntegratorAccountIndexRequiredForNonZeroFees
+	}
+
+	// Disallow self-trade specification if any fee is specified
+	hasSelfTradeSpec := !isNil[AttributeTypeSelfTradeBehaviorMode] || !isNil[AttributeTypeSelfTradeEqualityMode]
+	if hasSelfTradeSpec && hasFees {
+		return ErrSelfTradeSpecificationNotAllowedWithNonZeroFees
+	}
+
+	// Disallow reduce mode with master account index equality mode
+	isMaiEqualityMode := attr[AttributeTypeSelfTradeEqualityMode] == SelfTradeEqualityMasterAccountIndex
+	isReduceBehaviorMode := attr[AttributeTypeSelfTradeBehaviorMode] == SelfTradeBehaviorReduce
+	if isReduceBehaviorMode && isMaiEqualityMode {
+		return ErrReduceModeNotAllowedWithMasterAccountIndexEqualityMode
 	}
 
 	return nil
