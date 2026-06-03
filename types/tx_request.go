@@ -27,6 +27,9 @@ type L2TxAttributes struct {
 	IntegratorTakerFee     *uint32
 	IntegratorMakerFee     *uint32
 	SkipNonce              *uint8
+	CancelAllMarketIndex   *int16
+	SelfTradeBehaviorMode  *uint8
+	SelfTradeEqualityMode  *uint8
 }
 
 type PublicKey = gFp5.Element
@@ -180,7 +183,10 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 		(attr.IntegratorAccountIndex == nil &&
 			attr.IntegratorTakerFee == nil &&
 			attr.IntegratorMakerFee == nil &&
-			attr.SkipNonce == nil) {
+			attr.SkipNonce == nil &&
+			attr.CancelAllMarketIndex == nil &&
+			attr.SelfTradeBehaviorMode == nil &&
+			attr.SelfTradeEqualityMode == nil) {
 		return nil
 	}
 	l2TxAttributes := txtypes.L2TxAttributes{}
@@ -195,6 +201,15 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	}
 	if attr.SkipNonce != nil {
 		l2TxAttributes[txtypes.AttributeTypeSkipTxNonce] = int(*attr.SkipNonce)
+	}
+	if attr.CancelAllMarketIndex != nil {
+		l2TxAttributes[txtypes.AttributeTypeCancelAllMarketIndex] = int(*attr.CancelAllMarketIndex)
+	}
+	if attr.SelfTradeBehaviorMode != nil {
+		l2TxAttributes[txtypes.AttributeTypeSelfTradeBehaviorMode] = int(*attr.SelfTradeBehaviorMode)
+	}
+	if attr.SelfTradeEqualityMode != nil {
+		l2TxAttributes[txtypes.AttributeTypeSelfTradeEqualityMode] = int(*attr.SelfTradeEqualityMode)
 	}
 	return l2TxAttributes
 }
