@@ -123,9 +123,15 @@ func CreateTxAttributesFromIsSkipNonce(skipNonce uint8) *types.L2TxAttributes {
 
 func CreateIntegratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uint32, integratorMakerFee uint32, skipNonce uint8, selfTradeBehaviorMode uint8, selfTradeEqualityMode uint8) *types.L2TxAttributes {
 	attr := types.L2TxAttributes{}
-	attr.IntegratorAccountIndex = &integratorAccountIndex
-	attr.IntegratorTakerFee = &integratorTakerFee
-	attr.IntegratorMakerFee = &integratorMakerFee
+	if integratorAccountIndex != txtypes.NilIntegratorIndex {
+		attr.IntegratorAccountIndex = &integratorAccountIndex
+	}
+	if integratorTakerFee != txtypes.NilIntegratorTakerFee {
+		attr.IntegratorTakerFee = &integratorTakerFee
+	}
+	if integratorMakerFee != txtypes.NilIntegratorMakerFee {
+		attr.IntegratorMakerFee = &integratorMakerFee
+	}
 	if skipNonce == 1 {
 		attr.SkipNonce = &skipNonce
 	}
