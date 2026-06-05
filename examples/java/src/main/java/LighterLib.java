@@ -132,11 +132,13 @@ public class LighterLib {
                 int price, int isAsk, int orderType, int timeInForce,
                 int reduceOnly, int triggerPrice, long orderExpiry,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
+                byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
                 byte skipNonce, long nonce, int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCreateGroupedOrders(
                 byte groupingType, CreateOrderTxReq orders, int len,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
+                byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
                 byte skipNonce, long nonce, int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCancelOrder(int marketIndex, long orderIndex,
@@ -151,12 +153,14 @@ public class LighterLib {
                                                       int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCancelAllOrders(int timeInForce, long time,
+                                                     int cancelAllMarketIndex,
                                                      byte skipNonce, long nonce,
                                                      int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignModifyOrder(
                 int marketIndex, long index, long baseAmount, long price, long triggerPrice,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
+                byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
                 byte skipNonce, long nonce, int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignTransfer(

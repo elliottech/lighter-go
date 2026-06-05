@@ -63,6 +63,11 @@ func (txInfo *L2CancelAllOrdersTxInfo) Validate() error {
 		return ErrExpiredAtInvalid
 	}
 
+	cancelMarketIndex, exist := txInfo.L2TxAttributes[AttributeTypeCancelAllMarketIndex]
+	if exist && txInfo.TimeInForce != ImmediateCancelAll && cancelMarketIndex != int(NilMarketIndex) {
+		return ErrCancelAllMarketIndexCantBeScheduled
+	}
+
 	// TimeInForce and Time
 	switch txInfo.TimeInForce {
 	case ImmediateCancelAll:

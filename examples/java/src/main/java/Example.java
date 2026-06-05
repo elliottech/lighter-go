@@ -81,6 +81,8 @@ public class Example {
                 /* integratorAccountIndex */  0L,
                 /* integratorTakerFee */      0,
                 /* integratorMakerFee */      0,
+                /* selfTradeBehaviorMode */   (byte) 0,
+                /* selfTradeEqualityMode */   (byte) 0,
                 /* skipNonce */ (byte) 0,
                 nonce,
                 apiKeyIndex,

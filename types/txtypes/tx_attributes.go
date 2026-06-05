@@ -32,8 +32,11 @@ const (
 	AttributeTypeIntegratorTakerFee     = 2
 	AttributeTypeIntegratorMakerFee     = 3
 	AttributeTypeSkipTxNonce            = 4
+	AttributeTypeCancelAllMarketIndex   = 5
+	AttributeTypeSelfTradeBehaviorMode  = 6
+	AttributeTypeSelfTradeEqualityMode  = 7
 
-	MaxAttributeType = AttributeTypeSkipTxNonce
+	MaxAttributeType = AttributeTypeSelfTradeEqualityMode
 )
 
 type AttibuteConfig struct {
@@ -73,12 +76,53 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 		NilValue:          0,
 		InvalidRangeError: ErrNonceSkipAttributeInvalid,
 	},
+	AttributeTypeCancelAllMarketIndex: {
+		ByteSize:          2,
+		MinValue:          int(MinPerpsMarketIndex),
+		MaxValue:          int(NilMarketIndex),
+		NilValue:          int(NilMarketIndex),
+		InvalidRangeError: ErrCancelAllMarketIndexInvalidRange,
+	},
+	AttributeTypeSelfTradeBehaviorMode: {
+		ByteSize:          1,
+		MinValue:          SelfTradeBehaviorExpireMaker,
+		MaxValue:          SelfTradeBehaviorReduce,
+		NilValue:          SelfTradeBehaviorExpireMaker,
+		InvalidRangeError: ErrSelfTradeBehaviorModeInvalidRange,
+	},
+	AttributeTypeSelfTradeEqualityMode: {
+		ByteSize:          1,
+		MinValue:          SelfTradeEqualityAccountIndex,
+		MaxValue:          SelfTradeEqualityMasterAccountIndex,
+		NilValue:          SelfTradeEqualityAccountIndex,
+		InvalidRangeError: ErrSelfTradeEqualityModeInvalidRange,
+	},
 }
 
 type L2TxAttributes map[uint8]int // Type to value
 
+type L2TxAttributeIsNilMap map[uint8]bool
+
+// Caller must make sure attrType is valid
+func (attr L2TxAttributes) GetValueOrDefault(attrType uint8) int {
+	value, ok := attr[attrType]
+	if !ok {
+		return AttributeTypeToConfig[attrType].NilValue
+	}
+	return value
+}
+
+func (attr L2TxAttributes) getIsNilInfos() L2TxAttributeIsNilMap {
+	helpers := make(L2TxAttributeIsNilMap)
+	helpers[0] = true
+	for typ := uint8(1); typ <= MaxAttributeType; typ++ {
+		helpers[typ] = attr.GetValueOrDefault(typ) == AttributeTypeToConfig[typ].NilValue
+	}
+	return helpers
+}
+
 func (attr L2TxAttributes) Validate() error {
-	if attr == nil {
+	if len(attr) == 0 {
 		return nil
 	}
 
@@ -96,18 +140,34 @@ func (attr L2TxAttributes) Validate() error {
 			return config.InvalidRangeError
 		}
 	}
+	isNil := attr.getIsNilInfos()
 
-	hasFees := attr[AttributeTypeIntegratorTakerFee] != NilIntegratorTakerFee || attr[AttributeTypeIntegratorMakerFee] != NilIntegratorMakerFee
-	if hasFees && attr[AttributeTypeIntegratorAccountIndex] == NilIntegratorIndex {
+	// Fees and integrator index must be specified together
+	hasFees := !isNil[AttributeTypeIntegratorTakerFee] || !isNil[AttributeTypeIntegratorMakerFee]
+	hasIntegratorIndex := !isNil[AttributeTypeIntegratorAccountIndex]
+	if hasFees != hasIntegratorIndex {
 		return ErrIntegratorAccountIndexRequiredForNonZeroFees
+	}
+
+	// Disallow self-trade specification if any fee is specified
+	hasSelfTradeSpec := !isNil[AttributeTypeSelfTradeBehaviorMode] || !isNil[AttributeTypeSelfTradeEqualityMode]
+	if hasSelfTradeSpec && hasFees {
+		return ErrSelfTradeSpecificationNotAllowedWithNonZeroFees
+	}
+
+	// Disallow reduce mode with master account index equality mode
+	isMaiEqualityMode := attr[AttributeTypeSelfTradeEqualityMode] == SelfTradeEqualityMasterAccountIndex
+	isReduceBehaviorMode := attr[AttributeTypeSelfTradeBehaviorMode] == SelfTradeBehaviorReduce
+	if isReduceBehaviorMode && isMaiEqualityMode {
+		return ErrReduceModeNotAllowedWithMasterAccountIndexEqualityMode
 	}
 
 	return nil
 }
 
 func (attr L2TxAttributes) IsEmpty() bool {
-	for _, value := range attr {
-		if value != 0 {
+	for key, value := range attr {
+		if value != AttributeTypeToConfig[key].NilValue {
 			return false
 		}
 	}
@@ -118,7 +178,7 @@ func (attr L2TxAttributes) IsEmpty() bool {
 func (attr L2TxAttributes) getNormalizedTypes() (attrTypes [NbAttributesPerTx]uint8) {
 	i := 0
 	for key, value := range attr {
-		if value == 0 {
+		if value == AttributeTypeToConfig[key].NilValue {
 			continue
 		}
 		attrTypes[i] = key

@@ -249,3 +249,14 @@ const (
 	MinWithdrawalAmount uint64 = 1
 	MaxWithdrawalAmount uint64 = MaxExchangeUSDC
 )
+
+// Self trade equality and behavior types
+const (
+	SelfTradeBehaviorExpireMaker = 0
+	SelfTradeBehaviorExpireTaker = 1
+	SelfTradeBehaviorCancelBoth  = 2
+	SelfTradeBehaviorReduce      = 3
+
+	SelfTradeEqualityAccountIndex       = 0
+	SelfTradeEqualityMasterAccountIndex = 1
+)

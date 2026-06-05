@@ -74,7 +74,7 @@ assert.equal(cancelTxInfo2.Nonce, 42);
 assertSkipNonceAttr("SignCancelOrder (skipNonce=0)", cancelTxInfo2, false);
 assert.notEqual(cancelResult.txHash, cancelResult2.txHash, "skipNonce should affect the signed tx hash");
 
-const cancelAllResult = globalThis.SignCancelAllOrders(0, 0, 1, 42, 0, 1);
+const cancelAllResult = globalThis.SignCancelAllOrders(0, 0, 255, 1, 42, 0, 1);
 console.log("SignCancelAllOrders (skipNonce=1):", cancelAllResult);
 const cancelAllTxInfo = assertSignedTx("SignCancelAllOrders (skipNonce=1)", cancelAllResult, 16);
 assert.equal(cancelAllTxInfo.TimeInForce, 0);
@@ -82,7 +82,7 @@ assert.equal(cancelAllTxInfo.Time, 0);
 assertSkipNonceAttr("SignCancelAllOrders (skipNonce=1)", cancelAllTxInfo, true);
 
 const orderResult = globalThis.SignCreateOrder(
-    0, 1, 1000, 50000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 42, 0, 1
+    0, 1, 1000, 50000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 42, 0, 1
 );
 console.log("SignCreateOrder (skipNonce=1):", orderResult);
 const orderTxInfo = assertSignedTx("SignCreateOrder (skipNonce=1)", orderResult, 14);
@@ -123,7 +123,7 @@ const groupedResult = globalThis.SignCreateGroupedOrders(
             IsAsk: 1, Type: 4, TimeInForce: 0, ReduceOnly: 1, TriggerPrice: 49000, OrderExpiry: expiry,
         },
     ],
-    0, 0, 0, 1, 42, 0, 1
+    0, 0, 0, 0, 0, 1, 42, 0, 1
 );
 console.log("SignCreateGroupedOrders (skipNonce=1):", groupedResult);
 const groupedTxInfo = assertSignedTx("SignCreateGroupedOrders (skipNonce=1)", groupedResult, 28);

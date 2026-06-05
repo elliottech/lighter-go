@@ -75,6 +75,8 @@ fn run_example(lib: &LighterLib, api_key_index: i32) {
             0,               // integrator_account_index
             0,               // integrator_taker_fee
             0,               // integrator_maker_fee
+            0,               // self_trade_behavior_mode
+            0,               // self_trade_equality_mode
             0,               // skip_nonce
             nonce,
             api_key_index,
