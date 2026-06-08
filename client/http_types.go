@@ -121,12 +121,18 @@ type Asset struct {
 	AssetId       uint16 `json:"asset_id"`
 	Balance       string `json:"balance"`
 	LockedBalance string `json:"locked_balance"`
+	// 统一抵押(UTA)下的现货保证金字段:USDC 资产项的 margin_balance 即真实 cross 抵押。
+	MarginMode    string `json:"margin_mode"`
+	MarginBalance string `json:"margin_balance"`
 }
 
 type Share struct {
 	PublicPoolIndex int64  `json:"public_pool_index"`
 	SharesAmount    int    `json:"shares_amount"`
 	EntryUsdc       string `json:"entry_usdc"`
+	// 质押(stake)份额: principal_amount 为质押本金,以被质押资产计价(如质押 100 LIT 即 "100")。
+	PrincipalAmount string `json:"principal_amount"`
+	EntryTimestamp  int64  `json:"entry_timestamp"`
 }
 
 type Account struct {
