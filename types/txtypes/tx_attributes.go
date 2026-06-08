@@ -145,7 +145,7 @@ func (attr L2TxAttributes) Validate() error {
 	// Fees and integrator index must be specified together
 	hasFees := !isNil[AttributeTypeIntegratorTakerFee] || !isNil[AttributeTypeIntegratorMakerFee]
 	hasIntegratorIndex := !isNil[AttributeTypeIntegratorAccountIndex]
-	if hasFees != hasIntegratorIndex {
+	if hasFees && !hasIntegratorIndex {
 		return ErrIntegratorAccountIndexRequiredForNonZeroFees
 	}
 
