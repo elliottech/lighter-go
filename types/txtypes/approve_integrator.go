@@ -81,9 +81,11 @@ func (txInfo *L2ApproveIntegratorTxInfo) Validate() error {
 		return ErrFeeTooHigh
 	}
 
-	isRevokingApproval := txInfo.MaxPerpsTakerFee == 0 && txInfo.MaxPerpsMakerFee == 0 && txInfo.MaxSpotTakerFee == 0 && txInfo.MaxSpotMakerFee == 0
-	if isRevokingApproval != (txInfo.ApprovalExpiry == 0) {
-		return ErrApprovalExpiryZeroOnRevocation
+	if txInfo.ApprovalExpiry == 0 {
+		allFeesZero := txInfo.MaxPerpsTakerFee == 0 && txInfo.MaxPerpsMakerFee == 0 && txInfo.MaxSpotTakerFee == 0 && txInfo.MaxSpotMakerFee == 0
+		if !allFeesZero {
+			return ErrApprovalExpiryZeroOnRevocation
+		}
 	}
 
 	// ApprovalExpiry
