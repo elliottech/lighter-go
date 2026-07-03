@@ -419,7 +419,17 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			orderIndex := int64(args[1].Int())
+
+			var orderIndex int64
+			if args[1].Type() == js.TypeString {
+				orderIndex, err = strconv.ParseInt(args[1].String(), 10, 64)
+				if err != nil {
+					return wrapErr(err)
+				}
+			} else {
+				orderIndex = int64(args[1].Int())
+			}
+
 			skipNonce := uint8(args[2].Int())
 			nonce := int64(args[3].Int())
 
