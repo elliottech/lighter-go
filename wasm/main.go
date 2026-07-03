@@ -682,7 +682,17 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			index := int64(args[1].Int())
+
+			var index int64
+			if args[1].Type() == js.TypeString {
+				index, err = strconv.ParseInt(args[1].String(), 10, 64)
+				if err != nil {
+					return wrapErr(err)
+				}
+			} else {
+				index = int64(args[1].Int())
+			}
+			
 			baseAmount := int64(args[2].Int())
 			price := uint32(args[3].Int())
 			triggerPrice := uint32(args[4].Int())
