@@ -1,6 +1,6 @@
 {
   "name": "@elliottech/lighter-sdk-react-native",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React Native WebView wrapper around the Lighter Go WASM SDK",
   "license": "MIT",
   "main": "dist/index.cjs",
