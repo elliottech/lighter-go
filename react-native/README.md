@@ -62,6 +62,43 @@ const result = await goWasmExecute({
 `goWasmExecute` resolves once the WebView has finished loading the SDK, so
 it's safe to call it before `LighterSdkWebView` has mounted - the call just waits.
 
+### `LighterSDK`
+
+`LighterSDK` is a typed convenience wrapper around `goWasmExecute` - one
+method per Go SDK function, with typed arguments/return values instead of
+raw `function`/`params` calls:
+
+```ts
+import { LighterSDK } from '@elliottech/lighter-sdk-react-native';
+
+const { pk, prv } = await LighterSDK.createClient(seed, chainId, accountIndex, nonce, apiKeyIndex);
+
+const { txInfo } = await LighterSDK.signCreateOrder({
+  accountIndex,
+  marketIndex,
+  clientOrderIndex,
+  baseAmount,
+  price,
+  isAsk,
+  orderType,
+  timeInForce,
+  reduceOnly,
+  triggerPrice,
+  orderExpiry,
+  nonce,
+});
+```
+
+Available methods: `createClient`, `createAuthToken`, `signChangePubKey`,
+`signUpdateLeverage`, `signStakeAssets`, `signUnstakeAssets`,
+`signMintShares`, `signBurnShares`, `signWithdraw`, `signTransfer`,
+`getTransferTransaction`, `signUpdateMargin`,
+`signUpdateAccountAssetConfig`, `signModifyOrder`, `signCancelOrder`,
+`signCancelAllOrders`, `signCreateOrder`, `signCreateGroupedOrders`,
+`signUpdateAccountConfig`, `signCreateSubAccount`. Each method's argument
+and response types are also exported (e.g. `TxResponse`,
+`LighterSdkCreateOrderArgs`, `LighterSdkTransferArgs`).
+
 ### `LighterSdkWebView` props
 
 | Prop        | Type                                            | Description                                                              |
