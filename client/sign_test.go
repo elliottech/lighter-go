@@ -298,3 +298,20 @@ func TestSignCreateGroupedOrders(t *testing.T) {
 	}
 	assertSkipNonce(t, "SignCreateGroupedOrders(skipNonce=1)", tx.L2TxAttributes, true)
 }
+
+func TestGetChangePubKeyTransactionNilApiClient(t *testing.T) {
+	priv, _, errr := GenerateAPIKey()
+	if errr != nil {
+		t.Fatalf("GenerateAPIKey error: %v", errr)
+	}
+	c := newTestClient(t, priv)
+
+	nonce := testNonce
+	_, err := c.GetChangePubKeyTransaction(
+		&types.ChangePubKeyReq{PubKey: c.keyManager.PubKeyBytes()},
+		&types.TransactOpts{Nonce: &nonce},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
