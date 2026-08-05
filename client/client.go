@@ -93,6 +93,9 @@ func CreateClient(httpClient MinimalHTTPClient, privateKey string, chainId uint3
 
 // Check validates that the client exists and the API key matches the one on the server
 func (c *TxClient) Check() error {
+	if c.HTTP() == nil {
+		return fmt.Errorf("apiClient should not be nil")
+	}
 	// check that the API key registered on Lighter matches this one
 	publicKey, err := c.HTTP().GetApiKey(c.accountIndex, c.apiKeyIndex)
 	if err != nil {
