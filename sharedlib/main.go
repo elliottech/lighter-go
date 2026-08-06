@@ -1,19 +1,25 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/elliottech/lighter-go/client"
 	"github.com/elliottech/lighter-go/client/http"
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 /*
+#cgo CFLAGS: -std=c11
 #include <stdlib.h>
 #include <stdint.h>
 typedef struct {
@@ -28,6 +34,12 @@ typedef struct {
 	char* messageToSign;
 	char* err;
 } SignedTxResponse;
+
+typedef struct {
+	void* data;
+	int64_t len;
+	char* err;
+} SignedTxBatchResponse;
 
 typedef struct {
 	char* privateKey;
@@ -78,6 +90,66 @@ func signedTxResponseErr(err any) C.SignedTxResponse {
 
 func signedTxResponsePanic(err any) C.SignedTxResponse {
 	return signedTxResponseErr(fmt.Errorf("panic: %v", err))
+}
+
+func signedTxBatchResponseErr(err any) C.SignedTxBatchResponse {
+	return C.SignedTxBatchResponse{err: wrapErr(err)}
+}
+
+type packedSignedTxResponse struct {
+	txType uint8
+	txInfo string
+	txHash string
+	err    string
+}
+
+func convertTxInfoToPackedResponse(txInfo txtypes.TxInfo, err error) packedSignedTxResponse {
+	if err != nil {
+		return packedSignedTxResponse{err: err.Error()}
+	}
+	if txInfo == nil {
+		return packedSignedTxResponse{err: "nil transaction info"}
+	}
+
+	txInfoStr, err := txInfo.GetTxInfo()
+	if err != nil {
+		return packedSignedTxResponse{err: err.Error()}
+	}
+	return packedSignedTxResponse{
+		txType: uint8(txInfo.GetTxType()),
+		txInfo: txInfoStr,
+		txHash: txInfo.GetTxHash(),
+	}
+}
+
+const packedSignedTxHeaderSize = 16
+
+func marshalSignedTxResponses(results []packedSignedTxResponse) []byte {
+	totalSize := 4
+	for _, result := range results {
+		totalSize += packedSignedTxHeaderSize + len(result.txInfo) + len(result.txHash) + len(result.err)
+	}
+
+	packed := make([]byte, totalSize)
+	binary.LittleEndian.PutUint32(packed, uint32(len(results)))
+	offset := 4
+	for _, result := range results {
+		packed[offset] = result.txType
+		binary.LittleEndian.PutUint32(packed[offset+4:], uint32(len(result.txInfo)))
+		binary.LittleEndian.PutUint32(packed[offset+8:], uint32(len(result.txHash)))
+		binary.LittleEndian.PutUint32(packed[offset+12:], uint32(len(result.err)))
+		offset += packedSignedTxHeaderSize
+		offset += copy(packed[offset:], result.txInfo)
+		offset += copy(packed[offset:], result.txHash)
+		offset += copy(packed[offset:], result.err)
+	}
+
+	return packed
+}
+
+func packSignedTxResponses(results []packedSignedTxResponse) C.SignedTxBatchResponse {
+	packed := marshalSignedTxResponses(results)
+	return C.SignedTxBatchResponse{data: C.CBytes(packed), len: C.int64_t(len(packed))}
 }
 
 func convertTxInfoToResponse(txInfo txtypes.TxInfo, err error) C.SignedTxResponse {
@@ -245,6 +317,16 @@ func CheckClient(cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	return wrapErr(c.Check())
 }
 
+//export PrepareSignerNonces
+func PrepareSignerNonces(cCount C.int) (ret *C.char) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = wrapErr(fmt.Errorf("panic: %v", r))
+		}
+	}()
+	return wrapErr(signer.PrepareSchnorrNonces(int(cCount)))
+}
+
 //export SignChangePubKey
 func SignChangePubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
@@ -303,7 +385,7 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 	orderExpiry := int64(cOrderExpiry)
 
 	if orderExpiry == -1 {
-		orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli() // 28 days
+		orderExpiry = time.Now().Add(defaultOrderExpiryDuration).UnixMilli()
 	}
 
 	tx := &types.CreateOrderTxReq{
@@ -322,6 +404,155 @@ func SignCreateOrder(cMarketIndex C.int, cClientOrderIndex C.longlong, cBaseAmou
 
 	txInfo, err := c.GetCreateOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
+}
+
+const (
+	maxCreateOrderBatch        = 10_000
+	defaultOrderExpiryDuration = 28 * 24 * time.Hour
+)
+
+type createOrderBatchOptions struct {
+	integratorAccountIndex int64
+	integratorTakerFee     uint32
+	integratorMakerFee     uint32
+	selfTradeBehaviorMode  uint8
+	selfTradeEqualityMode  uint8
+	skipNonce              uint8
+	firstNonce             int64
+	requestedAPIKeyIndex   uint8
+	requestedAccountIndex  int64
+}
+
+func signCreateOrdersBatch(orders []types.CreateOrderTxReq, options createOrderBatchOptions) ([]packedSignedTxResponse, error) {
+	length := len(orders)
+	if length <= 0 || length > maxCreateOrderBatch {
+		return nil, fmt.Errorf("batch length must be between 1 and %d", maxCreateOrderBatch)
+	}
+	if options.firstNonce < 0 {
+		return nil, fmt.Errorf("batch signing requires an explicit non-negative first nonce; it does not perform network I/O")
+	}
+	if options.firstNonce > math.MaxInt64-int64(length-1) {
+		return nil, fmt.Errorf("batch nonce range overflows int64")
+	}
+
+	c, err := client.GetClient(options.requestedAPIKeyIndex, options.requestedAccountIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]packedSignedTxResponse, length)
+	keyManager := c.GetKeyManager()
+	chainID := c.GetChainId()
+	accountIndex := c.GetAccountIndex()
+	apiKeyIndex := c.GetApiKeyIndex()
+	expiredAt := time.Now().Add(client.DefaultExpireTime).UnixMilli()
+	defaultOrderExpiry := time.Now().Add(defaultOrderExpiryDuration).UnixMilli()
+	txAttributes := CreateIntegratorTxAttributes(
+		options.integratorAccountIndex,
+		options.integratorTakerFee,
+		options.integratorMakerFee,
+		options.skipNonce,
+		options.selfTradeBehaviorMode,
+		options.selfTradeEqualityMode,
+	)
+
+	// A batch call uses up to GOMAXPROCS workers and can therefore occupy every
+	// available Go execution slot until the batch completes.
+	workerCount := min(length, runtime.GOMAXPROCS(0))
+	signRange := func(start, end int) {
+		for i := start; i < end; i++ {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						results[i] = packedSignedTxResponse{err: fmt.Sprintf("panic: %v", r)}
+					}
+				}()
+
+				order := orders[i]
+				if order.OrderExpiry == -1 {
+					order.OrderExpiry = defaultOrderExpiry
+				}
+				nonce := options.firstNonce + int64(i)
+				ops := &types.TransactOpts{
+					FromAccountIndex: &accountIndex,
+					ApiKeyIndex:      &apiKeyIndex,
+					ExpiredAt:        expiredAt,
+					Nonce:            &nonce,
+					TxAttributes:     txAttributes,
+				}
+				txInfo, signErr := types.ConstructCreateOrderTx(
+					keyManager, chainID, &order, ops,
+				)
+				results[i] = convertTxInfoToPackedResponse(txInfo, signErr)
+			}()
+		}
+	}
+
+	if workerCount == 1 {
+		signRange(0, length)
+	} else {
+		var workers sync.WaitGroup
+		workers.Add(workerCount)
+		for worker := 0; worker < workerCount; worker++ {
+			start := worker * length / workerCount
+			end := (worker + 1) * length / workerCount
+			go func() {
+				defer workers.Done()
+				signRange(start, end)
+			}()
+		}
+		workers.Wait()
+	}
+	return results, nil
+}
+
+//export SignCreateOrdersBatch
+func SignCreateOrdersBatch(cOrders *C.CreateOrderTxReq, cLen C.int, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cSkipNonce C.uint8_t, cFirstNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxBatchResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxBatchResponseErr(fmt.Errorf("panic: %v", r))
+		}
+	}()
+
+	length := int(cLen)
+	if length <= 0 || length > maxCreateOrderBatch {
+		return signedTxBatchResponseErr(fmt.Errorf("batch length must be between 1 and %d", maxCreateOrderBatch))
+	}
+	if cOrders == nil {
+		return signedTxBatchResponseErr("batch input pointer is required")
+	}
+
+	cOrdersSlice := unsafe.Slice(cOrders, length)
+	orders := make([]types.CreateOrderTxReq, length)
+	for i, order := range cOrdersSlice {
+		orders[i] = types.CreateOrderTxReq{
+			MarketIndex:      int16(order.MarketIndex),
+			ClientOrderIndex: int64(order.ClientOrderIndex),
+			BaseAmount:       int64(order.BaseAmount),
+			Price:            uint32(order.Price),
+			IsAsk:            uint8(order.IsAsk),
+			Type:             uint8(order.Type),
+			TimeInForce:      uint8(order.TimeInForce),
+			ReduceOnly:       uint8(order.ReduceOnly),
+			TriggerPrice:     uint32(order.TriggerPrice),
+			OrderExpiry:      int64(order.OrderExpiry),
+		}
+	}
+	results, err := signCreateOrdersBatch(orders, createOrderBatchOptions{
+		integratorAccountIndex: int64(cIntegratorAccountIndex),
+		integratorTakerFee:     uint32(cIntegratorTakerFee),
+		integratorMakerFee:     uint32(cIntegratorMakerFee),
+		selfTradeBehaviorMode:  uint8(cSelfTradeBehaviorMode),
+		selfTradeEqualityMode:  uint8(cSelfTradeEqualityMode),
+		skipNonce:              uint8(cSkipNonce),
+		firstNonce:             int64(cFirstNonce),
+		requestedAPIKeyIndex:   uint8(cApiKeyIndex),
+		requestedAccountIndex:  int64(cAccountIndex),
+	})
+	if err != nil {
+		return signedTxBatchResponseErr(err)
+	}
+	return packSignedTxResponses(results)
 }
 
 //export SignCreateGroupedOrders
@@ -345,7 +576,7 @@ func SignCreateGroupedOrders(cGroupingType C.uint8_t, cOrders *C.CreateOrderTxRe
 
 		orderExpiry := int64(order.OrderExpiry)
 		if orderExpiry == -1 {
-			orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli()
+			orderExpiry = time.Now().Add(defaultOrderExpiryDuration).UnixMilli()
 		}
 
 		orders[i] = &types.CreateOrderTxReq{
