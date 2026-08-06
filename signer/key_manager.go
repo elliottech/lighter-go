@@ -1,8 +1,11 @@
 package signer
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"hash"
+	"math/big"
 
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
@@ -23,6 +26,12 @@ type KeyManager interface {
 type keyManager struct {
 	key curve.ECgFp5Scalar
 }
+
+// hex string seed should be at least 32 bytes when decoded
+func NewSeedKeyManager(seed string) (KeyManager, error) {
+	return &keyManager{key: GetScalarFromSeed(seed)}, nil
+}
+
 
 func NewKeyManager(b []byte) (KeyManager, error) {
 	if len(b) != 40 {
@@ -51,4 +60,33 @@ func (key *keyManager) PubKeyBytes() (res [40]byte) {
 
 func (key *keyManager) PrvKeyBytes() []byte {
 	return key.key.ToLittleEndianBytes()
+}
+
+
+func GetScalarFromSeed(seed string) curve.ECgFp5Scalar {
+	seedBytes, err := hex.DecodeString(seed)
+	if err != nil {
+		panic(fmt.Sprintf("failed to decode seed hex string: %v", err))
+	}
+
+	if len(seedBytes) < 32 {
+		panic("seed too short, should be at least 32 bytes")
+	}
+
+	hasher := sha256.New()
+	hasher.Write([]byte{1})
+	hasher.Write(seedBytes)
+
+	part1 := hasher.Sum(nil)
+
+	hasher.Reset()
+	hasher.Write([]byte{2})
+	hasher.Write(seedBytes)
+	part2 := hasher.Sum(nil)
+
+	combined := make([]byte, 40)
+	copy(combined[0:32], part1)
+	copy(combined[32:40], part2)
+
+	return curve.FromNonCanonicalBigInt(new(big.Int).SetBytes(combined))
 }

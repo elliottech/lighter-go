@@ -7,6 +7,7 @@ import (
 var (
 	ErrAssetIndexTooLow                                       = fmt.Errorf("AssetIndex should not be less than %d", MinAssetIndex)
 	ErrAssetIndexTooHigh                                      = fmt.Errorf("AssetIndex should not be larger than %d", MaxAssetIndex)
+	ErrInvalidAssetIndex                                      = fmt.Errorf("AssetIndex is invalid")
 	ErrRouteTypeInvalid                                       = fmt.Errorf("RouteType is invalid")
 	ErrAccountIndexTooLow                                     = fmt.Errorf("AccountIndex should not be less than %d", MinAccountIndex)
 	ErrAccountIndexTooHigh                                    = fmt.Errorf("AccountIndex should not be larger than %d", MaxAccountIndex)
