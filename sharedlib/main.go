@@ -471,7 +471,7 @@ func SignCancelAllOrders(cTimeInForce C.int, cTime C.longlong, cCancelAllMarketI
 }
 
 //export SignModifyOrder
-func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlong, cPrice C.longlong, cTriggerPrice C.longlong, cIntegratorAccountIndex C.longlong, cIntegratorTakerFee C.int, cIntegratorMakerFee C.int, cSelfTradeBehaviorMode C.uint8_t, cSelfTradeEqualityMode C.uint8_t, cOrderVersion C.longlong, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -497,6 +497,10 @@ func SignModifyOrder(cMarketIndex C.int, cIndex C.longlong, cBaseAmount C.longlo
 		TriggerPrice: triggerPrice,
 	}
 	ops := getIntegratorTransactOptsAll(cIntegratorAccountIndex, cIntegratorTakerFee, cIntegratorMakerFee, cSkipNonce, cNonce, cSelfTradeBehaviorMode, cSelfTradeEqualityMode)
+	orderVersion := int64(cOrderVersion)
+	if orderVersion != txtypes.NilOrderVersion {
+		ops.TxAttributes.OrderVersion = &orderVersion
+	}
 
 	txInfo, err := c.GetModifyOrderTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
