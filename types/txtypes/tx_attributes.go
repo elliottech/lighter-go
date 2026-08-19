@@ -35,15 +35,16 @@ const (
 	AttributeTypeCancelAllMarketIndex   = 5
 	AttributeTypeSelfTradeBehaviorMode  = 6
 	AttributeTypeSelfTradeEqualityMode  = 7
+	AttributeTypeOrderOrderVersion      = 8
 
-	MaxAttributeType = AttributeTypeSelfTradeEqualityMode
+	MaxAttributeType = AttributeTypeOrderOrderVersion
 )
 
 type AttibuteConfig struct {
 	ByteSize          int
-	MinValue          int
-	MaxValue          int
-	NilValue          int
+	MinValue          int64
+	MaxValue          int64
+	NilValue          int64
 	InvalidRangeError error
 }
 
@@ -51,21 +52,21 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 	AttributeTypeIntegratorAccountIndex: {
 		ByteSize:          6,
 		MinValue:          0,
-		MaxValue:          int(MaxAccountIndex),
+		MaxValue:          MaxAccountIndex,
 		NilValue:          NilIntegratorIndex,
 		InvalidRangeError: ErrIntegratorAccountIndexInvalidRange,
 	},
 	AttributeTypeIntegratorTakerFee: {
 		ByteSize:          4,
 		MinValue:          0,
-		MaxValue:          int(FeeTick),
+		MaxValue:          FeeTick,
 		NilValue:          NilIntegratorTakerFee,
 		InvalidRangeError: ErrIntegratorFeeInvalidRange,
 	},
 	AttributeTypeIntegratorMakerFee: {
 		ByteSize:          4,
 		MinValue:          0,
-		MaxValue:          int(FeeTick),
+		MaxValue:          FeeTick,
 		NilValue:          NilIntegratorMakerFee,
 		InvalidRangeError: ErrIntegratorFeeInvalidRange,
 	},
@@ -78,9 +79,9 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 	},
 	AttributeTypeCancelAllMarketIndex: {
 		ByteSize:          2,
-		MinValue:          int(MinPerpsMarketIndex),
-		MaxValue:          int(NilMarketIndex),
-		NilValue:          int(NilMarketIndex),
+		MinValue:          int64(MinPerpsMarketIndex),
+		MaxValue:          int64(NilMarketIndex),
+		NilValue:          int64(NilMarketIndex),
 		InvalidRangeError: ErrCancelAllMarketIndexInvalidRange,
 	},
 	AttributeTypeSelfTradeBehaviorMode: {
@@ -97,14 +98,21 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 		NilValue:          SelfTradeEqualityAccountIndex,
 		InvalidRangeError: ErrSelfTradeEqualityModeInvalidRange,
 	},
+	AttributeTypeOrderOrderVersion: {
+		ByteSize:          6,
+		MinValue:          0,
+		MaxValue:          MaxTimestamp,
+		NilValue:          NilOrderVersion,
+		InvalidRangeError: ErrOrderOrderVersionInvalidRange,
+	},
 }
 
-type L2TxAttributes map[uint8]int // Type to value
+type L2TxAttributes map[uint8]int64 // Type to value
 
 type L2TxAttributeIsNilMap map[uint8]bool
 
 // Caller must make sure attrType is valid
-func (attr L2TxAttributes) GetValueOrDefault(attrType uint8) int {
+func (attr L2TxAttributes) GetValueOrDefault(attrType uint8) int64 {
 	value, ok := attr[attrType]
 	if !ok {
 		return AttributeTypeToConfig[attrType].NilValue
@@ -193,7 +201,7 @@ func (attr L2TxAttributes) getNormalizedTypes() (attrTypes [NbAttributesPerTx]ui
 func (attr L2TxAttributes) Hash() (msgHash goldilocks_quintic_extension.Element, err error) {
 	elems := make([]g.GoldilocksField, 0, NbAttributesPerTx*2)
 	for _, attrType := range attr.getNormalizedTypes() {
-		attrValue := 0
+		attrValue := int64(0)
 		if attrType != 0 {
 			attrValue = attr[attrType]
 		}

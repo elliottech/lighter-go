@@ -30,6 +30,19 @@ type L2TxAttributes struct {
 	CancelAllMarketIndex   *int16
 	SelfTradeBehaviorMode  *uint8
 	SelfTradeEqualityMode  *uint8
+	OrderVersion           *int64
+}
+
+func (attr *L2TxAttributes) IsEmpty() bool {
+	return attr == nil ||
+		(attr.IntegratorAccountIndex == nil &&
+			attr.IntegratorTakerFee == nil &&
+			attr.IntegratorMakerFee == nil &&
+			attr.SkipNonce == nil &&
+			attr.CancelAllMarketIndex == nil &&
+			attr.SelfTradeBehaviorMode == nil &&
+			attr.SelfTradeEqualityMode == nil &&
+			attr.OrderVersion == nil)
 }
 
 type PublicKey = gFp5.Element
@@ -179,37 +192,33 @@ func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts
 }
 
 func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
-	if attr == nil ||
-		(attr.IntegratorAccountIndex == nil &&
-			attr.IntegratorTakerFee == nil &&
-			attr.IntegratorMakerFee == nil &&
-			attr.SkipNonce == nil &&
-			attr.CancelAllMarketIndex == nil &&
-			attr.SelfTradeBehaviorMode == nil &&
-			attr.SelfTradeEqualityMode == nil) {
+	if attr.IsEmpty() {
 		return nil
 	}
 	l2TxAttributes := txtypes.L2TxAttributes{}
 	if attr.IntegratorAccountIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = int(*attr.IntegratorAccountIndex)
+		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = *attr.IntegratorAccountIndex
 	}
 	if attr.IntegratorTakerFee != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int(*attr.IntegratorTakerFee)
+		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int64(*attr.IntegratorTakerFee)
 	}
 	if attr.IntegratorMakerFee != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorMakerFee] = int(*attr.IntegratorMakerFee)
+		l2TxAttributes[txtypes.AttributeTypeIntegratorMakerFee] = int64(*attr.IntegratorMakerFee)
 	}
 	if attr.SkipNonce != nil {
-		l2TxAttributes[txtypes.AttributeTypeSkipTxNonce] = int(*attr.SkipNonce)
+		l2TxAttributes[txtypes.AttributeTypeSkipTxNonce] = int64(*attr.SkipNonce)
 	}
 	if attr.CancelAllMarketIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeCancelAllMarketIndex] = int(*attr.CancelAllMarketIndex)
+		l2TxAttributes[txtypes.AttributeTypeCancelAllMarketIndex] = int64(*attr.CancelAllMarketIndex)
 	}
 	if attr.SelfTradeBehaviorMode != nil {
-		l2TxAttributes[txtypes.AttributeTypeSelfTradeBehaviorMode] = int(*attr.SelfTradeBehaviorMode)
+		l2TxAttributes[txtypes.AttributeTypeSelfTradeBehaviorMode] = int64(*attr.SelfTradeBehaviorMode)
 	}
 	if attr.SelfTradeEqualityMode != nil {
-		l2TxAttributes[txtypes.AttributeTypeSelfTradeEqualityMode] = int(*attr.SelfTradeEqualityMode)
+		l2TxAttributes[txtypes.AttributeTypeSelfTradeEqualityMode] = int64(*attr.SelfTradeEqualityMode)
+	}
+	if attr.OrderVersion != nil {
+		l2TxAttributes[txtypes.AttributeTypeOrderOrderVersion] = int64(*attr.OrderVersion)
 	}
 	return l2TxAttributes
 }

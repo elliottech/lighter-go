@@ -233,6 +233,8 @@ const (
 	MinOrderTriggerPrice uint32 = 1
 	MaxOrderTriggerPrice uint32 = (1 << 32) - 1
 
+	NilOrderVersion int64 = 0
+
 	MaxGroupedOrderCount int64 = 3
 
 	MaxTimestamp = (1 << 48) - 1
