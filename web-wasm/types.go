@@ -22,6 +22,7 @@ type TransactOpts struct {
 
 	SkipNonce            bool
 	CancelAllMarketIndex *int16
+	OrderVersion         *int64
 }
 
 func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
@@ -30,7 +31,10 @@ func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
 		attributes[txtypes.AttributeTypeSkipTxNonce] = 1
 	}
 	if ops.CancelAllMarketIndex != nil {
-		attributes[txtypes.AttributeTypeCancelAllMarketIndex] = int(*ops.CancelAllMarketIndex)
+		attributes[txtypes.AttributeTypeCancelAllMarketIndex] = int64(*ops.CancelAllMarketIndex)
+	}
+	if ops.OrderVersion != nil {
+		attributes[txtypes.AttributeTypeOrderOrderVersion] = *ops.OrderVersion
 	}
 	if len(attributes) == 0 {
 		return nil

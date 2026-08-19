@@ -161,7 +161,8 @@ public class LighterLib {
                 int marketIndex, long index, long baseAmount, long price, long triggerPrice,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
                 byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
-                byte skipNonce, long nonce, int apiKeyIndex, long accountIndex);
+                byte skipNonce, long nonce, long orderVersion,
+                int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignTransfer(
                 long toAccountIndex, short assetIndex, byte fromRouteType, byte toRouteType,

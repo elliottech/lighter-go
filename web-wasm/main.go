@@ -610,6 +610,13 @@ func SignModifyOrder(this js.Value, args []js.Value) any {
 	price := uint32(args[4].Int())
 	triggerPrice := uint32(args[5].Int())
 	nonce := int64(args[6].Int())
+	var orderVersion *int64
+	if len(args) > 7 {
+		value := int64(args[7].Int())
+		if value != txtypes.NilOrderVersion {
+			orderVersion = &value
+		}
+	}
 
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -625,6 +632,7 @@ func SignModifyOrder(this js.Value, args []js.Value) any {
 
 				ops := new(TransactOpts)
 				ops.Nonce = &nonce
+				ops.OrderVersion = orderVersion
 				tx, err := clients[accountIndex].GetModifyOrderTransaction(txInfo, ops)
 				if err != nil {
 					resolve.Invoke(errToJson(err))

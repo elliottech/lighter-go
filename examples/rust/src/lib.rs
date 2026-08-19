@@ -438,6 +438,7 @@ impl LighterLib {
         self_trade_equality_mode: u8,
         skip_nonce: u8,
         nonce: i64,
+        order_version: i64,
         api_key_index: i32,
         account_index: i64,
     ) -> SignedTxResponse {
@@ -445,14 +446,14 @@ impl LighterLib {
             let f: Symbol<
                 unsafe extern "C" fn(
                     i32, i64, i64, i64, i64,
-                    i64, i32, i32, u8, u8, u8, i64, i32, i64,
+                    i64, i32, i32, u8, u8, u8, i64, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignModifyOrder\0").unwrap();
             raw_to_signed_tx(f(
                 market_index, index, base_amount, price, trigger_price,
                 integrator_account_index, integrator_taker_fee, integrator_maker_fee,
                 self_trade_behavior_mode, self_trade_equality_mode,
-                skip_nonce, nonce, api_key_index, account_index,
+                skip_nonce, nonce, order_version, api_key_index, account_index,
             ), self.free_fn)
         }
     }
