@@ -102,4 +102,5 @@ var (
 	ErrReduceModeNotAllowedWithMasterAccountIndexEqualityMode = fmt.Errorf("Reduce self-trade behavior mode isn't allowed with master account index equality mode")
 	ErrSelfTradeEqualityModeInvalidRange                      = fmt.Errorf("SelfTradeEqualityMode is in invalid range")
 	ErrSelfTradeBehaviorModeInvalidRange                      = fmt.Errorf("SelfTradeBehaviorMode is in invalid range")
+	ErrOrderOrderVersionInvalidRange                          = fmt.Errorf("OrderOrderVersion is in invalid range")
 )
