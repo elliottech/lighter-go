@@ -129,6 +129,46 @@ func (c *LightClient) GenerateTransferSignBody(txData *TransferTxReq, ops *Trans
 	return txInfo.GetL1SignatureBody(c.chainId), nil
 }
 
+func (c *LightClient) GenerateApproveIntegratorSignBody(txData *ApproveIntegratorTxReq, ops *TransactOpts) (string, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return "", err
+	}
+
+	txInfo, err := ConstructApproveIntegratorTx(c.keyManager, c.chainId, txData, ops)
+	if err != nil {
+		return "", err
+	}
+	return txInfo.GetL1SignatureBody(c.chainId), nil
+}
+
+func (c *LightClient) GetApproveIntegratorTransaction(tx *ApproveIntegratorTxReq, ops *TransactOpts, signatureList ...string) (*txtypes.L2ApproveIntegratorTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+
+	txInfo, err := ConstructApproveIntegratorTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+
+	signature := ""
+	if len(signatureList) == 0 {
+		return nil, errors.New("signature is expected to be passed")
+	} else if len(signatureList) == 1 {
+		signature = signatureList[0]
+	} else {
+		return nil, errors.New("multiple signatures provided")
+	}
+
+	if signature != "" && signature != "0x" {
+		txInfo.L1Sig = signature
+	}
+
+	return txInfo, nil
+}
+
 func (c *LightClient) GetChangePubKeyTransaction(tx *ChangePubKeyReq, ops *TransactOpts, signatureList ...string) (*txtypes.L2ChangePubKeyTxInfo, error) {
 	if c.keyManager == nil {
 		return nil, fmt.Errorf("key manager is nil")
@@ -386,6 +426,8 @@ func getTxResponse(tx interface{}, lighterChainId uint32) map[string]any {
 	case *txtypes.L2UnstakeAssetsTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2StakeAssetsTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.L2ApproveIntegratorTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	default:
 		return errToJson(fmt.Errorf("unknown tx type"))
