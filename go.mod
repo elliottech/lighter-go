@@ -5,9 +5,13 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
-	github.com/elliottech/poseidon_crypto v0.0.15
+	github.com/elliottech/poseidon_crypto v0.0.18
 	github.com/ethereum/go-ethereum v1.15.6
 )
+
+// Temporary review pin: after poseidon_crypto publishes the fixed-generator
+// signing changes, bump the requirement above to v0.0.19 and delete this replace.
+replace github.com/elliottech/poseidon_crypto => github.com/josusanmartin/poseidon_crypto v0.0.19-0.20260806103651-53cabb8c2dbf
 
 require (
 	github.com/bits-and-blooms/bitset v1.17.0 // indirect
