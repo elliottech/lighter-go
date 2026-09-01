@@ -114,10 +114,7 @@ type CancelAllOrdersTxReq struct {
 	TimeInForce uint8
 	Time        int64
 }
-type CreateStakingPoolTxReq struct {
-	InitialTotalShares   int64
-	MinOperatorShareRate uint16
-}
+
 type StakeAssetsTxReq struct {
 	StakingPoolIndex int64
 	ShareAmount      int64
@@ -170,19 +167,6 @@ type UpdateMarginTxReq struct {
 	MarketIndex int16
 	USDCAmount  int64
 	Direction   uint8
-}
-type StrategyTransferTxReq struct {
-	AssetIndex        int16
-	FromStrategyIndex uint8
-	ToStrategyIndex   uint8
-	Amount            int64
-}
-
-type UpdateMarketConfigTxReq struct {
-	MarketIndex              int16
-	StrategyIndex            uint8
-	MarketFlags              int64
-	FundingPremiumMultiplier uint16
 }
 
 type PublicKey = gFp5.Element
