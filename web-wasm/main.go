@@ -41,9 +41,12 @@ func main() {
 	js.Global().Set("_signUpdateAccountConfig", js.FuncOf(SignUpdateAccountConfig))
 	js.Global().Set("_signUpdateAccountAssetConfig", js.FuncOf(SignUpdateAccountAssetConfig))
 	js.Global().Set("_signCreateGroupedOrders", js.FuncOf(SignCreateGroupedOrders))
+	js.Global().Set("_signApproveIntegrator", js.FuncOf(SignApproveIntegrator))
+	js.Global().Set("_getApproveIntegratorTransaction", js.FuncOf(GetApproveIntegratorTransaction))
 	js.Global().Set("_getChangePubKeyTransaction", js.FuncOf(GetChangePubKeyTransaction))
 	js.Global().Set("_getRevokePubKeyTransaction", js.FuncOf(GetRevokePubKeyTransaction))
 	js.Global().Set("_getTransferTransaction", js.FuncOf(GetTransferTransaction))
+	js.Global().Set("_getAirdropAllocationMessage", js.FuncOf(GetAirdropAllocationMessage))
 	js.Global().Set("_createAuthToken", js.FuncOf(CreateAuthToken))
 	js.Global().Set("_signStakeAssets", js.FuncOf(SignStakeAssets))
 	js.Global().Set("_signUnstakeAssets", js.FuncOf(SignUnstakeAssets))
@@ -442,7 +445,7 @@ func SignCreateOrder(this js.Value, args []js.Value) any {
 	}
 	orderExpiry := int64(args[10].Int())
 	nonce := int64(args[11].Int())
-
+	integratorAccountIndex, integratorTakerFee, integratorMakerFee := integratorAttributes(args, 12)
 	if orderExpiry == -1 {
 		orderExpiry = time.Now().Add(time.Hour * 24 * 28).UnixMilli() // 28 days
 	}
@@ -465,6 +468,9 @@ func SignCreateOrder(this js.Value, args []js.Value) any {
 				}
 				ops := new(TransactOpts)
 				ops.Nonce = &nonce
+				ops.IntegratorAccountIndex = integratorAccountIndex
+				ops.IntegratorTakerFee = integratorTakerFee
+				ops.IntegratorMakerFee = integratorMakerFee
 				tx, err := clients[accountIndex].GetCreateOrderTransaction(txInfo, ops)
 				if err != nil {
 					resolve.Invoke(errToJson(err))
@@ -610,13 +616,6 @@ func SignModifyOrder(this js.Value, args []js.Value) any {
 	price := uint32(args[4].Int())
 	triggerPrice := uint32(args[5].Int())
 	nonce := int64(args[6].Int())
-	var orderVersion *int64
-	if len(args) > 7 {
-		value := int64(args[7].Int())
-		if value != txtypes.NilOrderVersion {
-			orderVersion = &value
-		}
-	}
 
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -632,7 +631,6 @@ func SignModifyOrder(this js.Value, args []js.Value) any {
 
 				ops := new(TransactOpts)
 				ops.Nonce = &nonce
-				ops.OrderVersion = orderVersion
 				tx, err := clients[accountIndex].GetModifyOrderTransaction(txInfo, ops)
 				if err != nil {
 					resolve.Invoke(errToJson(err))
@@ -755,6 +753,105 @@ func SignTransfer(this js.Value, args []js.Value) any {
 				ops.Nonce = &nonce
 				ops.ApiKeyIndex = &apiKeyIndex
 				tx, err := clients[accountIndex].GetTransferTransaction(txInfo, ops, signedMessage)
+				if err != nil {
+					resolve.Invoke(errToJson(err))
+					return
+				}
+				resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func GetApproveIntegratorTransaction(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	nonce := int64(args[1].Int())
+	apiKeyIndex := uint8(args[2].Int())
+	integratorAccountIndex := int64(args[3].Int())
+	maxPerpsTakerFee := uint32(args[4].Int())
+	maxPerpsMakerFee := uint32(args[5].Int())
+	maxSpotTakerFee := uint32(args[6].Int())
+	maxSpotMakerFee := uint32(args[7].Int())
+	approvalExpiry := int64(args[8].Int())
+
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				txInfo := &ApproveIntegratorTxReq{
+					IntegratorAccountIndex: integratorAccountIndex,
+					MaxPerpsTakerFee:       maxPerpsTakerFee,
+					MaxPerpsMakerFee:       maxPerpsMakerFee,
+					MaxSpotTakerFee:        maxSpotTakerFee,
+					MaxSpotMakerFee:        maxSpotMakerFee,
+					ApprovalExpiry:         approvalExpiry,
+				}
+
+				ops := new(TransactOpts)
+				ops.Nonce = &nonce
+				ops.ApiKeyIndex = &apiKeyIndex
+				sdkClient := clients[accountIndex]
+				txnBody, err := sdkClient.GenerateApproveIntegratorSignBody(txInfo, ops)
+
+				response := map[string]any{
+					"success":       sdkClient != nil,
+					"pubKeySuccess": err == nil,
+					"body":          txnBody,
+				}
+
+				resolve.Invoke(response)
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func SignApproveIntegrator(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	signedMessage := string(args[1].String())
+	if !strings.HasPrefix(signedMessage, "0x") {
+		signedMessage = "0x" + signedMessage
+	}
+
+	nonce := int64(args[2].Int())
+	apiKeyIndex := uint8(args[3].Int())
+	integratorAccountIndex := int64(args[4].Int())
+	maxPerpsTakerFee := uint32(args[5].Int())
+	maxPerpsMakerFee := uint32(args[6].Int())
+	maxSpotTakerFee := uint32(args[7].Int())
+	maxSpotMakerFee := uint32(args[8].Int())
+	approvalExpiry := int64(args[9].Int())
+
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				txInfo := &ApproveIntegratorTxReq{
+					IntegratorAccountIndex: integratorAccountIndex,
+					MaxPerpsTakerFee:       maxPerpsTakerFee,
+					MaxPerpsMakerFee:       maxPerpsMakerFee,
+					MaxSpotTakerFee:        maxSpotTakerFee,
+					MaxSpotMakerFee:        maxSpotMakerFee,
+					ApprovalExpiry:         approvalExpiry,
+				}
+
+				ops := new(TransactOpts)
+				ops.Nonce = &nonce
+				ops.ApiKeyIndex = &apiKeyIndex
+				tx, err := clients[accountIndex].GetApproveIntegratorTransaction(txInfo, ops, signedMessage)
 				if err != nil {
 					resolve.Invoke(errToJson(err))
 					return
@@ -1096,6 +1193,7 @@ func SignCreateGroupedOrders(this js.Value, args []js.Value) any {
 		currentIndex += 10
 	}
 	nonce := int64(args[currentIndex].Int())
+	integratorAccountIndex, integratorTakerFee, integratorMakerFee := integratorAttributes(args, currentIndex+1)
 
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -1107,12 +1205,37 @@ func SignCreateGroupedOrders(this js.Value, args []js.Value) any {
 				}
 				ops := new(TransactOpts)
 				ops.Nonce = &nonce
+				ops.IntegratorAccountIndex = integratorAccountIndex
+				ops.IntegratorTakerFee = integratorTakerFee
+				ops.IntegratorMakerFee = integratorMakerFee
 				tx, err := clients[accountIndex].GetCreateGroupedOrdersTransaction(txInfo, ops)
 				if err != nil {
 					resolve.Invoke(errToJson(err))
 					return
 				}
 				resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func GetAirdropAllocationMessage(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+	allocations := args[1].String()
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				message := fmt.Sprintf(txtypes.TemplateAirdropAllocation, allocations, getHex10FromUint64(uint64(clients[accountIndex].ChainId())))
+				resolve.Invoke(map[string]any{
+					"message": message,
+				})
 			}()
 			return nil
 		})
@@ -1165,6 +1288,29 @@ func cancelAllMarketIndexAttribute(args []js.Value, idx int) (int16, bool) {
 		return 0, false
 	}
 	return marketIndex, true
+}
+
+// integratorAttributes reads the optional trailing (integratorAccountIndex,
+// integratorTakerFee, integratorMakerFee) args starting at idx. Missing,
+// non-number, or nil-valued args leave the corresponding attribute unset so
+// existing callers keep signing identical hashes.
+func integratorAttributes(args []js.Value, idx int) (accountIndex *int64, takerFee, makerFee *uint32) {
+	if len(args) > idx && args[idx].Type() == js.TypeNumber {
+		if v := int64(args[idx].Int()); v != txtypes.NilIntegratorIndex {
+			accountIndex = &v
+		}
+	}
+	if len(args) > idx+1 && args[idx+1].Type() == js.TypeNumber {
+		if v := uint32(args[idx+1].Int()); v != txtypes.NilIntegratorTakerFee {
+			takerFee = &v
+		}
+	}
+	if len(args) > idx+2 && args[idx+2].Type() == js.TypeNumber {
+		if v := uint32(args[idx+2].Int()); v != txtypes.NilIntegratorMakerFee {
+			makerFee = &v
+		}
+	}
+	return
 }
 
 func errPromise(err error) js.Func {

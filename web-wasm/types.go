@@ -20,9 +20,11 @@ type TransactOpts struct {
 	Nonce            *int64
 	DryRun           bool
 
-	SkipNonce            bool
-	CancelAllMarketIndex *int16
-	OrderVersion         *int64
+	SkipNonce              bool
+	CancelAllMarketIndex   *int16
+	IntegratorAccountIndex *int64
+	IntegratorTakerFee     *uint32
+	IntegratorMakerFee     *uint32
 }
 
 func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
@@ -33,8 +35,14 @@ func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
 	if ops.CancelAllMarketIndex != nil {
 		attributes[txtypes.AttributeTypeCancelAllMarketIndex] = int64(*ops.CancelAllMarketIndex)
 	}
-	if ops.OrderVersion != nil {
-		attributes[txtypes.AttributeTypeOrderOrderVersion] = *ops.OrderVersion
+	if ops.IntegratorAccountIndex != nil {
+		attributes[txtypes.AttributeTypeIntegratorAccountIndex] = *ops.IntegratorAccountIndex
+	}
+	if ops.IntegratorTakerFee != nil {
+		attributes[txtypes.AttributeTypeIntegratorTakerFee] = int64(*ops.IntegratorTakerFee)
+	}
+	if ops.IntegratorMakerFee != nil {
+		attributes[txtypes.AttributeTypeIntegratorMakerFee] = int64(*ops.IntegratorMakerFee)
 	}
 	if len(attributes) == 0 {
 		return nil
@@ -44,6 +52,15 @@ func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
 
 type ChangePubKeyReq struct {
 	PubKey [40]byte
+}
+
+type ApproveIntegratorTxReq struct {
+	IntegratorAccountIndex int64
+	MaxPerpsTakerFee       uint32
+	MaxPerpsMakerFee       uint32
+	MaxSpotTakerFee        uint32
+	MaxSpotMakerFee        uint32
+	ApprovalExpiry         int64
 }
 
 type TransferTxReq struct {
@@ -97,7 +114,10 @@ type CancelAllOrdersTxReq struct {
 	TimeInForce uint8
 	Time        int64
 }
-
+type CreateStakingPoolTxReq struct {
+	InitialTotalShares   int64
+	MinOperatorShareRate uint16
+}
 type StakeAssetsTxReq struct {
 	StakingPoolIndex int64
 	ShareAmount      int64
@@ -150,6 +170,19 @@ type UpdateMarginTxReq struct {
 	MarketIndex int16
 	USDCAmount  int64
 	Direction   uint8
+}
+type StrategyTransferTxReq struct {
+	AssetIndex        int16
+	FromStrategyIndex uint8
+	ToStrategyIndex   uint8
+	Amount            int64
+}
+
+type UpdateMarketConfigTxReq struct {
+	MarketIndex              int16
+	StrategyIndex            uint8
+	MarketFlags              int64
+	FundingPremiumMultiplier uint16
 }
 
 type PublicKey = gFp5.Element
@@ -262,7 +295,21 @@ func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2Mo
 		L2TxAttributes: ops.L2TxAttributes(),
 	}
 }
-
+func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
+	return &txtypes.L2ApproveIntegratorTxInfo{
+		AccountIndex:           *ops.FromAccountIndex,
+		ApiKeyIndex:            *ops.ApiKeyIndex,
+		IntegratorAccountIndex: tx.IntegratorAccountIndex,
+		MaxPerpsTakerFee:       tx.MaxPerpsTakerFee,
+		MaxPerpsMakerFee:       tx.MaxPerpsMakerFee,
+		MaxSpotTakerFee:        tx.MaxSpotTakerFee,
+		MaxSpotMakerFee:        tx.MaxSpotMakerFee,
+		ApprovalExpiry:         tx.ApprovalExpiry,
+		ExpiredAt:              ops.ExpiredAt,
+		Nonce:                  *ops.Nonce,
+		L2TxAttributes:         ops.L2TxAttributes(),
+	}
+}
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
 	return &txtypes.L2TransferTxInfo{
 		FromAccountIndex: *ops.FromAccountIndex,
@@ -592,6 +639,28 @@ func ConstructL2CancelAllOrdersTx(key signer.KeyManager, lighterChainId uint32, 
 
 func ConstructL2ModifyOrderTx(key signer.KeyManager, lighterChainId uint32, tx *ModifyOrderTxReq, ops *TransactOpts) (*txtypes.L2ModifyOrderTxInfo, error) {
 	convertedTx := ConvertModifyOrderTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructApproveIntegratorTx(key signer.KeyManager, lighterChainId uint32, tx *ApproveIntegratorTxReq, ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
+	convertedTx := ConvertApproveIntegratorTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
