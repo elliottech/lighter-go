@@ -52,17 +52,11 @@ build-darwin-amd64-local:
     go mod vendor
     go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
 
-### WASM builds
+### Web WASM build
 
 build-wasm:
     go mod vendor
-    GOOS=js GOARCH=wasm go build -trimpath -o ./build/lighter-signer.wasm ./wasm/
-
-### Web WASM build
-
-build-web-wasm:
-    go mod vendor
-    GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ./build/lighter-signer-web.wasm ./web-wasm
+    GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ./build/lighter-signer.wasm ./wasm
 
 ### Examples
 

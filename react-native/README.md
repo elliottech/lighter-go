@@ -2,7 +2,7 @@
 
 React Native WebView wrapper around the Lighter Go WASM SDK. The Go SDK is
 compiled to WASM, embedded as base64 into a self-contained HTML page (see
-`../web-wasm`), and bundled with this package. `LighterSdkWebView` loads that page
+`../wasm`), and bundled with this package. `LighterSdkWebView` loads that page
 in a hidden WebView and exposes the Go functions it registers via a small
 promise-based bridge.
 
@@ -116,7 +116,7 @@ runtime) is generated from `src/wasm-template.html`, not hand-written:
 
 ```sh
 npm run build:js     # bundles src/ into dist/ (tsdown)
-npm run build:wasm   # builds ../web-wasm/main.wasm and regenerates dist/wasm-wrapper.standalone.html
+npm run build:wasm   # builds ../wasm/main.wasm and regenerates dist/wasm-wrapper.standalone.html
 npm run build        # runs both, in that order
 ```
 

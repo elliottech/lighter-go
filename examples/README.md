@@ -164,8 +164,7 @@ node ./examples/wasm/test_wasm.mjs
 ### What the script does
 
 1. Instantiates `build/lighter-signer.wasm` via `wasm_exec.js` and starts the Go runtime
-2. Calls `GenerateAPIKey()` and asserts a valid hex keypair is returned
-3. Calls `CreateClient(...)` on chain 304 with the generated private key
-4. Signs a cancel-order, cancel-all-orders, create-order, create-sub-account and update-leverage transaction
-5. For each signed tx, asserts the `txType`, `txHash` and decoded `txInfo` fields match the inputs
-6. Verifies that toggling the `skipNonce` flag changes the resulting tx hash and populates the `L2TxAttributes` accordingly
+2. Calls the WebView-compatible `_createClient(...)` Promise API with a deterministic seed
+3. Signs cancel-order and create-order transactions and validates their hashes and decoded transaction data
+4. Verifies that toggling `skipNonce` changes the signed hash and `L2TxAttributes`
+5. Calls `_getAirdropAllocationMessage(...)` and validates the generated message
