@@ -64,6 +64,7 @@ func (c *client) GetNextNonce(accountIndex int64, apiKeyIndex uint8) (int64, err
 }
 
 type apiKeyCacheKey struct {
+	endpoint     string
 	accountIndex int64
 	apiKeyIndex  uint8
 }
@@ -74,7 +75,7 @@ var (
 )
 
 func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error) {
-	cacheKey := apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKeyIndex}
+	cacheKey := apiKeyCacheKey{endpoint: c.endpoint, accountIndex: accountIndex, apiKeyIndex: apiKeyIndex}
 
 	apiKeyCacheMu.RLock()
 	if cached, ok := apiKeyCache[cacheKey]; ok {
@@ -90,12 +91,12 @@ func (c *client) GetApiKey(accountIndex int64, apiKeyIndex uint8) (string, error
 
 	apiKeyCacheMu.Lock()
 	for k := range apiKeyCache {
-		if k.accountIndex == accountIndex {
+		if k.endpoint == c.endpoint && k.accountIndex == accountIndex {
 			delete(apiKeyCache, k)
 		}
 	}
 	for _, apiKey := range result.ApiKeys {
-		apiKeyCache[apiKeyCacheKey{accountIndex: accountIndex, apiKeyIndex: apiKey.ApiKeyIndex}] = apiKey.PublicKey
+		apiKeyCache[apiKeyCacheKey{endpoint: c.endpoint, accountIndex: accountIndex, apiKeyIndex: apiKey.ApiKeyIndex}] = apiKey.PublicKey
 	}
 	key, ok := apiKeyCache[cacheKey]
 	apiKeyCacheMu.Unlock()
@@ -109,7 +110,7 @@ func (c *client) InvalidateApiKeys(accountIndex int64) {
 	apiKeyCacheMu.Lock()
 	defer apiKeyCacheMu.Unlock()
 	for k := range apiKeyCache {
-		if k.accountIndex == accountIndex {
+		if k.endpoint == c.endpoint && k.accountIndex == accountIndex {
 			delete(apiKeyCache, k)
 		}
 	}
