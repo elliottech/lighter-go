@@ -158,10 +158,7 @@ const (
 
 	MinMarketIndex      int16 = 0
 	MinPerpsMarketIndex int16 = 0
-	MaxPerpsMarketIndex int16 = 254 // (1 << 8) - 2
 	NilMarketIndex      int16 = 255
-	MinSpotMarketIndex  int16 = 2048 // (1 << 11)
-	MaxSpotMarketIndex  int16 = 4094 // (1 << 12) - 2
 
 	NilIntegratorIndex    = 0
 	NilIntegratorTakerFee = 0

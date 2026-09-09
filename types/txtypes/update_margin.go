@@ -56,7 +56,7 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 	}
 
 	// MarketIndex
-	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex > MaxPerpsMarketIndex {
+	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 

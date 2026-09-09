@@ -58,9 +58,7 @@ func (txInfo *L2ModifyOrderTxInfo) Validate() error {
 	}
 
 	// MarketIndex
-	isSpotMarket := txInfo.MarketIndex >= MinSpotMarketIndex && txInfo.MarketIndex <= MaxSpotMarketIndex
-	isPerpsMarket := txInfo.MarketIndex >= MinPerpsMarketIndex && txInfo.MarketIndex <= MaxPerpsMarketIndex
-	if !isSpotMarket && !isPerpsMarket {
+	if txInfo.MarketIndex < 0 || txInfo.MarketIndex == 255 || txInfo.MarketIndex > (1<<15-1) {
 		return ErrInvalidMarketIndex
 	}
 

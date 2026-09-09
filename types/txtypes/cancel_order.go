@@ -56,9 +56,7 @@ func (txInfo *L2CancelOrderTxInfo) Validate() error {
 	}
 
 	// MarketIndex
-	isSpotMarket := txInfo.MarketIndex >= MinSpotMarketIndex && txInfo.MarketIndex <= MaxSpotMarketIndex
-	isPerpsMarket := txInfo.MarketIndex >= MinPerpsMarketIndex && txInfo.MarketIndex <= MaxPerpsMarketIndex
-	if !isSpotMarket && !isPerpsMarket {
+	if txInfo.MarketIndex < MinMarketIndex || txInfo.MarketIndex == NilMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 

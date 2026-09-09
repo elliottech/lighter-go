@@ -54,9 +54,7 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 	}
 
 	// MarketIndex
-	isSpotMarket := txInfo.MarketIndex >= MinSpotMarketIndex && txInfo.MarketIndex <= MaxSpotMarketIndex
-	isPerpsMarket := txInfo.MarketIndex >= MinPerpsMarketIndex && txInfo.MarketIndex <= MaxPerpsMarketIndex
-	if !isSpotMarket && !isPerpsMarket {
+	if txInfo.MarketIndex < 0 || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > (1<<15-1) {
 		return ErrInvalidMarketIndex
 	}
 
@@ -100,7 +98,7 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 	}
 
 	// ReduceOnly
-	if (txInfo.ReduceOnly != 0 && txInfo.ReduceOnly != 1) || (isSpotMarket && txInfo.ReduceOnly == 1) {
+	if txInfo.ReduceOnly != 0 && txInfo.ReduceOnly != 1 {
 		return ErrOrderReduceOnlyInvalid
 	}
 
@@ -127,9 +125,7 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 			return ErrOrderExpiryInvalid
 		}
 	case StopLossOrder, TakeProfitOrder:
-		if !isPerpsMarket {
-			return ErrOrderTypeInvalid
-		} else if txInfo.TimeInForce != ImmediateOrCancel {
+		if txInfo.TimeInForce != ImmediateOrCancel {
 			return ErrOrderTimeInForceInvalid
 		} else if txInfo.TriggerPrice == NilOrderTriggerPrice {
 			return ErrOrderTriggerPriceInvalid
@@ -137,9 +133,7 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 			return ErrOrderExpiryInvalid
 		}
 	case StopLossLimitOrder, TakeProfitLimitOrder:
-		if !isPerpsMarket {
-			return ErrOrderTypeInvalid
-		} else if txInfo.TriggerPrice == NilOrderTriggerPrice {
+		if txInfo.TriggerPrice == NilOrderTriggerPrice {
 			return ErrOrderTriggerPriceInvalid
 		} else if txInfo.OrderExpiry == NilOrderExpiry {
 			return ErrOrderExpiryInvalid
