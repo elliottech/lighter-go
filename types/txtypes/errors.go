@@ -46,7 +46,6 @@ var (
 	ErrTransferFeeNegative                                    = fmt.Errorf("TransferFee should not be negative")
 	ErrTransferFeeTooHigh                                     = fmt.Errorf("TransferFee should not be larger than %d", MaxTransferAmount)
 	ErrMarketIndexTooLow                                      = fmt.Errorf("MarketIndex should not be less than %d", MinMarketIndex)
-	ErrMarketIndexTooHigh                                     = fmt.Errorf("MarketIndex should not be larger than %d", MaxSpotMarketIndex)
 	ErrMarketIndexMismatch                                    = fmt.Errorf("MarketIndex should match the market index of the order")
 	ErrInvalidMarketIndex                                     = fmt.Errorf("MarketIndex is not valid")
 	ErrInitialMarginFractionTooLow                            = fmt.Errorf("InitialMarginFraction should not be less than %d", 0)
