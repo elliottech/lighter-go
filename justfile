@@ -8,7 +8,7 @@ build-all:
 
 build-darwin-local:
     go mod vendor
-    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib/main.go
+    CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib/main.go
 
 # Note: build-linux-local does not append -arm or amd64 at end
 build-linux-local:
@@ -50,7 +50,7 @@ build-windows-amd64-docker:
 
 build-darwin-amd64-local:
     go mod vendor
-    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
+    CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
 
 ### WASM builds
 
