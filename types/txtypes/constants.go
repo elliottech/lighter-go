@@ -157,6 +157,7 @@ const (
 	MaxApiKeyIndex        uint8 = 254 // (1 << 8) - 2
 
 	MinMarketIndex      int16 = 0
+	MaxMarketIndex      int16 = (1 << 15) - 1
 	MinPerpsMarketIndex int16 = 0
 	NilMarketIndex      int16 = 255
 

@@ -56,7 +56,11 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 	}
 
 	// MarketIndex
-	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex {
+	// Note: Legacy market IDs were range-partitioned by type: [0, 255) for perp markets and [2048, 4096) for spot markets.
+	// New market IDs no longer guarantee this split, so any code that derives the market type from the ID
+	// (e.g. `if marketId > 300 { spot } else { perp }`) is broken.
+	// Consequently, the SDK cannot verify that a TX targets the correct market type.
+	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
