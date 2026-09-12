@@ -1,14 +1,14 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WEB_WASM_DIR="$SCRIPT_DIR/../web-wasm"
-WASM_FILE="$WEB_WASM_DIR/main.wasm"
+WASM_DIR="$SCRIPT_DIR/../wasm"
+WASM_FILE="$WASM_DIR/main.wasm"
 TEMPLATE_FILE="$SCRIPT_DIR/src/wasm-template.html"
 OUTPUT_FILE="$SCRIPT_DIR/dist/wasm-wrapper.standalone.html"
 
 echo "Building main.wasm..."
-(cd "$WEB_WASM_DIR" && ./build.sh)
+(cd "$WASM_DIR" && ./build.sh)
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 

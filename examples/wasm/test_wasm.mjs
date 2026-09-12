@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "..", "..");
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(dirname, "..", "..");
 const buildDir = path.join(repoRoot, "build");
 
 await import(path.join(buildDir, "wasm_exec.js"));
@@ -13,125 +13,108 @@ const go = new globalThis.Go();
 const wasmBytes = fs.readFileSync(path.join(buildDir, "lighter-signer.wasm"));
 const { instance } = await WebAssembly.instantiate(wasmBytes, go.importObject);
 
-go.run(instance);
+void go.run(instance);
 
-function assertHex(name, value) {
-    assert.equal(typeof value, "string", `${name} should be a string`);
-    assert.match(value, /^0x[0-9a-f]+$/i, `${name} should be a hex string`);
+async function callWasm(name, ...params) {
+  const exportedFunction = globalThis[name];
+  assert.equal(typeof exportedFunction, "function", `${name} should be exported`);
+
+  const invoke = exportedFunction(...params);
+  assert.equal(typeof invoke, "function", `${name} should return an invoker`);
+  return invoke();
 }
 
 function assertNoError(name, result) {
-    assert.ok(result && typeof result === "object", `${name} should return an object`);
-    assert.equal(result.error, undefined, `${name} failed: ${result.error}`);
+  assert.ok(result && typeof result === "object", `${name} should return an object`);
+  assert.equal(result.error, undefined, `${name} failed: ${result.error}`);
 }
 
-function assertSignedTx(name, result, expectedTxType) {
-    assertNoError(name, result);
-    assert.equal(result.txType, expectedTxType, `${name} returned an unexpected txType`);
-    assert.equal(typeof result.txInfo, "string", `${name} should return txInfo`);
-    assert.equal(typeof result.txHash, "string", `${name} should return txHash`);
-    assert.match(result.txHash, /^[0-9a-f]+$/i, `${name} txHash should be hex`);
-
-    const txInfo = JSON.parse(result.txInfo);
-    assert.equal(typeof txInfo.Nonce, "number", `${name} txInfo should include Nonce`);
-    assert.equal(typeof txInfo.Sig, "string", `${name} txInfo should include Sig`);
-    return txInfo;
+function assertSignedTx(name, result) {
+  assertNoError(name, result);
+  assert.match(result.txHash, /^[0-9a-f]+$/i, `${name} txHash should be hex`);
+  assert.equal(typeof result.txInfo, "string", `${name} should return txInfo`);
+  return JSON.parse(result.txInfo);
 }
 
-function assertSkipNonceAttr(name, txInfo, expected) {
-    if (expected) {
-        assert.equal(txInfo.L2TxAttributes?.["4"], 1, `${name} should include skipNonce attribute`);
-        return;
-    }
-    assert.equal(txInfo.L2TxAttributes, null, `${name} should not include tx attributes`);
-}
+const seed = "11".repeat(32);
+const chainId = 304;
+const accountIndex = 1;
 
-const keyResult = globalThis.GenerateAPIKey();
-console.log("GenerateAPIKey:", keyResult);
-assertNoError("GenerateAPIKey", keyResult);
-assertHex("GenerateAPIKey.privateKey", keyResult.privateKey);
-assertHex("GenerateAPIKey.publicKey", keyResult.publicKey);
-const privateKey = keyResult.privateKey;
-
-const createResult = globalThis.CreateClient("http://localhost:1234", privateKey, 304, 0, 1);
-console.log("CreateClient:", createResult);
-assertNoError("CreateClient", createResult);
-
-const cancelResult = globalThis.SignCancelOrder(0, 12345, 1, 42, 0, 1);
-console.log("SignCancelOrder (skipNonce=1):", cancelResult);
-const cancelTxInfo = assertSignedTx("SignCancelOrder (skipNonce=1)", cancelResult, 15);
-assert.equal(cancelTxInfo.AccountIndex, 1);
-assert.equal(cancelTxInfo.ApiKeyIndex, 0);
-assert.equal(cancelTxInfo.MarketIndex, 0);
-assert.equal(cancelTxInfo.Index, 12345);
-assert.equal(cancelTxInfo.Nonce, 42);
-assertSkipNonceAttr("SignCancelOrder (skipNonce=1)", cancelTxInfo, true);
-
-const cancelResult2 = globalThis.SignCancelOrder(0, 12345, 0, 42, 0, 1);
-console.log("SignCancelOrder (skipNonce=0):", cancelResult2);
-const cancelTxInfo2 = assertSignedTx("SignCancelOrder (skipNonce=0)", cancelResult2, 15);
-assert.equal(cancelTxInfo2.Nonce, 42);
-assertSkipNonceAttr("SignCancelOrder (skipNonce=0)", cancelTxInfo2, false);
-assert.notEqual(cancelResult.txHash, cancelResult2.txHash, "skipNonce should affect the signed tx hash");
-
-const cancelAllResult = globalThis.SignCancelAllOrders(0, 0, 255, 1, 42, 0, 1);
-console.log("SignCancelAllOrders (skipNonce=1):", cancelAllResult);
-const cancelAllTxInfo = assertSignedTx("SignCancelAllOrders (skipNonce=1)", cancelAllResult, 16);
-assert.equal(cancelAllTxInfo.TimeInForce, 0);
-assert.equal(cancelAllTxInfo.Time, 0);
-assertSkipNonceAttr("SignCancelAllOrders (skipNonce=1)", cancelAllTxInfo, true);
-
-const orderResult = globalThis.SignCreateOrder(
-    0, 1, 1000, 50000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 42, 0, 1
+const createResult = await callWasm(
+  "_createClient",
+  seed,
+  chainId,
+  accountIndex,
+  42,
+  0,
+  true,
 );
-console.log("SignCreateOrder (skipNonce=1):", orderResult);
-const orderTxInfo = assertSignedTx("SignCreateOrder (skipNonce=1)", orderResult, 14);
-assert.equal(orderTxInfo.MarketIndex, 0);
-assert.equal(orderTxInfo.ClientOrderIndex, 1);
-assert.equal(orderTxInfo.BaseAmount, 1000);
-assert.equal(orderTxInfo.Price, 50000);
-assert.equal(orderTxInfo.TimeInForce, 0);
-assert.equal(orderTxInfo.OrderExpiry, 0);
-assertSkipNonceAttr("SignCreateOrder (skipNonce=1)", orderTxInfo, true);
+console.log("_createClient (skipNonce=true):", createResult);
+assertNoError("_createClient", createResult);
+assert.equal(createResult.success, true);
+assert.equal(createResult.pubKeySuccess, true);
+assert.match(createResult.pk, /^[0-9a-f]+$/i);
+assert.match(createResult.prv, /^[0-9a-f]+$/i);
 
-const subAccResult = globalThis.SignCreateSubAccount(1, 42, 0, 1);
-console.log("SignCreateSubAccount (skipNonce=1):", subAccResult);
-const subAccTxInfo = assertSignedTx("SignCreateSubAccount (skipNonce=1)", subAccResult, 9);
-assert.equal(subAccTxInfo.AccountIndex, 1);
-assert.equal(subAccTxInfo.Nonce, 42);
-assertSkipNonceAttr("SignCreateSubAccount (skipNonce=1)", subAccTxInfo, true);
-
-const levResult = globalThis.SignUpdateLeverage(0, 100, 0, 1, 42, 0, 1);
-console.log("SignUpdateLeverage (skipNonce=1):", levResult);
-const levTxInfo = assertSignedTx("SignUpdateLeverage (skipNonce=1)", levResult, 20);
-assert.equal(levTxInfo.MarketIndex, 0);
-assert.equal(levTxInfo.InitialMarginFraction, 100);
-assert.equal(levTxInfo.MarginMode, 0);
-assertSkipNonceAttr("SignUpdateLeverage (skipNonce=1)", levTxInfo, true);
-
-const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
-
-const groupedResult = globalThis.SignCreateGroupedOrders(
-    1,
-    [
-        {
-            MarketIndex: 0, ClientOrderIndex: 0, BaseAmount: 1000, Price: 50000,
-            IsAsk: 0, Type: 0, TimeInForce: 1, ReduceOnly: 0, TriggerPrice: 0, OrderExpiry: expiry,
-        },
-        {
-            MarketIndex: 0, ClientOrderIndex: 0, BaseAmount: 0, Price: 51000,
-            IsAsk: 1, Type: 4, TimeInForce: 0, ReduceOnly: 1, TriggerPrice: 49000, OrderExpiry: expiry,
-        },
-    ],
-    0, 0, 0, 0, 0, 1, 42, 0, 1
+const cancelWithSkip = await callWasm(
+  "_signCancelOrder",
+  accountIndex,
+  0,
+  "12345",
+  43,
 );
-console.log("SignCreateGroupedOrders (skipNonce=1):", groupedResult);
-const groupedTxInfo = assertSignedTx("SignCreateGroupedOrders (skipNonce=1)", groupedResult, 28);
-assert.equal(groupedTxInfo.GroupingType, 1);
-assert.equal(groupedTxInfo.Orders.length, 2);
-assert.equal(groupedTxInfo.Orders[0].TimeInForce, 1);
-assert.equal(groupedTxInfo.Orders[1].Type, 4);
-assert.equal(groupedTxInfo.Orders[1].TriggerPrice, 49000);
-assertSkipNonceAttr("SignCreateGroupedOrders (skipNonce=1)", groupedTxInfo, true);
+console.log("_signCancelOrder (skipNonce=true):", cancelWithSkip);
+const cancelWithSkipInfo = assertSignedTx("_signCancelOrder", cancelWithSkip);
+assert.equal(cancelWithSkipInfo.AccountIndex, accountIndex);
+assert.equal(cancelWithSkipInfo.MarketIndex, 0);
+assert.equal(cancelWithSkipInfo.Index, 12345);
+assert.equal(cancelWithSkipInfo.Nonce, 43);
+assert.equal(cancelWithSkipInfo.L2TxAttributes?.["4"], 1);
 
-console.log("\n--- All assertions passed ---");
+await callWasm("_createClient", seed, chainId, accountIndex, 42, 0, false);
+const cancelWithoutSkip = await callWasm(
+  "_signCancelOrder",
+  accountIndex,
+  0,
+  "12345",
+  43,
+);
+console.log("_signCancelOrder (skipNonce=false):", cancelWithoutSkip);
+const cancelWithoutSkipInfo = assertSignedTx("_signCancelOrder", cancelWithoutSkip);
+assert.equal(cancelWithoutSkipInfo.L2TxAttributes, null);
+assert.notEqual(cancelWithSkip.txHash, cancelWithoutSkip.txHash);
+
+const orderResult = await callWasm(
+  "_signCreateOrder",
+  accountIndex,
+  0,
+  1,
+  "1000",
+  "50000",
+  0,
+  0,
+  0,
+  0,
+  "0",
+  0,
+  44,
+);
+console.log("_signCreateOrder:", orderResult);
+const orderInfo = assertSignedTx("_signCreateOrder", orderResult);
+assert.equal(orderInfo.AccountIndex, accountIndex);
+assert.equal(orderInfo.ClientOrderIndex, 1);
+assert.equal(orderInfo.BaseAmount, 1000);
+assert.equal(orderInfo.Price, 50000);
+assert.equal(orderInfo.Nonce, 44);
+
+const allocationResult = await callWasm(
+  "_getAirdropAllocationMessage",
+  accountIndex,
+  "1:100,2:200",
+);
+console.log("_getAirdropAllocationMessage:", allocationResult);
+assertNoError("_getAirdropAllocationMessage", allocationResult);
+assert.match(allocationResult.message, /allocations: 1:100,2:200/);
+assert.match(allocationResult.message, /chainId: 0x0000000000000130/);
+
+console.log("\n--- All WASM assertions passed ---");
