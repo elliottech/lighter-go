@@ -80,7 +80,7 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 	AttributeTypeCancelAllMarketIndex: {
 		ByteSize:          2,
 		MinValue:          int64(MinPerpsMarketIndex),
-		MaxValue:          int64(NilMarketIndex),
+		MaxValue:          int64(MaxMarketIndex),
 		NilValue:          int64(NilMarketIndex),
 		InvalidRangeError: ErrCancelAllMarketIndexInvalidRange,
 	},
