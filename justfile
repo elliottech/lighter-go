@@ -8,20 +8,20 @@ build-all:
 
 build-darwin-local:
     go mod vendor
-    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib/main.go
+    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-arm64.dylib ./sharedlib
 
 # Note: build-linux-local does not append -arm or amd64 at end
 build-linux-local:
     go mod vendor
-    CGO_ENABLED=1 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-linux.so ./sharedlib/main.go
+    CGO_ENABLED=1 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-linux.so ./sharedlib
 
 # Note: build-windows-local does not append -arm or amd64 at end
 # Windows build (requires gcc from msys2: choco install msys2)
-# CMD:        set PATH=C:\msys64\mingw64\bin;%PATH% && set CGO_ENABLED=1 && go mod vendor && go build -buildmode=c-shared -trimpath -o ./build/signer-amd64.dll ./sharedlib/main.go
-# PowerShell: $env:Path='C:\msys64\mingw64\bin;'+$env:Path; $env:CGO_ENABLED='1'; go mod vendor; go build -buildmode=c-shared -trimpath -o ./build/signer-amd64.dll ./sharedlib/main.go
+# CMD:        set PATH=C:\msys64\mingw64\bin;%PATH% && set CGO_ENABLED=1 && go mod vendor && go build -buildmode=c-shared -trimpath -o ./build/signer-amd64.dll ./sharedlib
+# PowerShell: $env:Path='C:\msys64\mingw64\bin;'+$env:Path; $env:CGO_ENABLED='1'; go mod vendor; go build -buildmode=c-shared -trimpath -o ./build/signer-amd64.dll ./sharedlib
 build-windows-local:
     go mod vendor
-    $env:Path='C:\msys64\mingw64\bin;'+$env:Path; $env:CGO_ENABLED='1'; go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-windows.dll ./sharedlib/main.go
+    $env:Path='C:\msys64\mingw64\bin;'+$env:Path; $env:CGO_ENABLED='1'; go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-windows.dll ./sharedlib
 
 ### Docker builds
 
@@ -50,7 +50,7 @@ build-windows-amd64-docker:
 
 build-darwin-amd64-local:
     go mod vendor
-    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib/main.go
+    go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-darwin-amd64.dylib ./sharedlib
 
 ### WASM builds
 
