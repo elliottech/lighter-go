@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Building WASM..."
-GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o main.wasm
+GOOS=js GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -o main.wasm
 
 # Check/Compress Brotli
 if command -v brotli &> /dev/null; then

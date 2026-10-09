@@ -425,7 +425,7 @@ func SignCreateOrder(this js.Value, args []js.Value) any {
 		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
 	}
 
-	marketIndex := int16(args[1].Int())
+	marketIndex := int64(args[1].Int())
 	clientOrderIndex := int64(args[2].Int())
 	baseAmount, err := strconv.Atoi(args[3].String())
 	if err != nil {
@@ -491,7 +491,7 @@ func SignCancelOrder(this js.Value, args []js.Value) any {
 		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
 	}
 
-	marketIndex := int16(args[1].Int())
+	marketIndex := int64(args[1].Int())
 	orderIndex, err := strconv.ParseInt(args[2].String(), 10, 64)
 	if err != nil {
 		return errPromise(fmt.Errorf("orderIndex is not an integer"))
@@ -607,7 +607,7 @@ func SignModifyOrder(this js.Value, args []js.Value) any {
 		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
 	}
 
-	marketIndex := int16(args[1].Int())
+	marketIndex := int64(args[1].Int())
 	orderIndex, err := strconv.ParseInt(args[2].String(), 10, 64)
 	if err != nil {
 		return errPromise(fmt.Errorf("orderIndex is not an integer"))
@@ -1079,7 +1079,7 @@ func SignUpdateLeverage(this js.Value, args []js.Value) any {
 	if clients[accountIndex] == nil {
 		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
 	}
-	marketIndex := int16(args[1].Int())
+	marketIndex := int64(args[1].Int())
 	initialMarginFraction := uint16(args[2].Int())
 	marginMode := uint8(args[3].Int())
 	nonce := int64(args[4].Int())
@@ -1114,7 +1114,7 @@ func SignUpdateMargin(this js.Value, args []js.Value) any {
 	if clients[accountIndex] == nil {
 		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
 	}
-	marketIndex := int16(args[1].Int())
+	marketIndex := int64(args[1].Int())
 	usdcAmount := int64(args[2].Int())
 	direction := uint8(args[3].Int())
 	nonce := int64(args[4].Int())
@@ -1156,7 +1156,7 @@ func SignCreateGroupedOrders(this js.Value, args []js.Value) any {
 	orders := make([]*CreateOrderTxReq, int(orderCount))
 	currentIndex := 3
 	for i := 0; i < int(orderCount); i++ {
-		marketIndex := int16(args[currentIndex].Int())
+		marketIndex := int64(args[currentIndex].Int())
 		clientOrderIndex := int64(args[currentIndex+1].Int())
 		baseAmount, err := strconv.Atoi(args[currentIndex+2].String())
 		if err != nil {
@@ -1279,11 +1279,11 @@ func CreateAuthToken(this js.Value, args []js.Value) any {
 	})
 }
 
-func cancelAllMarketIndexAttribute(args []js.Value, idx int) (int16, bool) {
+func cancelAllMarketIndexAttribute(args []js.Value, idx int) (int64, bool) {
 	if len(args) <= idx || args[idx].Type() != js.TypeNumber {
 		return 0, false
 	}
-	marketIndex := int16(args[idx].Int())
+	marketIndex := int64(args[idx].Int())
 	if marketIndex == txtypes.NilMarketIndex {
 		return 0, false
 	}
