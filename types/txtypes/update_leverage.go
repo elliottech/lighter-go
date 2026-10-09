@@ -55,7 +55,7 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 		return ErrApiKeyIndexTooHigh
 	}
 	// MarketIndex
-	if txInfo.MarketIndex == NilMarketIndex {
+	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
