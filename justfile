@@ -62,7 +62,7 @@ build-wasm:
 
 build-web-wasm:
     go mod vendor
-    GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ./build/lighter-signer-web.wasm ./web-wasm
+    GOOS=js GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -o ./build/lighter-signer-web.wasm ./web-wasm
 
 ### Examples
 
