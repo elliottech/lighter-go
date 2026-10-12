@@ -61,7 +61,7 @@ func integratorTxAttributes(integratorAccountIndex int64, integratorTakerFee uin
 	return attr
 }
 
-func cancelAllTxAttributes(cancelAllMarketIndex int16, skipNonce uint8) *types.L2TxAttributes {
+func cancelAllTxAttributes(cancelAllMarketIndex int64, skipNonce uint8) *types.L2TxAttributes {
 	attr := &types.L2TxAttributes{}
 	if cancelAllMarketIndex != txtypes.NilMarketIndex {
 		attr.CancelAllMarketIndex = &cancelAllMarketIndex
@@ -147,6 +147,14 @@ func safeUint64(v js.Value, index int) (uint64, error) {
 		return 0, fmt.Errorf("argument %d is undefined", index)
 	}
 	return uint64(v.Int()), nil
+}
+
+// safeInt64 safely extracts an int64 from a js.Value, handling undefined values
+func safeInt64(v js.Value, index int) (int64, error) {
+	if v.Type() == js.TypeUndefined {
+		return 0, fmt.Errorf("argument %d is undefined", index)
+	}
+	return int64(v.Int()), nil
 }
 
 // safeUint16 safely extracts a uint16 from a js.Value, handling undefined values
@@ -312,7 +320,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeInt16(args[0], 0)
+			marketIndex, err := safeInt64(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -386,7 +394,7 @@ func main() {
 			}
 
 			txInfo := &types.CreateOrderTxReq{
-				MarketIndex:      int16(marketIndex),
+				MarketIndex:      marketIndex,
 				ClientOrderIndex: clientOrderIndex,
 				BaseAmount:       baseAmount,
 				Price:            price,
@@ -418,7 +426,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeInt16(args[0], 0)
+			marketIndex, err := safeInt64(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -453,7 +461,7 @@ func main() {
 
 			timeInForce := uint8(args[0].Int())
 			timeVal := int64(args[1].Int())
-			cancelAllMarketIndex := int16(args[2].Int())
+			cancelAllMarketIndex := int64(args[2].Int())
 			skipNonce := uint8(args[3].Int())
 			nonce := int64(args[4].Int())
 
@@ -636,7 +644,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeInt16(args[0], 0)
+			marketIndex, err := safeInt64(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -671,7 +679,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeInt16(args[0], 0)
+			marketIndex, err := safeInt64(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -935,7 +943,7 @@ func main() {
 				return wrapErr(err)
 			}
 
-			marketIndex, err := safeInt16(args[0], 0)
+			marketIndex, err := safeInt64(args[0], 0)
 			if err != nil {
 				return wrapErr(err)
 			}
@@ -999,7 +1007,7 @@ func main() {
 				}
 
 				orders[i] = &types.CreateOrderTxReq{
-					MarketIndex:      int16(orderObj.Get("MarketIndex").Int()),
+					MarketIndex:      int64(orderObj.Get("MarketIndex").Int()),
 					ClientOrderIndex: int64(orderObj.Get("ClientOrderIndex").Int()),
 					BaseAmount:       int64(orderObj.Get("BaseAmount").Int()),
 					Price:            uint32(orderObj.Get("Price").Int()),

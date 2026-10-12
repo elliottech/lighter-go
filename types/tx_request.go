@@ -27,7 +27,7 @@ type L2TxAttributes struct {
 	IntegratorTakerFee     *uint32
 	IntegratorMakerFee     *uint32
 	SkipNonce              *uint8
-	CancelAllMarketIndex   *int16
+	CancelAllMarketIndex   *int64
 	SelfTradeBehaviorMode  *uint8
 	SelfTradeEqualityMode  *uint8
 	OrderVersion           *int64
@@ -77,7 +77,7 @@ type WithdrawTxReq struct {
 }
 
 type CreateOrderTxReq struct {
-	MarketIndex      int16
+	MarketIndex      int64
 	ClientOrderIndex int64
 	BaseAmount       int64
 	Price            uint32
@@ -95,7 +95,7 @@ type CreateGroupedOrdersTxReq struct {
 }
 
 type ModifyOrderTxReq struct {
-	MarketIndex  int16
+	MarketIndex  int64
 	Index        int64
 	BaseAmount   int64
 	Price        uint32
@@ -103,7 +103,7 @@ type ModifyOrderTxReq struct {
 }
 
 type CancelOrderTxReq struct {
-	MarketIndex int16
+	MarketIndex int64
 	Index       int64
 }
 
@@ -146,13 +146,13 @@ type BurnSharesTxReq struct {
 }
 
 type UpdateLeverageTxReq struct {
-	MarketIndex           int16
+	MarketIndex           int64
 	InitialMarginFraction uint16
 	MarginMode            uint8
 }
 
 type UpdateMarginTxReq struct {
-	MarketIndex int16
+	MarketIndex int64
 	USDCAmount  int64
 	Direction   uint8
 }

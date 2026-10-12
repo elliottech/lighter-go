@@ -19,7 +19,7 @@ type TxInfo interface {
 }
 
 type OrderInfo struct {
-	MarketIndex int16
+	MarketIndex int64
 
 	ClientOrderIndex int64
 

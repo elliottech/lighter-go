@@ -6,7 +6,7 @@ use lighter_rust::LighterLib;
 
 const CHAIN_ID: i32 = 304;
 const ACCOUNT_INDEX: i64 = 100;
-const MARKET_INDEX: i32 = 0; // ETH market
+const MARKET_INDEX: i64 = 0; // ETH market
 const BASE_AMOUNT: i64 = 10_000;
 const PRICE: i32 = 400_000;
 const ORDER_TYPE: i32 = 0; // limit

@@ -85,7 +85,7 @@ public class LighterLib {
     @FieldOrder({"MarketIndex", "ClientOrderIndex", "BaseAmount", "Price",
                  "IsAsk", "Type", "TimeInForce", "ReduceOnly", "TriggerPrice", "OrderExpiry"})
     public static class CreateOrderTxReq extends Structure {
-        public short MarketIndex;
+        public long MarketIndex;
         public long  ClientOrderIndex;
         public long  BaseAmount;
         public int   Price;
@@ -128,7 +128,7 @@ public class LighterLib {
                                                  int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCreateOrder(
-                int marketIndex, long clientOrderIndex, long baseAmount,
+                long marketIndex, long clientOrderIndex, long baseAmount,
                 int price, int isAsk, int orderType, int timeInForce,
                 int reduceOnly, int triggerPrice, long orderExpiry,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
@@ -141,7 +141,7 @@ public class LighterLib {
                 byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
                 byte skipNonce, long nonce, int apiKeyIndex, long accountIndex);
 
-        SignedTxResponse.ByValue SignCancelOrder(int marketIndex, long orderIndex,
+        SignedTxResponse.ByValue SignCancelOrder(long marketIndex, long orderIndex,
                                                 byte skipNonce, long nonce,
                                                 int apiKeyIndex, long accountIndex);
 
@@ -153,12 +153,12 @@ public class LighterLib {
                                                       int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCancelAllOrders(int timeInForce, long time,
-                                                     int cancelAllMarketIndex,
+                                                     long cancelAllMarketIndex,
                                                      byte skipNonce, long nonce,
                                                      int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignModifyOrder(
-                int marketIndex, long index, long baseAmount, long price, long triggerPrice,
+                long marketIndex, long index, long baseAmount, long price, long triggerPrice,
                 long integratorAccountIndex, int integratorTakerFee, int integratorMakerFee,
                 byte selfTradeBehaviorMode, byte selfTradeEqualityMode,
                 byte skipNonce, long nonce, long orderVersion,
@@ -187,14 +187,14 @@ public class LighterLib {
                                                byte skipNonce, long nonce,
                                                int apiKeyIndex, long accountIndex);
 
-        SignedTxResponse.ByValue SignUpdateLeverage(int marketIndex, int initialMarginFraction,
+        SignedTxResponse.ByValue SignUpdateLeverage(long marketIndex, int initialMarginFraction,
                                                     int marginMode,
                                                     byte skipNonce, long nonce,
                                                     int apiKeyIndex, long accountIndex);
 
         StrOrErr.ByValue         CreateAuthToken(long deadline, int apiKeyIndex, long accountIndex);
 
-        SignedTxResponse.ByValue SignUpdateMargin(int marketIndex, long usdcAmount, int direction,
+        SignedTxResponse.ByValue SignUpdateMargin(long marketIndex, long usdcAmount, int direction,
                                                  byte skipNonce, long nonce,
                                                  int apiKeyIndex, long accountIndex);
 

@@ -21,7 +21,7 @@ type TransactOpts struct {
 	DryRun           bool
 
 	SkipNonce              bool
-	CancelAllMarketIndex   *int16
+	CancelAllMarketIndex   *int64
 	IntegratorAccountIndex *int64
 	IntegratorTakerFee     *uint32
 	IntegratorMakerFee     *uint32
@@ -80,7 +80,7 @@ type WithdrawTxReq struct {
 }
 
 type CreateOrderTxReq struct {
-	MarketIndex      int16
+	MarketIndex      int64
 	ClientOrderIndex int64
 	BaseAmount       int64
 	Price            uint32
@@ -98,7 +98,7 @@ type CreateGroupedOrdersTxReq struct {
 }
 
 type ModifyOrderTxReq struct {
-	MarketIndex  int16
+	MarketIndex  int64
 	Index        int64
 	BaseAmount   int64
 	Price        uint32
@@ -106,7 +106,7 @@ type ModifyOrderTxReq struct {
 }
 
 type CancelOrderTxReq struct {
-	MarketIndex int16
+	MarketIndex int64
 	Index       int64
 }
 
@@ -149,7 +149,7 @@ type BurnSharesTxReq struct {
 }
 
 type UpdateLeverageTxReq struct {
-	MarketIndex           int16
+	MarketIndex           int64
 	InitialMarginFraction uint16
 	MarginMode            uint8
 }
@@ -164,7 +164,7 @@ type UpdateAccountAssetConfigTxReq struct {
 }
 
 type UpdateMarginTxReq struct {
-	MarketIndex int16
+	MarketIndex int64
 	USDCAmount  int64
 	Direction   uint8
 }

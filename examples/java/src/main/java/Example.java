@@ -13,7 +13,7 @@ public class Example {
 
     static final int  CHAIN_ID      = 304;
     static final long ACCOUNT_INDEX = 100L;
-    static final int  MARKET_INDEX  = 0;       // ETH market
+    static final long MARKET_INDEX  = 0;       // ETH market
     static final long BASE_AMOUNT   = 10_000L;
     static final int  PRICE         = 400_000;
     static final int  ORDER_TYPE    = 0;       // limit

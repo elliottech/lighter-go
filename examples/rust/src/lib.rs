@@ -38,7 +38,7 @@ pub struct RawSignedTxResponse {
 /// Mirrors `CreateOrderTxReq` from lighter.h
 #[repr(C)]
 pub struct CreateOrderTxReq {
-    pub market_index: i16,
+    pub market_index: i64,
     pub client_order_index: i64,
     pub base_amount: i64,
     pub price: u32,
@@ -254,7 +254,7 @@ impl LighterLib {
     #[allow(clippy::too_many_arguments)]
     pub fn sign_create_order(
         &self,
-        market_index: i32,
+        market_index: i64,
         client_order_index: i64,
         base_amount: i64,
         price: i32,
@@ -277,7 +277,7 @@ impl LighterLib {
         unsafe {
             let f: Symbol<
                 unsafe extern "C" fn(
-                    i32, i64, i64, i32, i32, i32, i32, i32, i32, i64,
+                    i64, i64, i64, i32, i32, i32, i32, i32, i32, i64,
                     i64, i32, i32, u8, u8, u8, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCreateOrder\0").unwrap();
@@ -346,7 +346,7 @@ impl LighterLib {
 
     pub fn sign_cancel_order(
         &self,
-        market_index: i32,
+        market_index: i64,
         order_index: i64,
         skip_nonce: u8,
         nonce: i64,
@@ -355,7 +355,7 @@ impl LighterLib {
     ) -> SignedTxResponse {
         unsafe {
             let f: Symbol<
-                unsafe extern "C" fn(i32, i64, u8, i64, i32, i64) -> RawSignedTxResponse,
+                unsafe extern "C" fn(i64, i64, u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCancelOrder\0").unwrap();
             raw_to_signed_tx(f(
                 market_index,
@@ -407,7 +407,7 @@ impl LighterLib {
         &self,
         time_in_force: i32,
         time: i64,
-        cancel_all_market_index: i32,
+        cancel_all_market_index: i64,
         skip_nonce: u8,
         nonce: i64,
         api_key_index: i32,
@@ -415,7 +415,7 @@ impl LighterLib {
     ) -> SignedTxResponse {
         unsafe {
             let f: Symbol<
-                unsafe extern "C" fn(i32, i64, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
+                unsafe extern "C" fn(i32, i64, i64, u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignCancelAllOrders\0").unwrap();
             raw_to_signed_tx(f(
                 time_in_force, time, cancel_all_market_index, skip_nonce, nonce, api_key_index, account_index,
@@ -426,7 +426,7 @@ impl LighterLib {
     #[allow(clippy::too_many_arguments)]
     pub fn sign_modify_order(
         &self,
-        market_index: i32,
+        market_index: i64,
         index: i64,
         base_amount: i64,
         price: i64,
@@ -445,7 +445,7 @@ impl LighterLib {
         unsafe {
             let f: Symbol<
                 unsafe extern "C" fn(
-                    i32, i64, i64, i64, i64,
+                    i64, i64, i64, i64, i64,
                     i64, i32, i32, u8, u8, u8, i64, i64, i32, i64,
                 ) -> RawSignedTxResponse,
             > = self.lib.get(b"SignModifyOrder\0").unwrap();
@@ -591,7 +591,7 @@ impl LighterLib {
 
     pub fn sign_update_leverage(
         &self,
-        market_index: i32,
+        market_index: i64,
         initial_margin_fraction: i32,
         margin_mode: i32,
         skip_nonce: u8,
@@ -601,7 +601,7 @@ impl LighterLib {
     ) -> SignedTxResponse {
         unsafe {
             let f: Symbol<
-                unsafe extern "C" fn(i32, i32, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
+                unsafe extern "C" fn(i64, i32, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignUpdateLeverage\0").unwrap();
             raw_to_signed_tx(f(
                 market_index,
@@ -634,7 +634,7 @@ impl LighterLib {
 
     pub fn sign_update_margin(
         &self,
-        market_index: i32,
+        market_index: i64,
         usdc_amount: i64,
         direction: i32,
         skip_nonce: u8,
@@ -644,7 +644,7 @@ impl LighterLib {
     ) -> SignedTxResponse {
         unsafe {
             let f: Symbol<
-                unsafe extern "C" fn(i32, i64, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
+                unsafe extern "C" fn(i64, i64, i32, u8, i64, i32, i64) -> RawSignedTxResponse,
             > = self.lib.get(b"SignUpdateMargin\0").unwrap();
             raw_to_signed_tx(f(
                 market_index, usdc_amount, direction, skip_nonce, nonce, api_key_index, account_index,
