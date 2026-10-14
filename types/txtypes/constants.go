@@ -59,6 +59,11 @@ const (
 	TxTypeL2UpdateAccountConfig      = 41
 	TxTypeL2UpdateAccountAssetConfig = 42
 
+	TxTypeBinaryOptionsOperatorCreateMarket     = 49
+	TxTypeBinaryOptionsOperatorSettleMarket     = 50
+	TxTypeBinaryOptionsOperatorUpdateMarket     = 52
+	TxTypeBinaryOptionsOperatorUpdateMarketSlot = 53
+
 	TxTypeL1BurnShares    = 30
 	TxTypeL1RegisterAsset = 31
 	TxTypeL1UpdateAsset   = 32
@@ -160,6 +165,18 @@ const (
 	MaxMarketIndex      int64 = (1 << 48) - 1
 	MinPerpsMarketIndex int64 = 0
 	NilMarketIndex      int64 = 255
+
+	MinBinaryOptionsMarketIndex int16 = 1000
+	MaxBinaryOptionsMarketIndex int16 = 2000
+
+	MarketTypeBinaryOptions uint8 = 2
+
+	DiscreteSettlementType   uint8 = 0
+	ContinuousSettlementType uint8 = 1
+
+	MaxExtensionMultiplier int64 = (1 << 56) - 1
+	MaxOpenInterest        int64 = (1 << 56) - 1
+	MaxOrderQuoteAmount    int64 = (1 << 48) - 1
 
 	NilIntegratorIndex    = 0
 	NilIntegratorTakerFee = 0

@@ -214,6 +214,54 @@ func (c *TxClient) GetUpdateMarginTransaction(tx *types.UpdateMarginTxReq, ops *
 	return txInfo, nil
 }
 
+func (c *TxClient) GetBinaryOptionsOperatorCreateMarketTransaction(tx *types.BinaryOptionsOperatorCreateMarketTxReq, ops *types.TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructBinaryOptionsOperatorCreateMarketTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetBinaryOptionsOperatorSettleMarketTransaction(tx *types.BinaryOptionsOperatorSettleMarketTxReq, ops *types.TransactOpts) (*txtypes.BinaryOptionsOperatorSettleMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructBinaryOptionsOperatorSettleMarketTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetBinaryOptionsOperatorUpdateMarketTransaction(tx *types.BinaryOptionsOperatorUpdateMarketTxReq, ops *types.TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructBinaryOptionsOperatorUpdateMarketTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetBinaryOptionsOperatorUpdateMarketSlotTransaction(tx *types.BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *types.TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructBinaryOptionsOperatorUpdateMarketSlotTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	return txInfo, nil
+}
+
 func (c *TxClient) GetStakeAssetsTransaction(tx *types.StakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {

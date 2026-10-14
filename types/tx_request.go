@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/elliottech/lighter-go/signer"
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
@@ -155,6 +156,60 @@ type UpdateMarginTxReq struct {
 	MarketIndex int64
 	USDCAmount  int64
 	Direction   uint8
+}
+
+type BinaryOptionsOperatorCreateMarketTxReq struct {
+	MarketIndex    int16 // market slot
+	MarketType     uint8
+	BaseAssetId    int16
+	QuoteAssetId   int16
+	StartTimestamp int64
+	EndTimestamp   int64
+
+	SizeExtensionMultiplier  int64
+	QuoteExtensionMultiplier int64
+	SettlementCap            uint32
+	SettlementType           uint8
+	DefaultPrice             uint32
+	TakerFee                 uint32
+	MakerFee                 uint32
+	MinBaseAmount            int64
+	MinQuoteAmount           int64
+	OrderQuoteLimit          int64
+	OpenInterestLimit        int64
+	IsFrozen                 uint8
+
+	Symbol        string
+	SizeDecimals  uint8
+	PriceDecimals uint8
+}
+
+type BinaryOptionsOperatorSettleMarketTxReq struct {
+	MarketIndex       int16 // market slot
+	PublicMarketIndex int64
+	SettlementPrice   uint32
+	IsRefund          uint8
+}
+
+type BinaryOptionsOperatorUpdateMarketTxReq struct {
+	MarketIndex       int16 // market slot
+	PublicMarketIndex int64
+	StartTimestamp    int64
+	EndTimestamp      int64
+
+	TakerFee          uint32
+	MakerFee          uint32
+	LiquidationFee    uint32 // only applies to perps markets; must be zero for binary options markets
+	MinBaseAmount     int64
+	MinQuoteAmount    int64
+	OrderQuoteLimit   int64
+	OpenInterestLimit int64
+	IsFrozen          uint8
+}
+
+type BinaryOptionsOperatorUpdateMarketSlotTxReq struct {
+	MarketIndex          int16 // market slot
+	OperatorAccountIndex int64
 }
 
 type UpdateAccountConfigTxReq struct {
@@ -598,6 +653,97 @@ func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *Upd
 	return convertedTx, nil
 }
 
+func ConstructBinaryOptionsOperatorCreateMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorCreateMarketTx(tx, ops)
+	if len(tx.Symbol) >= len(convertedTx.Symbol) || !utf8.ValidString(tx.Symbol) {
+		return nil, txtypes.ErrInvalidMarketSymbol
+	}
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorSettleMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorSettleMarketTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorUpdateMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorUpdateMarketTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorUpdateMarketSlotTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorUpdateMarketSlotTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
 func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
 	convertedTx := ConvertUpdateMarginTx(tx, ops)
 	err := convertedTx.Validate()
@@ -905,6 +1051,88 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 		ExpiredAt:             ops.ExpiredAt,
 		Nonce:                 *ops.Nonce,
 		L2TxAttributes:        ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorCreateMarketTxInfo {
+	var symbol [32]byte
+	copy(symbol[:], tx.Symbol)
+
+	return &txtypes.BinaryOptionsOperatorCreateMarketTxInfo{
+		AccountIndex:             *ops.FromAccountIndex,
+		ApiKeyIndex:              *ops.ApiKeyIndex,
+		MarketIndex:              tx.MarketIndex,
+		MarketType:               tx.MarketType,
+		BaseAssetId:              tx.BaseAssetId,
+		QuoteAssetId:             tx.QuoteAssetId,
+		StartTimestamp:           tx.StartTimestamp,
+		EndTimestamp:             tx.EndTimestamp,
+		SizeExtensionMultiplier:  tx.SizeExtensionMultiplier,
+		QuoteExtensionMultiplier: tx.QuoteExtensionMultiplier,
+		SettlementCap:            tx.SettlementCap,
+		SettlementType:           tx.SettlementType,
+		DefaultPrice:             tx.DefaultPrice,
+		TakerFee:                 tx.TakerFee,
+		MakerFee:                 tx.MakerFee,
+		MinBaseAmount:            tx.MinBaseAmount,
+		MinQuoteAmount:           tx.MinQuoteAmount,
+		OrderQuoteLimit:          tx.OrderQuoteLimit,
+		OpenInterestLimit:        tx.OpenInterestLimit,
+		IsFrozen:                 tx.IsFrozen,
+		Symbol:                   symbol,
+		SizeDecimals:             tx.SizeDecimals,
+		PriceDecimals:            tx.PriceDecimals,
+		ExpiredAt:                ops.ExpiredAt,
+		Nonce:                    *ops.Nonce,
+		L2TxAttributes:           ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		MarketIndex:       tx.MarketIndex,
+		PublicMarketIndex: tx.PublicMarketIndex,
+		SettlementPrice:   tx.SettlementPrice,
+		IsRefund:          tx.IsRefund,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorUpdateMarketTxInfo{
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		MarketIndex:       tx.MarketIndex,
+		PublicMarketIndex: tx.PublicMarketIndex,
+		StartTimestamp:    tx.StartTimestamp,
+		EndTimestamp:      tx.EndTimestamp,
+		TakerFee:          tx.TakerFee,
+		MakerFee:          tx.MakerFee,
+		LiquidationFee:    tx.LiquidationFee,
+		MinBaseAmount:     tx.MinBaseAmount,
+		MinQuoteAmount:    tx.MinQuoteAmount,
+		OrderQuoteLimit:   tx.OrderQuoteLimit,
+		OpenInterestLimit: tx.OpenInterestLimit,
+		IsFrozen:          tx.IsFrozen,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertBinaryOptionsOperatorUpdateMarketSlotTx(tx *BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo {
+	return &txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo{
+		AccountIndex:         *ops.FromAccountIndex,
+		ApiKeyIndex:          *ops.ApiKeyIndex,
+		MarketIndex:          tx.MarketIndex,
+		OperatorAccountIndex: tx.OperatorAccountIndex,
+		ExpiredAt:            ops.ExpiredAt,
+		Nonce:                *ops.Nonce,
+		L2TxAttributes:       ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
