@@ -11,9 +11,9 @@ type L2UpdateMarginTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex int64
-	USDCAmount  int64
-	Direction   uint8
+	PublicMarketIndex int64 `json:"MarketIndex"`
+	USDCAmount        int64
+	Direction         uint8
 
 	ExpiredAt  int64
 	Nonce      int64
@@ -60,7 +60,8 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 	// New market IDs no longer guarantee this split, so any code that derives the market type from the ID
 	// (e.g. `if marketId > 300 { spot } else { perp }`) is broken.
 	// Consequently, the SDK cannot verify that a TX targets the correct market type.
-	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
+	if txInfo.PublicMarketIndex < MinPublicMarketIndex || txInfo.PublicMarketIndex > MaxPublicMarketIndex ||
+		txInfo.PublicMarketIndex == NilPublicMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -95,7 +96,7 @@ func (txInfo *L2UpdateMarginTxInfo) Hash(lighterChainId uint32) (msgHash []byte,
 
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.USDCAmount&0xFFFFFFFF))
 	elems = append(elems, g.GoldilocksField(txInfo.USDCAmount>>32))
 	elems = append(elems, g.GoldilocksField(txInfo.Direction))

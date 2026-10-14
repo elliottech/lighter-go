@@ -28,23 +28,23 @@ const (
 	TxTypeL1Withdraw        = 6
 	TxTypeL1CreateOrder     = 7
 
-	TxTypeL2ChangePubKey       = 8
-	TxTypeL2CreateSubAccount   = 9
-	TxTypeL2CreatePublicPool   = 10
-	TxTypeL2UpdatePublicPool   = 11
-	TxTypeL2Transfer           = 12
-	TxTypeL2Withdraw           = 13
-	TxTypeL2CreateOrder        = 14
-	TxTypeL2CancelOrder        = 15
-	TxTypeL2CancelAllOrders    = 16
-	TxTypeL2ModifyOrder        = 17
-	TxTypeL2MintShares         = 18
-	TxTypeL2BurnShares         = 19
-	TxTypeL2UpdateLeverage     = 20
-	TxTypeL2ForceBurnShares    = 40
-	TxTypeL2StrategyTransfer   = 43
-	TxTypeL2UpdateMarketConfig = 44
-	TxTypeL2ApproveIntegrator  = 45
+	TxTypeL2ChangePubKey               = 8
+	TxTypeL2CreateSubAccount           = 9
+	TxTypeL2CreatePublicPool           = 10
+	TxTypeL2UpdatePublicPool           = 11
+	TxTypeL2Transfer                   = 12
+	TxTypeL2Withdraw                   = 13
+	TxTypeL2CreateOrder                = 14
+	TxTypeL2CancelOrder                = 15
+	TxTypeL2CancelAllOrders            = 16
+	TxTypeL2ModifyOrder                = 17
+	TxTypeL2MintShares                 = 18
+	TxTypeL2BurnShares                 = 19
+	TxTypeL2UpdateLeverage             = 20
+	DEPRECATED_TxTypeL2ForceBurnShares = 40 //nolint:revive,stylecheck
+	TxTypeL2StrategyTransfer           = 43
+	TxTypeL2UpdateMarketConfig         = 44
+	TxTypeL2ApproveIntegrator          = 45
 
 	TxTypeInternalClaimOrder        = 21
 	TxTypeInternalCancelOrder       = 22
@@ -149,6 +149,12 @@ const (
 	MarginFractionTick int64  = 10_000
 	ShareTick          uint16 = 10_000
 
+	MaxMarketFlags int64 = 0b11
+
+	FundingPremiumMultiplierTick int64  = 100
+	MinFundingPremiumMultiplier  uint16 = 1
+	MaxFundingPremiumMultiplier  uint16 = 100
+
 	MinAccountIndex       int64 = -1
 	MaxAccountIndex       int64 = 281474976710654 // (1 << 48) - 2
 	MaxMasterAccountIndex int64 = 140737488355327 // (1 << 47) - 1
@@ -156,10 +162,36 @@ const (
 	MinApiKeyIndex        uint8 = 0
 	MaxApiKeyIndex        uint8 = 254 // (1 << 8) - 2
 
-	MinMarketIndex      int64 = 0
-	MaxMarketIndex      int64 = (1 << 48) - 1
-	MinPerpsMarketIndex int64 = 0
-	NilMarketIndex      int64 = 255
+	MinPublicMarketIndex = 0
+	MaxPublicMarketIndex = (1 << 48) - 1
+	// 255 matches NilMarketIndex so legacy cancel-all signatures (8-bit market index, nil = 255)
+	// stay valid and are interpreted as a nil public market index. 255 is never assignable as a
+	// real public market index.
+	NilPublicMarketIndex = 255
+
+	MinMarketIndex      int16 = 0
+	MinPerpsMarketIndex int16 = 0
+	MaxPerpsMarketIndex int16 = 254 // (1 << 8) - 2
+	NilMarketIndex      int16 = 255
+	MinSpotMarketIndex  int16 = 2048 // (1 << 11)
+	MaxSpotMarketIndex  int16 = 4094 // (1 << 12) - 2
+
+	MinBinaryOptionsMarketIndex int16 = 1000
+	MaxBinaryOptionsMarketIndex int16 = 2000
+
+	MarketTypePerps         uint8 = 0
+	MarketTypeSpot          uint8 = 1
+	MarketTypeBinaryOptions uint8 = 2
+
+	NoMarketOutcome  uint8 = 1
+	YesMarketOutcome uint8 = 2
+
+	DiscreteSettlementType   uint8 = 0
+	ContinuousSettlementType uint8 = 1
+
+	MaxExtensionMultiplier int64 = (1 << 56) - 1
+	MaxOrderQuoteAmount    int64 = (1 << 48) - 1
+	MaxOpenInterest        int64 = (1 << 56) - 1
 
 	NilIntegratorIndex    = 0
 	NilIntegratorTakerFee = 0
@@ -170,6 +202,9 @@ const (
 	MinAssetIndex    = 1
 	MaxAssetIndex    = (1 << 6) - 2
 	NilAssetIndex    = 0
+
+	MaxGlobalSupplyCap = (1 << 60) - 1
+	MaxUserSupplyCap   = (1 << 60) - 1
 
 	DefaultStrategyIndex uint8 = 0
 	MinStrategyIndex     uint8 = 0

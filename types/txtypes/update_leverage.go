@@ -11,7 +11,7 @@ type L2UpdateLeverageTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex           int64
+	PublicMarketIndex     int64 `json:"MarketIndex"`
 	InitialMarginFraction uint16
 	MarginMode            uint8
 
@@ -55,7 +55,8 @@ func (txInfo *L2UpdateLeverageTxInfo) Validate() error {
 		return ErrApiKeyIndexTooHigh
 	}
 	// MarketIndex
-	if txInfo.MarketIndex < MinPerpsMarketIndex || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
+	if txInfo.PublicMarketIndex < MinPublicMarketIndex || txInfo.PublicMarketIndex > MaxPublicMarketIndex ||
+		txInfo.PublicMarketIndex == NilPublicMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -92,7 +93,7 @@ func (txInfo *L2UpdateLeverageTxInfo) Hash(lighterChainId uint32) (msgHash []byt
 
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.InitialMarginFraction))
 	elems = append(elems, g.GoldilocksField(txInfo.MarginMode))
 

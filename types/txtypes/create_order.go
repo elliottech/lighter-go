@@ -58,7 +58,8 @@ func (txInfo *L2CreateOrderTxInfo) Validate() error {
 	// New market IDs no longer guarantee this split, so any code that derives the market type from the ID
 	// (e.g. `if marketId > 300 { spot } else { perp }`) is broken.
 	// Consequently, the SDK cannot verify that a TX targets the correct market type.
-	if txInfo.MarketIndex < 0 || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
+	if txInfo.PublicMarketIndex < MinPublicMarketIndex || txInfo.PublicMarketIndex > MaxPublicMarketIndex ||
+		txInfo.PublicMarketIndex == NilPublicMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -185,7 +186,7 @@ func (txInfo *L2CreateOrderTxInfo) Hash(lighterChainId uint32) (msgHash []byte, 
 
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ClientOrderIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.BaseAmount))
 	elems = append(elems, g.GoldilocksField(txInfo.Price))

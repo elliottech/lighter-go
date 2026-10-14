@@ -1,5 +1,3 @@
-//go:build js && wasm
-
 package main
 
 import (
@@ -7,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
 	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types/txtypes"
+	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +31,15 @@ type LightClient struct {
 }
 
 func NewLightClient(seed string, chainId uint32) (*LightClient, error) {
+	// Keep input policy in the WASM adapter; the shared signer retains its
+	// existing panic/error contracts for other Go callers.
+	decoded, err := hex.DecodeString(seed)
+	if err != nil {
+		return nil, fmt.Errorf("seed must be hexadecimal")
+	}
+	if len(decoded) < 32 {
+		return nil, fmt.Errorf("seed too short, should be at least 32 bytes")
+	}
 	keyManager, err := signer.NewSeedKeyManager(seed)
 	if err != nil {
 		return nil, err
@@ -49,7 +58,19 @@ func NewLightClientByPrv(prv string, chainId uint32) (*LightClient, error) {
 		return nil, fmt.Errorf("failed to decode private key hex string: %w", err)
 	}
 
-	keyManager, err := signer.NewKeyManager(prvBytes)
+	if len(prvBytes) != 40 {
+		return nil, fmt.Errorf("private key length is not 40 bytes, length: %d", len(prvBytes))
+	}
+	reversed := make([]byte, len(prvBytes))
+	for i := range prvBytes {
+		reversed[len(prvBytes)-1-i] = prvBytes[i]
+	}
+	scalar := new(big.Int).SetBytes(reversed)
+	if scalar.Sign() == 0 || scalar.Cmp(curve.ORDER) >= 0 {
+		return nil, fmt.Errorf("private key must be a nonzero canonical scalar")
+	}
+
+	keyManager, err := signer.NewKeyManagerFromBytes(prvBytes)
 	if err != nil {
 		return nil, err
 	}

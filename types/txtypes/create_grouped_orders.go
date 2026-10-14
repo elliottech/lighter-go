@@ -66,7 +66,8 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 	// New market IDs no longer guarantee this split, so any code that derives the market type from the ID
 	// (e.g. `if marketId > 300 { spot } else { perp }`) is broken.
 	// Consequently, the SDK cannot verify that a TX targets the correct market type.
-	if txInfo.Orders[0].MarketIndex < MinPerpsMarketIndex || txInfo.Orders[0].MarketIndex == NilMarketIndex || txInfo.Orders[0].MarketIndex > MaxMarketIndex {
+	if txInfo.Orders[0].PublicMarketIndex < MinPublicMarketIndex || txInfo.Orders[0].PublicMarketIndex > MaxPublicMarketIndex ||
+		txInfo.Orders[0].PublicMarketIndex == NilPublicMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -74,7 +75,7 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Validate() error {
 	uniqueClientOrderIds := make(map[int64]struct{})
 	for _, order := range txInfo.Orders {
 		// MarketIndex
-		if order.MarketIndex != txInfo.Orders[0].MarketIndex {
+		if order.PublicMarketIndex != txInfo.Orders[0].PublicMarketIndex {
 			return ErrMarketIndexMismatch
 		}
 
@@ -331,7 +332,7 @@ func (txInfo *L2CreateGroupedOrdersTxInfo) Hash(lighterChainId uint32) (msgHash 
 	aggregatedOrderHash := p2.EmptyHashOut()
 	for index, order := range txInfo.Orders {
 		orderHash := p2.HashNoPad([]g.GoldilocksField{
-			g.GoldilocksField(order.MarketIndex),
+			g.GoldilocksField(order.PublicMarketIndex),
 			g.GoldilocksField(order.ClientOrderIndex),
 			g.GoldilocksField(order.BaseAmount),
 			g.GoldilocksField(order.Price),

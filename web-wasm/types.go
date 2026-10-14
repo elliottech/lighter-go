@@ -1,5 +1,3 @@
-//go:build js && wasm
-
 package main
 
 import (
@@ -20,8 +18,9 @@ type TransactOpts struct {
 	Nonce            *int64
 	DryRun           bool
 
-	SkipNonce              bool
-	CancelAllMarketIndex   *int64
+	SkipNonce                  bool
+	CancelAllPublicMarketIndex *int64
+
 	IntegratorAccountIndex *int64
 	IntegratorTakerFee     *uint32
 	IntegratorMakerFee     *uint32
@@ -32,8 +31,8 @@ func (ops *TransactOpts) L2TxAttributes() txtypes.L2TxAttributes {
 	if ops.SkipNonce {
 		attributes[txtypes.AttributeTypeSkipTxNonce] = 1
 	}
-	if ops.CancelAllMarketIndex != nil {
-		attributes[txtypes.AttributeTypeCancelAllMarketIndex] = int64(*ops.CancelAllMarketIndex)
+	if ops.CancelAllPublicMarketIndex != nil {
+		attributes[txtypes.AttributeTypeCancelAllPublicMarketIndex] = int64(*ops.CancelAllPublicMarketIndex)
 	}
 	if ops.IntegratorAccountIndex != nil {
 		attributes[txtypes.AttributeTypeIntegratorAccountIndex] = *ops.IntegratorAccountIndex
@@ -224,16 +223,16 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 		AccountIndex: *ops.FromAccountIndex,
 		ApiKeyIndex:  *ops.ApiKeyIndex,
 		OrderInfo: &txtypes.OrderInfo{
-			MarketIndex:      tx.MarketIndex,
-			ClientOrderIndex: tx.ClientOrderIndex,
-			BaseAmount:       tx.BaseAmount,
-			Price:            tx.Price,
-			IsAsk:            tx.IsAsk,
-			Type:             tx.Type,
-			TimeInForce:      tx.TimeInForce,
-			ReduceOnly:       tx.ReduceOnly,
-			TriggerPrice:     tx.TriggerPrice,
-			OrderExpiry:      tx.OrderExpiry,
+			PublicMarketIndex: tx.MarketIndex,
+			ClientOrderIndex:  tx.ClientOrderIndex,
+			BaseAmount:        tx.BaseAmount,
+			Price:             tx.Price,
+			IsAsk:             tx.IsAsk,
+			Type:              tx.Type,
+			TimeInForce:       tx.TimeInForce,
+			ReduceOnly:        tx.ReduceOnly,
+			TriggerPrice:      tx.TriggerPrice,
+			OrderExpiry:       tx.OrderExpiry,
 		},
 		ExpiredAt:      ops.ExpiredAt,
 		Nonce:          *ops.Nonce,
@@ -243,13 +242,13 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 
 func ConvertCancelOrderTx(tx *CancelOrderTxReq, ops *TransactOpts) *txtypes.L2CancelOrderTxInfo {
 	return &txtypes.L2CancelOrderTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		Index:          tx.Index,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ops.L2TxAttributes(),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		Index:             tx.Index,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
 	}
 }
 
@@ -267,18 +266,19 @@ func ConvertCancelAllOrdersTx(tx *CancelAllOrdersTxReq, ops *TransactOpts) *txty
 
 func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2ModifyOrderTxInfo {
 	return &txtypes.L2ModifyOrderTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		Index:          tx.Index,
-		BaseAmount:     tx.BaseAmount,
-		Price:          tx.Price,
-		TriggerPrice:   tx.TriggerPrice,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ops.L2TxAttributes(),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		Index:             tx.Index,
+		BaseAmount:        tx.BaseAmount,
+		Price:             tx.Price,
+		TriggerPrice:      tx.TriggerPrice,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
 	}
 }
+
 func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
 	return &txtypes.L2ApproveIntegratorTxInfo{
 		AccountIndex:           *ops.FromAccountIndex,
@@ -294,6 +294,7 @@ func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *
 		L2TxAttributes:         ops.L2TxAttributes(),
 	}
 }
+
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
 	return &txtypes.L2TransferTxInfo{
 		FromAccountIndex: *ops.FromAccountIndex,
@@ -363,7 +364,7 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 	return &txtypes.L2UpdateLeverageTxInfo{
 		AccountIndex:          *ops.FromAccountIndex,
 		ApiKeyIndex:           *ops.ApiKeyIndex,
-		MarketIndex:           tx.MarketIndex,
+		PublicMarketIndex:     tx.MarketIndex,
 		InitialMarginFraction: tx.InitialMarginFraction,
 		MarginMode:            tx.MarginMode,
 		ExpiredAt:             ops.ExpiredAt,
@@ -397,14 +398,14 @@ func ConvertUpdateAccountAssetConfigTx(tx *UpdateAccountAssetConfigTxReq, ops *T
 
 func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2UpdateMarginTxInfo {
 	return &txtypes.L2UpdateMarginTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		USDCAmount:     tx.USDCAmount,
-		Direction:      tx.Direction,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ops.L2TxAttributes(),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		USDCAmount:        tx.USDCAmount,
+		Direction:         tx.Direction,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
 	}
 }
 

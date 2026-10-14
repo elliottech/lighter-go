@@ -11,8 +11,8 @@ type L2CancelOrderTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex int64
-	Index       int64 // Client Order Index or Order Index of the order to cancel
+	PublicMarketIndex int64 `json:"MarketIndex"`
+	Index             int64 // Client Order Index or Order Index of the order to cancel
 
 	ExpiredAt  int64
 	Nonce      int64
@@ -60,7 +60,8 @@ func (txInfo *L2CancelOrderTxInfo) Validate() error {
 	// New market IDs no longer guarantee this split, so any code that derives the market type from the ID
 	// (e.g. `if marketId > 300 { spot } else { perp }`) is broken.
 	// Consequently, the SDK cannot verify that a TX targets the correct market type.
-	if txInfo.MarketIndex < MinMarketIndex || txInfo.MarketIndex == NilMarketIndex || txInfo.MarketIndex > MaxMarketIndex {
+	if txInfo.PublicMarketIndex < MinPublicMarketIndex || txInfo.PublicMarketIndex > MaxPublicMarketIndex ||
+		txInfo.PublicMarketIndex == NilPublicMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -94,7 +95,7 @@ func (txInfo *L2CancelOrderTxInfo) Hash(lighterChainId uint32) (msgHash []byte, 
 
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.Index))
 
 	txHash := p2.HashToQuinticExtension(elems)

@@ -27,15 +27,15 @@ import (
 )
 
 const (
-	_                                   = iota
-	AttributeTypeIntegratorAccountIndex = 1
-	AttributeTypeIntegratorTakerFee     = 2
-	AttributeTypeIntegratorMakerFee     = 3
-	AttributeTypeSkipTxNonce            = 4
-	AttributeTypeCancelAllMarketIndex   = 5
-	AttributeTypeSelfTradeBehaviorMode  = 6
-	AttributeTypeSelfTradeEqualityMode  = 7
-	AttributeTypeOrderOrderVersion      = 8
+	_                                       = iota
+	AttributeTypeIntegratorAccountIndex     = 1
+	AttributeTypeIntegratorTakerFee         = 2
+	AttributeTypeIntegratorMakerFee         = 3
+	AttributeTypeSkipTxNonce                = 4
+	AttributeTypeCancelAllPublicMarketIndex = 5
+	AttributeTypeSelfTradeBehaviorMode      = 6
+	AttributeTypeSelfTradeEqualityMode      = 7
+	AttributeTypeOrderOrderVersion          = 8
 
 	MaxAttributeType = AttributeTypeOrderOrderVersion
 )
@@ -77,11 +77,11 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 		NilValue:          0,
 		InvalidRangeError: ErrNonceSkipAttributeInvalid,
 	},
-	AttributeTypeCancelAllMarketIndex: {
-		ByteSize:          2,
-		MinValue:          int64(MinPerpsMarketIndex),
-		MaxValue:          int64(MaxMarketIndex),
-		NilValue:          int64(NilMarketIndex),
+	AttributeTypeCancelAllPublicMarketIndex: {
+		ByteSize:          6,
+		MinValue:          int64(MinPublicMarketIndex),
+		MaxValue:          int64(MaxPublicMarketIndex),
+		NilValue:          int64(NilPublicMarketIndex),
 		InvalidRangeError: ErrCancelAllMarketIndexInvalidRange,
 	},
 	AttributeTypeSelfTradeBehaviorMode: {
@@ -109,8 +109,6 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 
 type L2TxAttributes map[uint8]int64 // Type to value
 
-type L2TxAttributeIsNilMap map[uint8]bool
-
 // Caller must make sure attrType is valid
 func (attr L2TxAttributes) GetValueOrDefault(attrType uint8) int64 {
 	value, ok := attr[attrType]
@@ -119,6 +117,8 @@ func (attr L2TxAttributes) GetValueOrDefault(attrType uint8) int64 {
 	}
 	return value
 }
+
+type L2TxAttributeIsNilMap map[uint8]bool
 
 func (attr L2TxAttributes) getIsNilInfos() L2TxAttributeIsNilMap {
 	helpers := make(L2TxAttributeIsNilMap)
@@ -148,6 +148,7 @@ func (attr L2TxAttributes) Validate() error {
 			return config.InvalidRangeError
 		}
 	}
+
 	isNil := attr.getIsNilInfos()
 
 	// Fees and integrator index must be specified together

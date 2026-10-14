@@ -14,23 +14,25 @@ import (
 )
 
 type TransactOpts struct {
-	FromAccountIndex *int64
-	ApiKeyIndex      *uint8
-	ExpiredAt        int64
-	Nonce            *int64
-	TxAttributes     *L2TxAttributes
-	DryRun           bool
+	FromAccountIndex        *int64
+	ApiKeyIndex             *uint8
+	ExpiredAt               int64
+	Nonce                   *int64
+	TxAttributes            *L2TxAttributes
+	SkipL1Signature         bool
+	DryRun                  bool
+	SkipInternalValidations bool
 }
 
 type L2TxAttributes struct {
-	IntegratorAccountIndex *int64
-	IntegratorTakerFee     *uint32
-	IntegratorMakerFee     *uint32
-	SkipNonce              *uint8
-	CancelAllMarketIndex   *int64
-	SelfTradeBehaviorMode  *uint8
-	SelfTradeEqualityMode  *uint8
-	OrderVersion           *int64
+	IntegratorAccountIndex     *int64
+	IntegratorTakerFee         *uint32
+	IntegratorMakerFee         *uint32
+	SkipNonce                  *uint8
+	CancelAllPublicMarketIndex *int64
+	SelfTradeBehaviorMode      *uint8
+	SelfTradeEqualityMode      *uint8
+	OrderVersion               *int64
 }
 
 func (attr *L2TxAttributes) IsEmpty() bool {
@@ -39,7 +41,7 @@ func (attr *L2TxAttributes) IsEmpty() bool {
 			attr.IntegratorTakerFee == nil &&
 			attr.IntegratorMakerFee == nil &&
 			attr.SkipNonce == nil &&
-			attr.CancelAllMarketIndex == nil &&
+			attr.CancelAllPublicMarketIndex == nil &&
 			attr.SelfTradeBehaviorMode == nil &&
 			attr.SelfTradeEqualityMode == nil &&
 			attr.OrderVersion == nil)
@@ -197,7 +199,7 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	}
 	l2TxAttributes := txtypes.L2TxAttributes{}
 	if attr.IntegratorAccountIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = *attr.IntegratorAccountIndex
+		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = int64(*attr.IntegratorAccountIndex)
 	}
 	if attr.IntegratorTakerFee != nil {
 		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int64(*attr.IntegratorTakerFee)
@@ -208,8 +210,8 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	if attr.SkipNonce != nil {
 		l2TxAttributes[txtypes.AttributeTypeSkipTxNonce] = int64(*attr.SkipNonce)
 	}
-	if attr.CancelAllMarketIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeCancelAllMarketIndex] = int64(*attr.CancelAllMarketIndex)
+	if attr.CancelAllPublicMarketIndex != nil {
+		l2TxAttributes[txtypes.AttributeTypeCancelAllPublicMarketIndex] = int64(*attr.CancelAllPublicMarketIndex)
 	}
 	if attr.SelfTradeBehaviorMode != nil {
 		l2TxAttributes[txtypes.AttributeTypeSelfTradeBehaviorMode] = int64(*attr.SelfTradeBehaviorMode)
@@ -225,9 +227,11 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 
 func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
 	convertedTx := ConvertChangePubKeyTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -247,9 +251,11 @@ func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *Chang
 
 func ConstructCreateSubAccountTx(key signer.Signer, lighterChainId uint32, ops *TransactOpts) (*txtypes.L2CreateSubAccountTxInfo, error) {
 	convertedTx := ConvertCreateSubAccountTx(ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -269,9 +275,11 @@ func ConstructCreateSubAccountTx(key signer.Signer, lighterChainId uint32, ops *
 
 func ConstructCreatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *CreatePublicPoolTxReq, ops *TransactOpts) (*txtypes.L2CreatePublicPoolTxInfo, error) {
 	convertedTx := ConvertCreatePublicPoolTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -291,9 +299,11 @@ func ConstructCreatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *C
 
 func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *UpdatePublicPoolTxReq, ops *TransactOpts) (*txtypes.L2UpdatePublicPoolTxInfo, error) {
 	convertedTx := ConvertUpdatePublicPoolTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -313,9 +323,11 @@ func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *U
 
 func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawTxReq, ops *TransactOpts) (*txtypes.L2WithdrawTxInfo, error) {
 	convertedTx := ConvertWithdrawTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -335,9 +347,11 @@ func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawT
 
 func ConstructCreateOrderTx(key signer.Signer, lighterChainId uint32, tx *CreateOrderTxReq, ops *TransactOpts) (*txtypes.L2CreateOrderTxInfo, error) {
 	convertedTx := ConvertCreateOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -357,9 +371,11 @@ func ConstructCreateOrderTx(key signer.Signer, lighterChainId uint32, tx *Create
 
 func ConstructL2CreateGroupedOrdersTx(key signer.Signer, lighterChainId uint32, tx *CreateGroupedOrdersTxReq, ops *TransactOpts) (*txtypes.L2CreateGroupedOrdersTxInfo, error) {
 	convertedTx := ConvertCreateGroupedOrdersTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -379,9 +395,11 @@ func ConstructL2CreateGroupedOrdersTx(key signer.Signer, lighterChainId uint32, 
 
 func ConstructL2CancelOrderTx(key signer.Signer, lighterChainId uint32, tx *CancelOrderTxReq, ops *TransactOpts) (*txtypes.L2CancelOrderTxInfo, error) {
 	convertedTx := ConvertCancelOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -401,9 +419,11 @@ func ConstructL2CancelOrderTx(key signer.Signer, lighterChainId uint32, tx *Canc
 
 func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *ModifyOrderTxReq, ops *TransactOpts) (*txtypes.L2ModifyOrderTxInfo, error) {
 	convertedTx := ConvertModifyOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -423,9 +443,11 @@ func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *Modi
 
 func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	convertedTx := ConvertStakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -445,9 +467,11 @@ func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeA
 
 func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *UnstakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
 	convertedTx := ConvertUnstakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -467,9 +491,11 @@ func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *Unst
 
 func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *CancelAllOrdersTxReq, ops *TransactOpts) (*txtypes.L2CancelAllOrdersTxInfo, error) {
 	convertedTx := ConvertCancelAllOrdersTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -490,9 +516,11 @@ func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *
 func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *ApproveIntegratorTxReq,
 	ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
 	convertedTx := ConvertApproveIntegratorTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -512,9 +540,11 @@ func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *
 
 func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferTxReq, ops *TransactOpts) (*txtypes.L2TransferTxInfo, error) {
 	convertedTx := ConvertTransferTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -534,9 +564,11 @@ func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferT
 
 func ConstructMintSharesTx(key signer.Signer, lighterChainId uint32, tx *MintSharesTxReq, ops *TransactOpts) (*txtypes.L2MintSharesTxInfo, error) {
 	convertedTx := ConvertMintSharesTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -556,9 +588,11 @@ func ConstructMintSharesTx(key signer.Signer, lighterChainId uint32, tx *MintSha
 
 func ConstructBurnSharesTx(key signer.Signer, lighterChainId uint32, tx *BurnSharesTxReq, ops *TransactOpts) (*txtypes.L2BurnSharesTxInfo, error) {
 	convertedTx := ConvertBurnSharesTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -578,9 +612,11 @@ func ConstructBurnSharesTx(key signer.Signer, lighterChainId uint32, tx *BurnSha
 
 func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *UpdateLeverageTxReq, ops *TransactOpts) (*txtypes.L2UpdateLeverageTxInfo, error) {
 	convertedTx := ConvertUpdateLeverageTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -600,9 +636,11 @@ func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *Upd
 
 func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
 	convertedTx := ConvertUpdateMarginTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -622,9 +660,11 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 
 func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountConfigTxInfo, error) {
 	convertedTx := ConvertUpdateAccountConfigTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -644,9 +684,11 @@ func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx
 
 func ConstructUpdateAccountAssetConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountAssetConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountAssetConfigTxInfo, error) {
 	convertedTx := ConvertUpdateAccountAssetConfigTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -702,16 +744,16 @@ func ConvertCreateOrderTx(tx *CreateOrderTxReq, ops *TransactOpts) *txtypes.L2Cr
 		AccountIndex: *ops.FromAccountIndex,
 		ApiKeyIndex:  *ops.ApiKeyIndex,
 		OrderInfo: &txtypes.OrderInfo{
-			MarketIndex:      tx.MarketIndex,
-			ClientOrderIndex: tx.ClientOrderIndex,
-			BaseAmount:       tx.BaseAmount,
-			Price:            tx.Price,
-			IsAsk:            tx.IsAsk,
-			Type:             tx.Type,
-			TimeInForce:      tx.TimeInForce,
-			ReduceOnly:       tx.ReduceOnly,
-			TriggerPrice:     tx.TriggerPrice,
-			OrderExpiry:      tx.OrderExpiry,
+			PublicMarketIndex: tx.MarketIndex,
+			ClientOrderIndex:  tx.ClientOrderIndex,
+			BaseAmount:        tx.BaseAmount,
+			Price:             tx.Price,
+			IsAsk:             tx.IsAsk,
+			Type:              tx.Type,
+			TimeInForce:       tx.TimeInForce,
+			ReduceOnly:        tx.ReduceOnly,
+			TriggerPrice:      tx.TriggerPrice,
+			OrderExpiry:       tx.OrderExpiry,
 		},
 		ExpiredAt:      ops.ExpiredAt,
 		Nonce:          *ops.Nonce,
@@ -732,16 +774,16 @@ func ConvertCreateGroupedOrdersTx(tx *CreateGroupedOrdersTxReq, ops *TransactOpt
 
 	for _, order := range tx.Orders {
 		ret.Orders = append(ret.Orders, &txtypes.OrderInfo{
-			MarketIndex:      order.MarketIndex,
-			ClientOrderIndex: order.ClientOrderIndex,
-			BaseAmount:       order.BaseAmount,
-			Price:            order.Price,
-			IsAsk:            order.IsAsk,
-			Type:             order.Type,
-			TimeInForce:      order.TimeInForce,
-			ReduceOnly:       order.ReduceOnly,
-			TriggerPrice:     order.TriggerPrice,
-			OrderExpiry:      order.OrderExpiry,
+			PublicMarketIndex: order.MarketIndex,
+			ClientOrderIndex:  order.ClientOrderIndex,
+			BaseAmount:        order.BaseAmount,
+			Price:             order.Price,
+			IsAsk:             order.IsAsk,
+			Type:              order.Type,
+			TimeInForce:       order.TimeInForce,
+			ReduceOnly:        order.ReduceOnly,
+			TriggerPrice:      order.TriggerPrice,
+			OrderExpiry:       order.OrderExpiry,
 		})
 	}
 	return ret
@@ -749,28 +791,28 @@ func ConvertCreateGroupedOrdersTx(tx *CreateGroupedOrdersTxReq, ops *TransactOpt
 
 func ConvertCancelOrderTx(tx *CancelOrderTxReq, ops *TransactOpts) *txtypes.L2CancelOrderTxInfo {
 	return &txtypes.L2CancelOrderTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		Index:          tx.Index,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		Index:             tx.Index,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
 func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2ModifyOrderTxInfo {
 	return &txtypes.L2ModifyOrderTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		Index:          tx.Index,
-		BaseAmount:     tx.BaseAmount,
-		Price:          tx.Price,
-		TriggerPrice:   tx.TriggerPrice,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		Index:             tx.Index,
+		BaseAmount:        tx.BaseAmount,
+		Price:             tx.Price,
+		TriggerPrice:      tx.TriggerPrice,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -899,7 +941,7 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 	return &txtypes.L2UpdateLeverageTxInfo{
 		AccountIndex:          *ops.FromAccountIndex,
 		ApiKeyIndex:           *ops.ApiKeyIndex,
-		MarketIndex:           tx.MarketIndex,
+		PublicMarketIndex:     tx.MarketIndex,
 		InitialMarginFraction: tx.InitialMarginFraction,
 		MarginMode:            tx.MarginMode,
 		ExpiredAt:             ops.ExpiredAt,
@@ -910,14 +952,14 @@ func ConvertUpdateLeverageTx(tx *UpdateLeverageTxReq, ops *TransactOpts) *txtype
 
 func ConvertUpdateMarginTx(tx *UpdateMarginTxReq, ops *TransactOpts) *txtypes.L2UpdateMarginTxInfo {
 	return &txtypes.L2UpdateMarginTxInfo{
-		AccountIndex:   *ops.FromAccountIndex,
-		ApiKeyIndex:    *ops.ApiKeyIndex,
-		MarketIndex:    tx.MarketIndex,
-		USDCAmount:     tx.USDCAmount,
-		Direction:      tx.Direction,
-		ExpiredAt:      ops.ExpiredAt,
-		Nonce:          *ops.Nonce,
-		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		PublicMarketIndex: tx.MarketIndex,
+		USDCAmount:        tx.USDCAmount,
+		Direction:         tx.Direction,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 

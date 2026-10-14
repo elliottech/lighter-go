@@ -19,7 +19,7 @@ type TxInfo interface {
 }
 
 type OrderInfo struct {
-	MarketIndex int64
+	PublicMarketIndex int64 `json:"MarketIndex"`
 
 	ClientOrderIndex int64
 

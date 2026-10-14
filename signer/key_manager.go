@@ -23,45 +23,43 @@ type KeyManager interface {
 	PrvKeyBytes() []byte
 }
 
-type keyManager struct {
+type seedKeyManager struct {
 	key curve.ECgFp5Scalar
 }
 
 // hex string seed should be at least 32 bytes when decoded
 func NewSeedKeyManager(seed string) (KeyManager, error) {
-	return &keyManager{key: GetScalarFromSeed(seed)}, nil
+	return &seedKeyManager{key: GetScalarFromSeed(seed)}, nil
 }
 
-
-func NewKeyManager(b []byte) (KeyManager, error) {
+func NewKeyManagerFromBytes(b []byte) (KeyManager, error) {
 	if len(b) != 40 {
-		return nil, fmt.Errorf("invalid private key length. expected: 40 got: %v", len(b))
+		return nil, fmt.Errorf("Public key length is not 40 bytes, length: %d", len(b))
 	}
-	return &keyManager{key: curve.ScalarElementFromLittleEndianBytes(b)}, nil
+	return &seedKeyManager{key: curve.ScalarElementFromLittleEndianBytes(b)}, nil
 }
 
-func (key *keyManager) Sign(hashedMessage []byte, hFunc hash.Hash) ([]byte, error) {
+func (key *seedKeyManager) Sign(hashedMessage []byte, hFunc hash.Hash) ([]byte, error) {
 	hashedMessageAsQuinticExtension, err := gFp5.FromCanonicalLittleEndianBytes(hashedMessage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse message while signing. message: %v err: %w", hashedMessage, err)
+		return nil, fmt.Errorf("Failed to parse message while signing. message: %v, error: %w", hashedMessage, err)
 	}
 	return schnorr.SchnorrSignHashedMessage(hashedMessageAsQuinticExtension, key.key).ToBytes(), nil
 }
 
-func (key *keyManager) PubKey() gFp5.Element {
+func (key *seedKeyManager) PubKey() gFp5.Element {
 	return schnorr.SchnorrPkFromSk(key.key)
 }
 
-func (key *keyManager) PubKeyBytes() (res [40]byte) {
+func (key *seedKeyManager) PubKeyBytes() (res [40]byte) {
 	bytes := key.PubKey().ToLittleEndianBytes()
 	copy(res[:], bytes[:])
 	return
 }
 
-func (key *keyManager) PrvKeyBytes() []byte {
+func (key *seedKeyManager) PrvKeyBytes() []byte {
 	return key.key.ToLittleEndianBytes()
 }
-
 
 func GetScalarFromSeed(seed string) curve.ECgFp5Scalar {
 	seedBytes, err := hex.DecodeString(seed)
