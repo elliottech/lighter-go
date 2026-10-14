@@ -52,7 +52,7 @@ jobs:
           sudo apt-get install -y gcc-mingw-w64-x86-64
           CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc \
             go build -buildmode=c-shared -trimpath \
-            -o ./build/lighter-signer-windows-amd64.dll ./sharedlib/main.go
+            -o ./build/lighter-signer-windows-amd64.dll ./sharedlib
 
       # make sure examples are building & test
       - run: go test ./...
