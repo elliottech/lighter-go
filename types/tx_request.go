@@ -207,11 +207,6 @@ type BinaryOptionsOperatorUpdateMarketTxReq struct {
 	IsFrozen          uint8
 }
 
-type BinaryOptionsOperatorUpdateMarketSlotTxReq struct {
-	MarketIndex          int16 // market slot
-	OperatorAccountIndex int64
-}
-
 type UpdateAccountConfigTxReq struct {
 	AccountTradingMode uint8
 }
@@ -722,28 +717,6 @@ func ConstructBinaryOptionsOperatorUpdateMarketTx(key signer.Signer, lighterChai
 	return convertedTx, nil
 }
 
-func ConstructBinaryOptionsOperatorUpdateMarketSlotTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo, error) {
-	convertedTx := ConvertBinaryOptionsOperatorUpdateMarketSlotTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
 func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
 	convertedTx := ConvertUpdateMarginTx(tx, ops)
 	err := convertedTx.Validate()
@@ -1121,18 +1094,6 @@ func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateM
 		ExpiredAt:         ops.ExpiredAt,
 		Nonce:             *ops.Nonce,
 		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
-	}
-}
-
-func ConvertBinaryOptionsOperatorUpdateMarketSlotTx(tx *BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo {
-	return &txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo{
-		AccountIndex:         *ops.FromAccountIndex,
-		ApiKeyIndex:          *ops.ApiKeyIndex,
-		MarketIndex:          tx.MarketIndex,
-		OperatorAccountIndex: tx.OperatorAccountIndex,
-		ExpiredAt:            ops.ExpiredAt,
-		Nonce:                *ops.Nonce,
-		L2TxAttributes:       ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 

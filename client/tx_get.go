@@ -250,18 +250,6 @@ func (c *TxClient) GetBinaryOptionsOperatorUpdateMarketTransaction(tx *types.Bin
 	return txInfo, nil
 }
 
-func (c *TxClient) GetBinaryOptionsOperatorUpdateMarketSlotTransaction(tx *types.BinaryOptionsOperatorUpdateMarketSlotTxReq, ops *types.TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketSlotTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	txInfo, err := types.ConstructBinaryOptionsOperatorUpdateMarketSlotTx(c.keyManager, c.chainId, tx, ops)
-	if err != nil {
-		return nil, err
-	}
-	return txInfo, nil
-}
-
 func (c *TxClient) GetStakeAssetsTransaction(tx *types.StakeAssetsTxReq, ops *types.TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {

@@ -59,10 +59,9 @@ const (
 	TxTypeL2UpdateAccountConfig      = 41
 	TxTypeL2UpdateAccountAssetConfig = 42
 
-	TxTypeBinaryOptionsOperatorCreateMarket     = 49
-	TxTypeBinaryOptionsOperatorSettleMarket     = 50
-	TxTypeBinaryOptionsOperatorUpdateMarket     = 52
-	TxTypeBinaryOptionsOperatorUpdateMarketSlot = 53
+	TxTypeBinaryOptionsOperatorCreateMarket = 49
+	TxTypeBinaryOptionsOperatorSettleMarket = 50
+	TxTypeBinaryOptionsOperatorUpdateMarket = 52
 
 	TxTypeL1BurnShares    = 30
 	TxTypeL1RegisterAsset = 31
