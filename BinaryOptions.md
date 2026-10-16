@@ -99,3 +99,15 @@ SignedTxResponse SignBinaryOptionsOperatorCreateMarket(BinaryOptionsOperatorCrea
 SignedTxResponse SignBinaryOptionsOperatorUpdateMarket(BinaryOptionsOperatorUpdateMarketTxReq* req, uint8_t skipNonce, long long nonce, int apiKeyIndex, long long accountIndex);
 SignedTxResponse SignBinaryOptionsOperatorSettleMarket(BinaryOptionsOperatorSettleMarketTxReq* req, uint8_t skipNonce, long long nonce, int apiKeyIndex, long long accountIndex);
 ```
+
+## WASM
+
+`wasm/main.go` exposes the same three functions. The first argument is a plain JS object with the same field names as the C structs above (`MarketSlot`, `StartTimestampMs`, `EndTimestampMs`, `Symbol`, ...), followed by `skipNonce, nonce, apiKeyIndex, accountIndex`:
+
+```js
+SignBinaryOptionsOperatorCreateMarket(req, skipNonce, nonce, apiKeyIndex, accountIndex)
+SignBinaryOptionsOperatorUpdateMarket(req, skipNonce, nonce, apiKeyIndex, accountIndex)
+SignBinaryOptionsOperatorSettleMarket(req, skipNonce, nonce, apiKeyIndex, accountIndex)
+```
+
+Each returns `{ txType, txInfo, txHash }` or `{ error }`.
