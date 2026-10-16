@@ -130,7 +130,7 @@ func (attr L2TxAttributes) getIsNilInfos() L2TxAttributeIsNilMap {
 }
 
 func (attr L2TxAttributes) Validate() error {
-	if len(attr) == 0 {
+	if attr.IsEmpty() {
 		return nil
 	}
 
@@ -175,7 +175,8 @@ func (attr L2TxAttributes) Validate() error {
 
 func (attr L2TxAttributes) IsEmpty() bool {
 	for key, value := range attr {
-		if value != AttributeTypeToConfig[key].NilValue {
+		config, ok := AttributeTypeToConfig[key]
+		if !ok || value != config.NilValue {
 			return false
 		}
 	}

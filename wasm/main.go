@@ -80,6 +80,10 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
 		return typed.GetL1SignatureBody(chainId)
+	case *txtypes.L2SendToEvmTxInfo:
+		return typed.GetOwnerSignatureBody(chainId)
+	case *txtypes.L2WithdrawToL1AddressTxInfo:
+		return typed.GetOwnerSignatureBody(chainId)
 	default:
 		return ""
 	}
@@ -630,6 +634,111 @@ func main() {
 			}
 
 			tx, err := c.GetWithdrawTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignSendToEvm", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 8 {
+				return js.ValueOf(map[string]interface{}{"error": "SignSendToEvm expects 8 args: assetIndex, evmRecipient, routeType, baseAmount, usdcFee, nonce, apiKeyIndex, accountIndex"})
+			}
+			// Validate all arguments are defined before accessing
+			for i := 0; i < 8; i++ {
+				if args[i].Type() == js.TypeUndefined {
+					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
+				}
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			assetIndex, err := safeUint32(args[0], 0)
+			if err != nil {
+				return wrapErr(err)
+			}
+			evmRecipient := args[1].String()
+			routeType, err := safeUint8(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+			baseAmount, err := safeUint64(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
+			usdcFee, err := safeInt(args[4], 4)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[5], 5)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.SendToEvmTxReq{
+				AssetIndex:   assetIndex,
+				EvmRecipient: evmRecipient,
+				RouteType:    routeType,
+				BaseAmount:   baseAmount,
+				USDCFee:      usdcFee,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetSendToEvmTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignWithdrawToL1Address", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 7 {
+				return js.ValueOf(map[string]interface{}{"error": "SignWithdrawToL1Address expects 7 args: assetIndex, l1Recipient, routeType, baseAmount, nonce, apiKeyIndex, accountIndex"})
+			}
+			// Validate all arguments are defined before accessing
+			for i := 0; i < 7; i++ {
+				if args[i].Type() == js.TypeUndefined {
+					return js.ValueOf(map[string]interface{}{"error": fmt.Sprintf("argument %d is undefined", i)})
+				}
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			assetIndex, err := safeUint32(args[0], 0)
+			if err != nil {
+				return wrapErr(err)
+			}
+			l1Recipient := args[1].String()
+			routeType, err := safeUint8(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+			baseAmount, err := safeUint64(args[3], 3)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[4], 4)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.WithdrawToL1AddressTxReq{
+				AssetIndex:  assetIndex,
+				L1Recipient: l1Recipient,
+				RouteType:   routeType,
+				BaseAmount:  baseAmount,
+			}
+			ops := new(types.TransactOpts)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetWithdrawToL1AddressTransaction(txInfo, ops)
 			return convertTxInfoToJS(tx, err)
 		})
 	}))

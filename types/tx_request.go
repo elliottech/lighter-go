@@ -77,6 +77,21 @@ type WithdrawTxReq struct {
 	Amount     uint64
 }
 
+type SendToEvmTxReq struct {
+	AssetIndex   uint32
+	EvmRecipient string
+	RouteType    uint8
+	BaseAmount   uint64 // Core base units, not EVM token units.
+	USDCFee      int64  // USDC Core base units.
+}
+
+type WithdrawToL1AddressTxReq struct {
+	AssetIndex  uint32
+	L1Recipient string
+	RouteType   uint8
+	BaseAmount  uint64 // Core base units, not L1 token units.
+}
+
 type CreateOrderTxReq struct {
 	MarketIndex      int64
 	ClientOrderIndex int64
@@ -362,6 +377,50 @@ func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *U
 
 func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawTxReq, ops *TransactOpts) (*txtypes.L2WithdrawTxInfo, error) {
 	convertedTx := ConvertWithdrawTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructSendToEvmTx(key signer.Signer, lighterChainId uint32, tx *SendToEvmTxReq, ops *TransactOpts) (*txtypes.L2SendToEvmTxInfo, error) {
+	convertedTx := ConvertSendToEvmTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructWithdrawToL1AddressTx(key signer.Signer, lighterChainId uint32, tx *WithdrawToL1AddressTxReq, ops *TransactOpts) (*txtypes.L2WithdrawToL1AddressTxInfo, error) {
+	convertedTx := ConvertWithdrawToL1AddressTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
@@ -914,6 +973,35 @@ func ConvertWithdrawTx(tx *WithdrawTxReq, ops *TransactOpts) *txtypes.L2Withdraw
 		ExpiredAt:        ops.ExpiredAt,
 		Nonce:            *ops.Nonce,
 		L2TxAttributes:   ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertSendToEvmTx(tx *SendToEvmTxReq, ops *TransactOpts) *txtypes.L2SendToEvmTxInfo {
+	return &txtypes.L2SendToEvmTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		AssetIndex:     tx.AssetIndex,
+		EvmRecipient:   tx.EvmRecipient,
+		RouteType:      tx.RouteType,
+		BaseAmount:     tx.BaseAmount,
+		USDCFee:        tx.USDCFee,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertWithdrawToL1AddressTx(tx *WithdrawToL1AddressTxReq, ops *TransactOpts) *txtypes.L2WithdrawToL1AddressTxInfo {
+	return &txtypes.L2WithdrawToL1AddressTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		AssetIndex:     tx.AssetIndex,
+		L1Recipient:    tx.L1Recipient,
+		RouteType:      tx.RouteType,
+		BaseAmount:     tx.BaseAmount,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 

@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	ErrInteropAccountIndexTooLow                              = fmt.Errorf("AccountIndex must be nonnegative")
+	ErrEvmRecipientInvalid                                    = fmt.Errorf("EvmRecipient must be a nonzero 20-byte hex address")
+	ErrL1RecipientInvalid                                     = fmt.Errorf("L1Recipient must be a nonzero 20-byte hex address")
 	ErrAssetIndexTooLow                                       = fmt.Errorf("AssetIndex should not be less than %d", MinAssetIndex)
 	ErrAssetIndexTooHigh                                      = fmt.Errorf("AssetIndex should not be larger than %d", MaxAssetIndex)
 	ErrInvalidAssetIndex                                      = fmt.Errorf("AssetIndex is invalid")
