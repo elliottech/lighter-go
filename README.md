@@ -42,8 +42,6 @@ SignUpdateMargin
 === Transfers ===
 SignWithdraw
 SignTransfer
-SignSendToEvm (WASM only)
-SignWithdrawToL1Address (WASM only)
 
 === Sub account & pools ===
 SignCreateSubAccount
