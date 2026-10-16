@@ -104,30 +104,6 @@ func (c *TxClient) GetWithdrawTransaction(tx *types.WithdrawTxReq, ops *types.Tr
 	return txInfo, nil
 }
 
-func (c *TxClient) GetSendToEvmTransaction(tx *types.SendToEvmTxReq, ops *types.TransactOpts) (*txtypes.L2SendToEvmTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	txInfo, err := types.ConstructSendToEvmTx(c.keyManager, c.chainId, tx, ops)
-	if err != nil {
-		return nil, err
-	}
-	return txInfo, nil
-}
-
-func (c *TxClient) GetWithdrawToL1AddressTransaction(tx *types.WithdrawToL1AddressTxReq, ops *types.TransactOpts) (*txtypes.L2WithdrawToL1AddressTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	txInfo, err := types.ConstructWithdrawToL1AddressTx(c.keyManager, c.chainId, tx, ops)
-	if err != nil {
-		return nil, err
-	}
-	return txInfo, nil
-}
-
 func (c *TxClient) GetCreateOrderTransaction(tx *types.CreateOrderTxReq, ops *types.TransactOpts) (*txtypes.L2CreateOrderTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
