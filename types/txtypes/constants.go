@@ -127,6 +127,13 @@ const (
 	AccountAssetMarginMode_MarginEnabled  = 1 // means account is using this asset as margin
 )
 
+// Market Type
+const (
+	MarketTypePerps         uint8 = 0
+	MarketTypeSpot          uint8 = 1
+	MarketTypeBinaryOptions uint8 = 2
+)
+
 // Asset Route Type
 const (
 	AssetRouteType_Perps = 0
@@ -169,10 +176,6 @@ const (
 	// distinct from the public market index users trade with.
 	MinBinaryOptionsMarketSlot int16 = 1000
 	MaxBinaryOptionsMarketSlot int16 = 2000
-
-	MarketTypePerps         uint8 = 0
-	MarketTypeSpot          uint8 = 1
-	MarketTypeBinaryOptions uint8 = 2
 
 	BinaryOptionsSettlementTypeDiscrete   uint8 = 0
 	BinaryOptionsSettlementTypeContinuous uint8 = 1
