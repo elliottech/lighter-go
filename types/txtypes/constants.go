@@ -59,6 +59,10 @@ const (
 	TxTypeL2UpdateAccountConfig      = 41
 	TxTypeL2UpdateAccountAssetConfig = 42
 
+	TxTypeBinaryOptionsOperatorCreateMarket = 49
+	TxTypeBinaryOptionsOperatorSettleMarket = 50
+	TxTypeBinaryOptionsOperatorUpdateMarket = 52
+
 	TxTypeL1BurnShares    = 30
 	TxTypeL1RegisterAsset = 31
 	TxTypeL1UpdateAsset   = 32
@@ -123,6 +127,13 @@ const (
 	AccountAssetMarginMode_MarginEnabled  = 1 // means account is using this asset as margin
 )
 
+// Market Type
+const (
+	MarketTypePerps         uint8 = 0
+	MarketTypeSpot          uint8 = 1
+	MarketTypeBinaryOptions uint8 = 2
+)
+
 // Asset Route Type
 const (
 	AssetRouteType_Perps = 0
@@ -160,6 +171,18 @@ const (
 	MaxMarketIndex      int64 = (1 << 48) - 1
 	MinPerpsMarketIndex int64 = 0
 	NilMarketIndex      int64 = 255
+
+	// Market slots are internal positions an order book is created on; they are
+	// distinct from the public market index users trade with.
+	MinBinaryOptionsMarketSlot int16 = 1000
+	MaxBinaryOptionsMarketSlot int16 = 2000
+
+	BinaryOptionsSettlementTypeDiscrete   uint8 = 0
+	BinaryOptionsSettlementTypeContinuous uint8 = 1
+
+	MaxExtensionMultiplier int64 = (1 << 56) - 1
+	MaxOpenInterest        int64 = (1 << 56) - 1
+	MaxOrderQuoteAmount    int64 = (1 << 48) - 1
 
 	NilIntegratorIndex    = 0
 	NilIntegratorTakerFee = 0

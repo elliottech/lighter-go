@@ -1155,5 +1155,144 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("SignBinaryOptionsOperatorCreateMarket", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignBinaryOptionsOperatorCreateMarket expects 5 args: req object, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			req := args[0]
+			if req.Type() != js.TypeObject {
+				return js.ValueOf(map[string]interface{}{"error": "req must be an object"})
+			}
+			skipNonce, err := safeUint8(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.BinaryOptionsOperatorCreateMarketTxReq{
+				MarketSlot:        int16(req.Get("MarketSlot").Int()),
+				StartTimestampMs:  int64(req.Get("StartTimestampMs").Int()),
+				EndTimestampMs:    int64(req.Get("EndTimestampMs").Int()),
+				SettlementCap:     uint32(req.Get("SettlementCap").Int()),
+				SettlementType:    uint8(req.Get("SettlementType").Int()),
+				DefaultPrice:      uint32(req.Get("DefaultPrice").Int()),
+				TakerFee:          uint32(req.Get("TakerFee").Int()),
+				MakerFee:          uint32(req.Get("MakerFee").Int()),
+				MinBaseAmount:     int64(req.Get("MinBaseAmount").Int()),
+				MinQuoteAmount:    int64(req.Get("MinQuoteAmount").Int()),
+				OrderQuoteLimit:   int64(req.Get("OrderQuoteLimit").Int()),
+				OpenInterestLimit: int64(req.Get("OpenInterestLimit").Int()),
+				IsFrozen:          uint8(req.Get("IsFrozen").Int()),
+				Symbol:            req.Get("Symbol").String(),
+				SizeDecimals:      uint8(req.Get("SizeDecimals").Int()),
+				PriceDecimals:     uint8(req.Get("PriceDecimals").Int()),
+			}
+			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetBinaryOptionsOperatorCreateMarketTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignBinaryOptionsOperatorUpdateMarket", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignBinaryOptionsOperatorUpdateMarket expects 5 args: req object, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			req := args[0]
+			if req.Type() != js.TypeObject {
+				return js.ValueOf(map[string]interface{}{"error": "req must be an object"})
+			}
+			skipNonce, err := safeUint8(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.BinaryOptionsOperatorUpdateMarketTxReq{
+				MarketSlot:        int16(req.Get("MarketSlot").Int()),
+				PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
+				StartTimestampMs:  int64(req.Get("StartTimestampMs").Int()),
+				EndTimestampMs:    int64(req.Get("EndTimestampMs").Int()),
+				TakerFee:          uint32(req.Get("TakerFee").Int()),
+				MakerFee:          uint32(req.Get("MakerFee").Int()),
+				MinBaseAmount:     int64(req.Get("MinBaseAmount").Int()),
+				MinQuoteAmount:    int64(req.Get("MinQuoteAmount").Int()),
+				OrderQuoteLimit:   int64(req.Get("OrderQuoteLimit").Int()),
+				OpenInterestLimit: int64(req.Get("OpenInterestLimit").Int()),
+				IsFrozen:          uint8(req.Get("IsFrozen").Int()),
+			}
+			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetBinaryOptionsOperatorUpdateMarketTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignBinaryOptionsOperatorSettleMarket", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignBinaryOptionsOperatorSettleMarket expects 5 args: req object, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			req := args[0]
+			if req.Type() != js.TypeObject {
+				return js.ValueOf(map[string]interface{}{"error": "req must be an object"})
+			}
+			skipNonce, err := safeUint8(args[1], 1)
+			if err != nil {
+				return wrapErr(err)
+			}
+			nonce, err := safeInt(args[2], 2)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			txInfo := &types.BinaryOptionsOperatorSettleMarketTxReq{
+				MarketSlot:        int16(req.Get("MarketSlot").Int()),
+				PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
+				SettlementPrice:   uint32(req.Get("SettlementPrice").Int()),
+				IsRefund:          uint8(req.Get("IsRefund").Int()),
+			}
+			ops := new(types.TransactOpts)
+			ops.TxAttributes = txAttributesWithSkipNonce(skipNonce)
+			if nonce != -1 {
+				ops.Nonce = &nonce
+			}
+
+			tx, err := c.GetBinaryOptionsOperatorSettleMarketTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
 	select {}
 }

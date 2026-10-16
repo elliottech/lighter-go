@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types/txtypes"
@@ -167,6 +168,46 @@ type UpdateMarginTxReq struct {
 	MarketIndex int64
 	USDCAmount  int64
 	Direction   uint8
+}
+
+type BinaryOptionsOperatorCreateMarketTxReq struct {
+	MarketSlot        int16
+	StartTimestampMs  int64
+	EndTimestampMs    int64
+	SettlementCap     uint32
+	SettlementType    uint8
+	DefaultPrice      uint32
+	TakerFee          uint32
+	MakerFee          uint32
+	MinBaseAmount     int64
+	MinQuoteAmount    int64
+	OrderQuoteLimit   int64
+	OpenInterestLimit int64
+	IsFrozen          uint8
+	Symbol            string
+	SizeDecimals      uint8
+	PriceDecimals     uint8
+}
+
+type BinaryOptionsOperatorUpdateMarketTxReq struct {
+	MarketSlot        int16
+	PublicMarketIndex int64
+	StartTimestampMs  int64
+	EndTimestampMs    int64
+	TakerFee          uint32
+	MakerFee          uint32
+	MinBaseAmount     int64
+	MinQuoteAmount    int64
+	OrderQuoteLimit   int64
+	OpenInterestLimit int64
+	IsFrozen          uint8
+}
+
+type BinaryOptionsOperatorSettleMarketTxReq struct {
+	MarketSlot        int16
+	PublicMarketIndex int64
+	SettlementPrice   uint32
+	IsRefund          uint8
 }
 
 type PublicKey = gFp5.Element
@@ -392,6 +433,91 @@ func ConvertUpdateAccountAssetConfigTx(tx *UpdateAccountAssetConfigTxReq, ops *T
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
 		L2TxAttributes:  ops.L2TxAttributes(),
+	}
+}
+
+func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorCreateMarketTxInfo {
+	var symbol [32]byte
+	copy(symbol[:], tx.Symbol)
+
+	quoteExtensionMultiplier := binaryOptionsQuoteExtensionMultiplier(tx.SizeDecimals, tx.PriceDecimals)
+
+	return &txtypes.BinaryOptionsOperatorCreateMarketTxInfo{
+		AccountIndex:             *ops.FromAccountIndex,
+		ApiKeyIndex:              *ops.ApiKeyIndex,
+		MarketSlot:               tx.MarketSlot,
+		MarketType:               txtypes.MarketTypeBinaryOptions,
+		BaseAssetId:              int16(txtypes.USDCAssetIndex),
+		QuoteAssetId:             int16(txtypes.USDCAssetIndex),
+		StartTimestampMs:         tx.StartTimestampMs,
+		EndTimestampMs:           tx.EndTimestampMs,
+		SizeExtensionMultiplier:  int64(tx.SettlementCap) * quoteExtensionMultiplier,
+		QuoteExtensionMultiplier: quoteExtensionMultiplier,
+		SettlementCap:            tx.SettlementCap,
+		SettlementType:           tx.SettlementType,
+		DefaultPrice:             tx.DefaultPrice,
+		TakerFee:                 tx.TakerFee,
+		MakerFee:                 tx.MakerFee,
+		MinBaseAmount:            tx.MinBaseAmount,
+		MinQuoteAmount:           tx.MinQuoteAmount,
+		OrderQuoteLimit:          tx.OrderQuoteLimit,
+		OpenInterestLimit:        tx.OpenInterestLimit,
+		IsFrozen:                 tx.IsFrozen,
+		Symbol:                   symbol,
+		SizeDecimals:             tx.SizeDecimals,
+		PriceDecimals:            tx.PriceDecimals,
+		ExpiredAt:                ops.ExpiredAt,
+		Nonce:                    *ops.Nonce,
+		L2TxAttributes:           ops.L2TxAttributes(),
+	}
+}
+
+// binaryOptionsQuoteExtensionMultiplier returns 10^(12 - sizeDecimals - priceDecimals); 0 (fails validation) when the decimals do not fit.
+func binaryOptionsQuoteExtensionMultiplier(sizeDecimals, priceDecimals uint8) int64 {
+	exp := 12 - int(sizeDecimals) - int(priceDecimals)
+	if exp < 0 {
+		return 0
+	}
+	multiplier := int64(1)
+	for i := 0; i < exp; i++ {
+		multiplier *= 10
+	}
+	return multiplier
+}
+
+func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorUpdateMarketTxInfo{
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		MarketSlot:        tx.MarketSlot,
+		PublicMarketIndex: tx.PublicMarketIndex,
+		StartTimestampMs:  tx.StartTimestampMs,
+		EndTimestampMs:    tx.EndTimestampMs,
+		TakerFee:          tx.TakerFee,
+		MakerFee:          tx.MakerFee,
+		LiquidationFee:    0,
+		MinBaseAmount:     tx.MinBaseAmount,
+		MinQuoteAmount:    tx.MinQuoteAmount,
+		OrderQuoteLimit:   tx.OrderQuoteLimit,
+		OpenInterestLimit: tx.OpenInterestLimit,
+		IsFrozen:          tx.IsFrozen,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
+	}
+}
+
+func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		MarketSlot:        tx.MarketSlot,
+		PublicMarketIndex: tx.PublicMarketIndex,
+		SettlementPrice:   tx.SettlementPrice,
+		IsRefund:          tx.IsRefund,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
 	}
 }
 
@@ -821,6 +947,75 @@ func ConstructUpdateAccountAssetConfigTx(key signer.KeyManager, lighterChainId u
 
 func ConstructUpdateLeverageTx(key signer.KeyManager, lighterChainId uint32, tx *UpdateLeverageTxReq, ops *TransactOpts) (*txtypes.L2UpdateLeverageTxInfo, error) {
 	convertedTx := ConvertUpdateLeverageTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorCreateMarketTx(key signer.KeyManager, lighterChainId uint32, tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorCreateMarketTx(tx, ops)
+	if len(tx.Symbol) >= len(convertedTx.Symbol) || !utf8.ValidString(tx.Symbol) {
+		return nil, txtypes.ErrInvalidMarketSymbol
+	}
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorUpdateMarketTx(key signer.KeyManager, lighterChainId uint32, tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorUpdateMarketTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.KeyManager, lighterChainId uint32, tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorSettleMarketTxInfo, error) {
+	convertedTx := ConvertBinaryOptionsOperatorSettleMarketTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
