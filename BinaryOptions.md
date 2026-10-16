@@ -111,3 +111,5 @@ SignBinaryOptionsOperatorSettleMarket(req, skipNonce, nonce, apiKeyIndex, accoun
 ```
 
 Each returns `{ txType, txInfo, txHash }` or `{ error }`.
+
+`web-wasm/` exposes the same as `_signBinaryOptionsOperatorCreateMarket/UpdateMarket/SettleMarket(accountIndex, req, nonce)`, returning a promise like the other `_sign*` functions.

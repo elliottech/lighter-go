@@ -50,6 +50,9 @@ func main() {
 	js.Global().Set("_createAuthToken", js.FuncOf(CreateAuthToken))
 	js.Global().Set("_signStakeAssets", js.FuncOf(SignStakeAssets))
 	js.Global().Set("_signUnstakeAssets", js.FuncOf(SignUnstakeAssets))
+	js.Global().Set("_signBinaryOptionsOperatorCreateMarket", js.FuncOf(SignBinaryOptionsOperatorCreateMarket))
+	js.Global().Set("_signBinaryOptionsOperatorUpdateMarket", js.FuncOf(SignBinaryOptionsOperatorUpdateMarket))
+	js.Global().Set("_signBinaryOptionsOperatorSettleMarket", js.FuncOf(SignBinaryOptionsOperatorSettleMarket))
 	<-c
 }
 
@@ -1209,6 +1212,136 @@ func SignCreateGroupedOrders(this js.Value, args []js.Value) any {
 				ops.IntegratorTakerFee = integratorTakerFee
 				ops.IntegratorMakerFee = integratorMakerFee
 				tx, err := clients[accountIndex].GetCreateGroupedOrdersTransaction(txInfo, ops)
+				if err != nil {
+					resolve.Invoke(errToJson(err))
+					return
+				}
+				resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func SignBinaryOptionsOperatorCreateMarket(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+	req := args[1]
+	if req.Type() != js.TypeObject {
+		return errPromise(fmt.Errorf("req must be an object"))
+	}
+	nonce := int64(args[2].Int())
+	txInfo := &BinaryOptionsOperatorCreateMarketTxReq{
+		MarketSlot:        int16(req.Get("MarketSlot").Int()),
+		StartTimestampMs:  int64(req.Get("StartTimestampMs").Int()),
+		EndTimestampMs:    int64(req.Get("EndTimestampMs").Int()),
+		SettlementCap:     uint32(req.Get("SettlementCap").Int()),
+		SettlementType:    uint8(req.Get("SettlementType").Int()),
+		DefaultPrice:      uint32(req.Get("DefaultPrice").Int()),
+		TakerFee:          uint32(req.Get("TakerFee").Int()),
+		MakerFee:          uint32(req.Get("MakerFee").Int()),
+		MinBaseAmount:     int64(req.Get("MinBaseAmount").Int()),
+		MinQuoteAmount:    int64(req.Get("MinQuoteAmount").Int()),
+		OrderQuoteLimit:   int64(req.Get("OrderQuoteLimit").Int()),
+		OpenInterestLimit: int64(req.Get("OpenInterestLimit").Int()),
+		IsFrozen:          uint8(req.Get("IsFrozen").Int()),
+		Symbol:            req.Get("Symbol").String(),
+		SizeDecimals:      uint8(req.Get("SizeDecimals").Int()),
+		PriceDecimals:     uint8(req.Get("PriceDecimals").Int()),
+	}
+
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				ops := new(TransactOpts)
+				ops.Nonce = &nonce
+				tx, err := clients[accountIndex].GetBinaryOptionsOperatorCreateMarketTransaction(txInfo, ops)
+				if err != nil {
+					resolve.Invoke(errToJson(err))
+					return
+				}
+				resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func SignBinaryOptionsOperatorUpdateMarket(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+	req := args[1]
+	if req.Type() != js.TypeObject {
+		return errPromise(fmt.Errorf("req must be an object"))
+	}
+	nonce := int64(args[2].Int())
+	txInfo := &BinaryOptionsOperatorUpdateMarketTxReq{
+		MarketSlot:        int16(req.Get("MarketSlot").Int()),
+		PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
+		StartTimestampMs:  int64(req.Get("StartTimestampMs").Int()),
+		EndTimestampMs:    int64(req.Get("EndTimestampMs").Int()),
+		TakerFee:          uint32(req.Get("TakerFee").Int()),
+		MakerFee:          uint32(req.Get("MakerFee").Int()),
+		MinBaseAmount:     int64(req.Get("MinBaseAmount").Int()),
+		MinQuoteAmount:    int64(req.Get("MinQuoteAmount").Int()),
+		OrderQuoteLimit:   int64(req.Get("OrderQuoteLimit").Int()),
+		OpenInterestLimit: int64(req.Get("OpenInterestLimit").Int()),
+		IsFrozen:          uint8(req.Get("IsFrozen").Int()),
+	}
+
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				ops := new(TransactOpts)
+				ops.Nonce = &nonce
+				tx, err := clients[accountIndex].GetBinaryOptionsOperatorUpdateMarketTransaction(txInfo, ops)
+				if err != nil {
+					resolve.Invoke(errToJson(err))
+					return
+				}
+				resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+			}()
+			return nil
+		})
+		promiseCons := js.Global().Get("Promise")
+		return promiseCons.New(handler)
+	})
+}
+
+func SignBinaryOptionsOperatorSettleMarket(this js.Value, args []js.Value) any {
+	accountIndex := int64(args[0].Int())
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+	req := args[1]
+	if req.Type() != js.TypeObject {
+		return errPromise(fmt.Errorf("req must be an object"))
+	}
+	nonce := int64(args[2].Int())
+	txInfo := &BinaryOptionsOperatorSettleMarketTxReq{
+		MarketSlot:        int16(req.Get("MarketSlot").Int()),
+		PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
+		SettlementPrice:   uint32(req.Get("SettlementPrice").Int()),
+		IsRefund:          uint8(req.Get("IsRefund").Int()),
+	}
+
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			go func() {
+				ops := new(TransactOpts)
+				ops.Nonce = &nonce
+				tx, err := clients[accountIndex].GetBinaryOptionsOperatorSettleMarketTransaction(txInfo, ops)
 				if err != nil {
 					resolve.Invoke(errToJson(err))
 					return
