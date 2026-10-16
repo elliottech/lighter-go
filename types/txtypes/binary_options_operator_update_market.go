@@ -14,10 +14,12 @@ type BinaryOptionsOperatorUpdateMarketTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex       int16
+	// MarketSlot is the slot the order book lives on; serialized as MarketIndex for the server.
+	MarketSlot        int16 `json:"MarketIndex"`
 	PublicMarketIndex int64
-	StartTimestamp    int64
-	EndTimestamp      int64
+	// StartTimestamp and EndTimestamp are unix timestamps in milliseconds.
+	StartTimestamp int64
+	EndTimestamp   int64
 
 	TakerFee          uint32
 	MakerFee          uint32
@@ -70,8 +72,8 @@ func (txInfo *BinaryOptionsOperatorUpdateMarketTxInfo) Validate() error {
 		return ErrApiKeyIndexTooHigh
 	}
 
-	// MarketIndex
-	if txInfo.MarketIndex < MinBinaryOptionsMarketIndex || txInfo.MarketIndex > MaxBinaryOptionsMarketIndex {
+	// MarketSlot
+	if txInfo.MarketSlot < MinBinaryOptionsMarketSlot || txInfo.MarketSlot > MaxBinaryOptionsMarketSlot {
 		return ErrInvalidMarketIndex
 	}
 
@@ -129,7 +131,7 @@ func (txInfo *BinaryOptionsOperatorUpdateMarketTxInfo) Hash(lighterChainId uint3
 	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.MarketSlot))
 	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.StartTimestamp))
 	elems = append(elems, g.GoldilocksField(txInfo.EndTimestamp))

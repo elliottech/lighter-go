@@ -158,26 +158,25 @@ type UpdateMarginTxReq struct {
 	Direction   uint8
 }
 
+// BinaryOptionsOperatorCreateMarketTxReq creates a binary options market with USDC as base and quote asset.
+// SizeExtensionMultiplier and QuoteExtensionMultiplier are derived from SizeDecimals, PriceDecimals and SettlementCap.
 type BinaryOptionsOperatorCreateMarketTxReq struct {
-	MarketIndex    int16 // market slot
-	MarketType     uint8
-	BaseAssetId    int16
-	QuoteAssetId   int16
-	StartTimestamp int64
-	EndTimestamp   int64
+	MarketSlot       int16
+	StartTimestampMs int64
+	EndTimestampMs   int64
 
-	SizeExtensionMultiplier  int64
-	QuoteExtensionMultiplier int64
-	SettlementCap            uint32
-	SettlementType           uint8
-	DefaultPrice             uint32
-	TakerFee                 uint32
-	MakerFee                 uint32
-	MinBaseAmount            int64
-	MinQuoteAmount           int64
-	OrderQuoteLimit          int64
-	OpenInterestLimit        int64
-	IsFrozen                 uint8
+	// SettlementCap is the maximum settlement value of a share in price ticks.
+	SettlementCap uint32
+	// SettlementType is txtypes.BinaryOptionsSettlementTypeDiscrete or txtypes.BinaryOptionsSettlementTypeContinuous.
+	SettlementType    uint8
+	DefaultPrice      uint32
+	TakerFee          uint32
+	MakerFee          uint32
+	MinBaseAmount     int64
+	MinQuoteAmount    int64
+	OrderQuoteLimit   int64
+	OpenInterestLimit int64
+	IsFrozen          uint8
 
 	Symbol        string
 	SizeDecimals  uint8
@@ -185,21 +184,20 @@ type BinaryOptionsOperatorCreateMarketTxReq struct {
 }
 
 type BinaryOptionsOperatorSettleMarketTxReq struct {
-	MarketIndex       int16 // market slot
+	MarketSlot        int16
 	PublicMarketIndex int64
 	SettlementPrice   uint32
 	IsRefund          uint8
 }
 
 type BinaryOptionsOperatorUpdateMarketTxReq struct {
-	MarketIndex       int16 // market slot
+	MarketSlot        int16
 	PublicMarketIndex int64
-	StartTimestamp    int64
-	EndTimestamp      int64
+	StartTimestampMs  int64
+	EndTimestampMs    int64
 
 	TakerFee          uint32
 	MakerFee          uint32
-	LiquidationFee    uint32 // only applies to perps markets; must be zero for binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -1031,17 +1029,19 @@ func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateM
 	var symbol [32]byte
 	copy(symbol[:], tx.Symbol)
 
+	quoteExtensionMultiplier := binaryOptionsQuoteExtensionMultiplier(tx.SizeDecimals, tx.PriceDecimals)
+
 	return &txtypes.BinaryOptionsOperatorCreateMarketTxInfo{
 		AccountIndex:             *ops.FromAccountIndex,
 		ApiKeyIndex:              *ops.ApiKeyIndex,
-		MarketIndex:              tx.MarketIndex,
-		MarketType:               tx.MarketType,
-		BaseAssetId:              tx.BaseAssetId,
-		QuoteAssetId:             tx.QuoteAssetId,
-		StartTimestamp:           tx.StartTimestamp,
-		EndTimestamp:             tx.EndTimestamp,
-		SizeExtensionMultiplier:  tx.SizeExtensionMultiplier,
-		QuoteExtensionMultiplier: tx.QuoteExtensionMultiplier,
+		MarketSlot:               tx.MarketSlot,
+		MarketType:               txtypes.MarketTypeBinaryOptions,
+		BaseAssetId:              int16(txtypes.USDCAssetIndex),
+		QuoteAssetId:             int16(txtypes.USDCAssetIndex),
+		StartTimestamp:           tx.StartTimestampMs,
+		EndTimestamp:             tx.EndTimestampMs,
+		SizeExtensionMultiplier:  int64(tx.SettlementCap) * quoteExtensionMultiplier,
+		QuoteExtensionMultiplier: quoteExtensionMultiplier,
 		SettlementCap:            tx.SettlementCap,
 		SettlementType:           tx.SettlementType,
 		DefaultPrice:             tx.DefaultPrice,
@@ -1061,11 +1061,26 @@ func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateM
 	}
 }
 
+// binaryOptionsQuoteExtensionMultiplier returns 10^(12 - sizeDecimals - priceDecimals): quote amounts are
+// scaled to USDC (6 decimals) times the collateral multiplier (6 decimals). Returns 0, which fails
+// validation, when the decimals do not fit.
+func binaryOptionsQuoteExtensionMultiplier(sizeDecimals, priceDecimals uint8) int64 {
+	exp := 12 - int(sizeDecimals) - int(priceDecimals)
+	if exp < 0 {
+		return 0
+	}
+	multiplier := int64(1)
+	for i := 0; i < exp; i++ {
+		multiplier *= 10
+	}
+	return multiplier
+}
+
 func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
 	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
 		AccountIndex:      *ops.FromAccountIndex,
 		ApiKeyIndex:       *ops.ApiKeyIndex,
-		MarketIndex:       tx.MarketIndex,
+		MarketSlot:        tx.MarketSlot,
 		PublicMarketIndex: tx.PublicMarketIndex,
 		SettlementPrice:   tx.SettlementPrice,
 		IsRefund:          tx.IsRefund,
@@ -1079,13 +1094,13 @@ func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateM
 	return &txtypes.BinaryOptionsOperatorUpdateMarketTxInfo{
 		AccountIndex:      *ops.FromAccountIndex,
 		ApiKeyIndex:       *ops.ApiKeyIndex,
-		MarketIndex:       tx.MarketIndex,
+		MarketSlot:        tx.MarketSlot,
 		PublicMarketIndex: tx.PublicMarketIndex,
-		StartTimestamp:    tx.StartTimestamp,
-		EndTimestamp:      tx.EndTimestamp,
+		StartTimestamp:    tx.StartTimestampMs,
+		EndTimestamp:      tx.EndTimestampMs,
 		TakerFee:          tx.TakerFee,
 		MakerFee:          tx.MakerFee,
-		LiquidationFee:    tx.LiquidationFee,
+		LiquidationFee:    0,
 		MinBaseAmount:     tx.MinBaseAmount,
 		MinQuoteAmount:    tx.MinQuoteAmount,
 		OrderQuoteLimit:   tx.OrderQuoteLimit,

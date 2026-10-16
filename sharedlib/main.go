@@ -47,6 +47,46 @@ typedef struct {
     uint32_t TriggerPrice;
     int64_t OrderExpiry;
 } CreateOrderTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t StartTimestampMs;
+    int64_t EndTimestampMs;
+    uint32_t SettlementCap;
+    uint8_t SettlementType;
+    uint32_t DefaultPrice;
+    uint32_t TakerFee;
+    uint32_t MakerFee;
+    int64_t MinBaseAmount;
+    int64_t MinQuoteAmount;
+    int64_t OrderQuoteLimit;
+    int64_t OpenInterestLimit;
+    uint8_t IsFrozen;
+    char* Symbol;
+    uint8_t SizeDecimals;
+    uint8_t PriceDecimals;
+} BinaryOptionsOperatorCreateMarketTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t PublicMarketIndex;
+    int64_t StartTimestampMs;
+    int64_t EndTimestampMs;
+    uint32_t TakerFee;
+    uint32_t MakerFee;
+    int64_t MinBaseAmount;
+    int64_t MinQuoteAmount;
+    int64_t OrderQuoteLimit;
+    int64_t OpenInterestLimit;
+    uint8_t IsFrozen;
+} BinaryOptionsOperatorUpdateMarketTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t PublicMarketIndex;
+    uint32_t SettlementPrice;
+    uint8_t IsRefund;
+} BinaryOptionsOperatorSettleMarketTxReq;
 */
 import "C"
 
@@ -896,7 +936,7 @@ func SignUpdateAccountAssetConfig(cAssetIndex C.int16_t, cAssetMarginMode C.uint
 }
 
 //export SignBinaryOptionsOperatorCreateMarket
-func SignBinaryOptionsOperatorCreateMarket(cMarketIndex C.int16_t, cMarketType C.uint8_t, cBaseAssetId C.int16_t, cQuoteAssetId C.int16_t, cStartTimestamp C.longlong, cEndTimestamp C.longlong, cSizeExtensionMultiplier C.longlong, cQuoteExtensionMultiplier C.longlong, cSettlementCap C.uint32_t, cSettlementType C.uint8_t, cDefaultPrice C.uint32_t, cTakerFee C.uint32_t, cMakerFee C.uint32_t, cMinBaseAmount C.longlong, cMinQuoteAmount C.longlong, cOrderQuoteLimit C.longlong, cOpenInterestLimit C.longlong, cIsFrozen C.uint8_t, cSymbol *C.char, cSizeDecimals C.uint8_t, cPriceDecimals C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignBinaryOptionsOperatorCreateMarket(cReq *C.BinaryOptionsOperatorCreateMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -909,27 +949,22 @@ func SignBinaryOptionsOperatorCreateMarket(cMarketIndex C.int16_t, cMarketType C
 	}
 
 	tx := &types.BinaryOptionsOperatorCreateMarketTxReq{
-		MarketIndex:              int16(cMarketIndex),
-		MarketType:               uint8(cMarketType),
-		BaseAssetId:              int16(cBaseAssetId),
-		QuoteAssetId:             int16(cQuoteAssetId),
-		StartTimestamp:           int64(cStartTimestamp),
-		EndTimestamp:             int64(cEndTimestamp),
-		SizeExtensionMultiplier:  int64(cSizeExtensionMultiplier),
-		QuoteExtensionMultiplier: int64(cQuoteExtensionMultiplier),
-		SettlementCap:            uint32(cSettlementCap),
-		SettlementType:           uint8(cSettlementType),
-		DefaultPrice:             uint32(cDefaultPrice),
-		TakerFee:                 uint32(cTakerFee),
-		MakerFee:                 uint32(cMakerFee),
-		MinBaseAmount:            int64(cMinBaseAmount),
-		MinQuoteAmount:           int64(cMinQuoteAmount),
-		OrderQuoteLimit:          int64(cOrderQuoteLimit),
-		OpenInterestLimit:        int64(cOpenInterestLimit),
-		IsFrozen:                 uint8(cIsFrozen),
-		Symbol:                   C.GoString(cSymbol),
-		SizeDecimals:             uint8(cSizeDecimals),
-		PriceDecimals:            uint8(cPriceDecimals),
+		MarketSlot:        int16(cReq.MarketSlot),
+		StartTimestampMs:  int64(cReq.StartTimestampMs),
+		EndTimestampMs:    int64(cReq.EndTimestampMs),
+		SettlementCap:     uint32(cReq.SettlementCap),
+		SettlementType:    uint8(cReq.SettlementType),
+		DefaultPrice:      uint32(cReq.DefaultPrice),
+		TakerFee:          uint32(cReq.TakerFee),
+		MakerFee:          uint32(cReq.MakerFee),
+		MinBaseAmount:     int64(cReq.MinBaseAmount),
+		MinQuoteAmount:    int64(cReq.MinQuoteAmount),
+		OrderQuoteLimit:   int64(cReq.OrderQuoteLimit),
+		OpenInterestLimit: int64(cReq.OpenInterestLimit),
+		IsFrozen:          uint8(cReq.IsFrozen),
+		Symbol:            C.GoString(cReq.Symbol),
+		SizeDecimals:      uint8(cReq.SizeDecimals),
+		PriceDecimals:     uint8(cReq.PriceDecimals),
 	}
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
@@ -938,7 +973,7 @@ func SignBinaryOptionsOperatorCreateMarket(cMarketIndex C.int16_t, cMarketType C
 }
 
 //export SignBinaryOptionsOperatorUpdateMarket
-func SignBinaryOptionsOperatorUpdateMarket(cMarketIndex C.int16_t, cPublicMarketIndex C.longlong, cStartTimestamp C.longlong, cEndTimestamp C.longlong, cTakerFee C.uint32_t, cMakerFee C.uint32_t, cLiquidationFee C.uint32_t, cMinBaseAmount C.longlong, cMinQuoteAmount C.longlong, cOrderQuoteLimit C.longlong, cOpenInterestLimit C.longlong, cIsFrozen C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignBinaryOptionsOperatorUpdateMarket(cReq *C.BinaryOptionsOperatorUpdateMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -951,18 +986,17 @@ func SignBinaryOptionsOperatorUpdateMarket(cMarketIndex C.int16_t, cPublicMarket
 	}
 
 	tx := &types.BinaryOptionsOperatorUpdateMarketTxReq{
-		MarketIndex:       int16(cMarketIndex),
-		PublicMarketIndex: int64(cPublicMarketIndex),
-		StartTimestamp:    int64(cStartTimestamp),
-		EndTimestamp:      int64(cEndTimestamp),
-		TakerFee:          uint32(cTakerFee),
-		MakerFee:          uint32(cMakerFee),
-		LiquidationFee:    uint32(cLiquidationFee),
-		MinBaseAmount:     int64(cMinBaseAmount),
-		MinQuoteAmount:    int64(cMinQuoteAmount),
-		OrderQuoteLimit:   int64(cOrderQuoteLimit),
-		OpenInterestLimit: int64(cOpenInterestLimit),
-		IsFrozen:          uint8(cIsFrozen),
+		MarketSlot:        int16(cReq.MarketSlot),
+		PublicMarketIndex: int64(cReq.PublicMarketIndex),
+		StartTimestampMs:  int64(cReq.StartTimestampMs),
+		EndTimestampMs:    int64(cReq.EndTimestampMs),
+		TakerFee:          uint32(cReq.TakerFee),
+		MakerFee:          uint32(cReq.MakerFee),
+		MinBaseAmount:     int64(cReq.MinBaseAmount),
+		MinQuoteAmount:    int64(cReq.MinQuoteAmount),
+		OrderQuoteLimit:   int64(cReq.OrderQuoteLimit),
+		OpenInterestLimit: int64(cReq.OpenInterestLimit),
+		IsFrozen:          uint8(cReq.IsFrozen),
 	}
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
@@ -971,7 +1005,7 @@ func SignBinaryOptionsOperatorUpdateMarket(cMarketIndex C.int16_t, cPublicMarket
 }
 
 //export SignBinaryOptionsOperatorSettleMarket
-func SignBinaryOptionsOperatorSettleMarket(cMarketIndex C.int16_t, cPublicMarketIndex C.longlong, cSettlementPrice C.uint32_t, cIsRefund C.uint8_t, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+func SignBinaryOptionsOperatorSettleMarket(cReq *C.BinaryOptionsOperatorSettleMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = signedTxResponsePanic(r)
@@ -984,10 +1018,10 @@ func SignBinaryOptionsOperatorSettleMarket(cMarketIndex C.int16_t, cPublicMarket
 	}
 
 	tx := &types.BinaryOptionsOperatorSettleMarketTxReq{
-		MarketIndex:       int16(cMarketIndex),
-		PublicMarketIndex: int64(cPublicMarketIndex),
-		SettlementPrice:   uint32(cSettlementPrice),
-		IsRefund:          uint8(cIsRefund),
+		MarketSlot:        int16(cReq.MarketSlot),
+		PublicMarketIndex: int64(cReq.PublicMarketIndex),
+		SettlementPrice:   uint32(cReq.SettlementPrice),
+		IsRefund:          uint8(cReq.IsRefund),
 	}
 	ops := getTransactOpts(cSkipNonce, cNonce)
 

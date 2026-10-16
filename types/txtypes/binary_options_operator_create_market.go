@@ -13,11 +13,13 @@ type BinaryOptionsOperatorCreateMarketTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	MarketIndex int16
+	// MarketSlot is the slot the order book lives on; serialized as MarketIndex for the server.
+	MarketSlot int16 `json:"MarketIndex"`
 	// MarketType is the type of market created on the slot. Only MarketTypeBinaryOptions is supported.
-	MarketType     uint8
-	BaseAssetId    int16
-	QuoteAssetId   int16
+	MarketType   uint8
+	BaseAssetId  int16
+	QuoteAssetId int16
+	// StartTimestamp and EndTimestamp are unix timestamps in milliseconds.
 	StartTimestamp int64
 	EndTimestamp   int64
 
@@ -26,8 +28,8 @@ type BinaryOptionsOperatorCreateMarketTxInfo struct {
 	// SettlementCap is the maximum settlement value of a share in price ticks, so that
 	// SettlementCap * QuoteExtensionMultiplier == SizeExtensionMultiplier.
 	SettlementCap uint32
-	// SettlementType is DiscreteSettlementType (settles at 0 or SettlementCap) or
-	// ContinuousSettlementType (settles at any price in [0, SettlementCap]).
+	// SettlementType is BinaryOptionsSettlementTypeDiscrete (settles at 0 or SettlementCap) or
+	// BinaryOptionsSettlementTypeContinuous (settles at any price in [0, SettlementCap]).
 	SettlementType uint8
 	// DefaultPrice is the settlement price used when the market is refunded, in price ticks.
 	// It is immutable after market creation.
@@ -93,8 +95,8 @@ func (txInfo *BinaryOptionsOperatorCreateMarketTxInfo) Validate() error {
 		return ErrInvalidAssetIndex
 	}
 
-	// MarketIndex
-	if txInfo.MarketIndex < MinBinaryOptionsMarketIndex || txInfo.MarketIndex > MaxBinaryOptionsMarketIndex {
+	// MarketSlot
+	if txInfo.MarketSlot < MinBinaryOptionsMarketSlot || txInfo.MarketSlot > MaxBinaryOptionsMarketSlot {
 		return ErrInvalidMarketIndex
 	}
 
@@ -115,7 +117,7 @@ func (txInfo *BinaryOptionsOperatorCreateMarketTxInfo) Validate() error {
 		return ErrInvalidSettlementCap
 	}
 
-	if txInfo.SettlementType != DiscreteSettlementType && txInfo.SettlementType != ContinuousSettlementType {
+	if txInfo.SettlementType != BinaryOptionsSettlementTypeDiscrete && txInfo.SettlementType != BinaryOptionsSettlementTypeContinuous {
 		return ErrInvalidSettlementType
 	}
 
@@ -164,7 +166,7 @@ func (txInfo *BinaryOptionsOperatorCreateMarketTxInfo) Hash(lighterChainId uint3
 	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
-	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.MarketSlot))
 	elems = append(elems, g.GoldilocksField(txInfo.MarketType))
 	elems = append(elems, g.GoldilocksField(txInfo.BaseAssetId))
 	elems = append(elems, g.GoldilocksField(txInfo.QuoteAssetId))

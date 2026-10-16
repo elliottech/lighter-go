@@ -165,13 +165,17 @@ const (
 	MinPerpsMarketIndex int64 = 0
 	NilMarketIndex      int64 = 255
 
-	MinBinaryOptionsMarketIndex int16 = 1000
-	MaxBinaryOptionsMarketIndex int16 = 2000
+	// Market slots are internal positions an order book is created on; they are
+	// distinct from the public market index users trade with.
+	MinBinaryOptionsMarketSlot int16 = 1000
+	MaxBinaryOptionsMarketSlot int16 = 2000
 
+	MarketTypePerps         uint8 = 0
+	MarketTypeSpot          uint8 = 1
 	MarketTypeBinaryOptions uint8 = 2
 
-	DiscreteSettlementType   uint8 = 0
-	ContinuousSettlementType uint8 = 1
+	BinaryOptionsSettlementTypeDiscrete   uint8 = 0
+	BinaryOptionsSettlementTypeContinuous uint8 = 1
 
 	MaxExtensionMultiplier int64 = (1 << 56) - 1
 	MaxOpenInterest        int64 = (1 << 56) - 1
