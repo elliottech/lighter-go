@@ -69,7 +69,7 @@ typedef struct {
 
 typedef struct {
     int16_t MarketSlot;
-    int64_t PublicMarketIndex;
+    int64_t MarketIndex;
     int64_t StartTimestampMs;
     int64_t EndTimestampMs;
     uint32_t TakerFee;
@@ -83,7 +83,7 @@ typedef struct {
 
 typedef struct {
     int16_t MarketSlot;
-    int64_t PublicMarketIndex;
+    int64_t MarketIndex;
     uint32_t SettlementPrice;
     uint8_t IsRefund;
 } BinaryOptionsOperatorSettleMarketTxReq;
@@ -987,7 +987,7 @@ func SignBinaryOptionsOperatorUpdateMarket(cReq *C.BinaryOptionsOperatorUpdateMa
 
 	tx := &types.BinaryOptionsOperatorUpdateMarketTxReq{
 		MarketSlot:        int16(cReq.MarketSlot),
-		PublicMarketIndex: int64(cReq.PublicMarketIndex),
+		MarketIndex:       int64(cReq.MarketIndex),
 		StartTimestampMs:  int64(cReq.StartTimestampMs),
 		EndTimestampMs:    int64(cReq.EndTimestampMs),
 		TakerFee:          uint32(cReq.TakerFee),
@@ -1018,10 +1018,10 @@ func SignBinaryOptionsOperatorSettleMarket(cReq *C.BinaryOptionsOperatorSettleMa
 	}
 
 	tx := &types.BinaryOptionsOperatorSettleMarketTxReq{
-		MarketSlot:        int16(cReq.MarketSlot),
-		PublicMarketIndex: int64(cReq.PublicMarketIndex),
-		SettlementPrice:   uint32(cReq.SettlementPrice),
-		IsRefund:          uint8(cReq.IsRefund),
+		MarketSlot:      int16(cReq.MarketSlot),
+		MarketIndex:     int64(cReq.MarketIndex),
+		SettlementPrice: uint32(cReq.SettlementPrice),
+		IsRefund:        uint8(cReq.IsRefund),
 	}
 	ops := getTransactOpts(cSkipNonce, cNonce)
 

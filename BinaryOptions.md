@@ -10,7 +10,7 @@ The requests live in `types/tx_request.go`, the constants in `types/txtypes/cons
 - `MarketSlot` (`int16`) is the internal slot the order book is created on. Binary options slots are
   `1000..2000` (`MinBinaryOptionsMarketSlot`..`MaxBinaryOptionsMarketSlot`). The slot is serialized as `MarketIndex`
   in the signed tx info, which is the name the server expects.
-- `PublicMarketIndex` (`int64`) is the market index users trade with (`CreateOrder` etc). It is assigned when the
+- `MarketIndex` (`int64`) is the market index users trade with (`CreateOrder` etc). It is assigned when the
   market is created and is required by update and settle.
 
 ## Fixed values
@@ -75,7 +75,7 @@ The `12` is USDC decimals (6) plus the collateral multiplier decimals (6), so `S
 | Field | Type | Accepted values |
 | --- | --- | --- |
 | `MarketSlot` | int16 | `1000..2000` |
-| `PublicMarketIndex` | int64 | the market's public index |
+| `MarketIndex` | int64 | the market's public index |
 | `StartTimestampMs`, `EndTimestampMs` | int64 | unix ms, same rules as create |
 | `TakerFee`, `MakerFee` | uint32 | `<= FeeTick` |
 | `MinBaseAmount`, `MinQuoteAmount`, `OrderQuoteLimit`, `OpenInterestLimit` | int64 | same rules as create |
@@ -86,7 +86,7 @@ The `12` is USDC decimals (6) plus the collateral multiplier decimals (6), so `S
 | Field | Type | Accepted values |
 | --- | --- | --- |
 | `MarketSlot` | int16 | `1000..2000` |
-| `PublicMarketIndex` | int64 | the market's public index |
+| `MarketIndex` | int64 | the market's public index |
 | `SettlementPrice` | uint32 | `0..SettlementCap`; must be `0` when `IsRefund` is set |
 | `IsRefund` | uint8 | `0` or `1`; `1` settles every position at `DefaultPrice` |
 

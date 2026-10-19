@@ -1286,7 +1286,7 @@ func SignBinaryOptionsOperatorUpdateMarket(this js.Value, args []js.Value) any {
 	nonce := int64(args[2].Int())
 	txInfo := &BinaryOptionsOperatorUpdateMarketTxReq{
 		MarketSlot:        int16(req.Get("MarketSlot").Int()),
-		PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
+		MarketIndex:       int64(req.Get("MarketIndex").Int()),
 		StartTimestampMs:  int64(req.Get("StartTimestampMs").Int()),
 		EndTimestampMs:    int64(req.Get("EndTimestampMs").Int()),
 		TakerFee:          uint32(req.Get("TakerFee").Int()),
@@ -1329,10 +1329,10 @@ func SignBinaryOptionsOperatorSettleMarket(this js.Value, args []js.Value) any {
 	}
 	nonce := int64(args[2].Int())
 	txInfo := &BinaryOptionsOperatorSettleMarketTxReq{
-		MarketSlot:        int16(req.Get("MarketSlot").Int()),
-		PublicMarketIndex: int64(req.Get("PublicMarketIndex").Int()),
-		SettlementPrice:   uint32(req.Get("SettlementPrice").Int()),
-		IsRefund:          uint8(req.Get("IsRefund").Int()),
+		MarketSlot:      int16(req.Get("MarketSlot").Int()),
+		MarketIndex:     int64(req.Get("MarketIndex").Int()),
+		SettlementPrice: uint32(req.Get("SettlementPrice").Int()),
+		IsRefund:        uint8(req.Get("IsRefund").Int()),
 	}
 
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
