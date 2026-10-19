@@ -184,17 +184,17 @@ type BinaryOptionsOperatorCreateMarketTxReq struct {
 }
 
 type BinaryOptionsOperatorSettleMarketTxReq struct {
-	MarketSlot        int16
-	PublicMarketIndex int64
-	SettlementPrice   uint32
-	IsRefund          uint8
+	MarketSlot      int16
+	MarketIndex     int64
+	SettlementPrice uint32
+	IsRefund        uint8
 }
 
 type BinaryOptionsOperatorUpdateMarketTxReq struct {
-	MarketSlot        int16
-	PublicMarketIndex int64
-	StartTimestampMs  int64
-	EndTimestampMs    int64
+	MarketSlot       int16
+	MarketIndex      int64
+	StartTimestampMs int64
+	EndTimestampMs   int64
 
 	TakerFee          uint32
 	MakerFee          uint32
@@ -1078,15 +1078,15 @@ func binaryOptionsQuoteExtensionMultiplier(sizeDecimals, priceDecimals uint8) in
 
 func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
 	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
-		AccountIndex:      *ops.FromAccountIndex,
-		ApiKeyIndex:       *ops.ApiKeyIndex,
-		MarketSlot:        tx.MarketSlot,
-		PublicMarketIndex: tx.PublicMarketIndex,
-		SettlementPrice:   tx.SettlementPrice,
-		IsRefund:          tx.IsRefund,
-		ExpiredAt:         ops.ExpiredAt,
-		Nonce:             *ops.Nonce,
-		L2TxAttributes:    ConstructL2TxAttributes(ops.TxAttributes),
+		AccountIndex:    *ops.FromAccountIndex,
+		ApiKeyIndex:     *ops.ApiKeyIndex,
+		MarketSlot:      tx.MarketSlot,
+		MarketIndex:     tx.MarketIndex,
+		SettlementPrice: tx.SettlementPrice,
+		IsRefund:        tx.IsRefund,
+		ExpiredAt:       ops.ExpiredAt,
+		Nonce:           *ops.Nonce,
+		L2TxAttributes:  ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }
 
@@ -1095,7 +1095,7 @@ func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateM
 		AccountIndex:      *ops.FromAccountIndex,
 		ApiKeyIndex:       *ops.ApiKeyIndex,
 		MarketSlot:        tx.MarketSlot,
-		PublicMarketIndex: tx.PublicMarketIndex,
+		MarketIndex:       tx.MarketIndex,
 		StartTimestampMs:  tx.StartTimestampMs,
 		EndTimestampMs:    tx.EndTimestampMs,
 		TakerFee:          tx.TakerFee,

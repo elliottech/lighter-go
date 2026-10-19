@@ -16,10 +16,10 @@ type BinaryOptionsOperatorSettleMarketTxInfo struct {
 	ApiKeyIndex  uint8
 
 	// MarketSlot is the slot the order book lives on; serialized as MarketIndex for the server.
-	MarketSlot        int16 `json:"MarketIndex"`
-	PublicMarketIndex int64
-	SettlementPrice   uint32
-	IsRefund          uint8
+	MarketSlot      int16 `json:"MarketIndex"`
+	MarketIndex     int64 `json:"PublicMarketIndex"`
+	SettlementPrice uint32
+	IsRefund        uint8
 
 	ExpiredAt  int64
 	Nonce      int64
@@ -66,9 +66,9 @@ func (txInfo *BinaryOptionsOperatorSettleMarketTxInfo) Validate() error {
 		return ErrInvalidMarketIndex
 	}
 
-	// PublicMarketIndex
-	if txInfo.PublicMarketIndex < MinMarketIndex || txInfo.PublicMarketIndex > MaxMarketIndex ||
-		txInfo.PublicMarketIndex == NilMarketIndex {
+	// MarketIndex
+	if txInfo.MarketIndex < MinMarketIndex || txInfo.MarketIndex > MaxMarketIndex ||
+		txInfo.MarketIndex == NilMarketIndex {
 		return ErrInvalidMarketIndex
 	}
 
@@ -100,7 +100,7 @@ func (txInfo *BinaryOptionsOperatorSettleMarketTxInfo) Hash(lighterChainId uint3
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.MarketSlot))
-	elems = append(elems, g.GoldilocksField(txInfo.PublicMarketIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.MarketIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.SettlementPrice))
 	elems = append(elems, g.GoldilocksField(txInfo.IsRefund))
 
