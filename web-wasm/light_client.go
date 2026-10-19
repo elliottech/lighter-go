@@ -352,6 +352,30 @@ func (c *LightClient) GetUpdateMarginTransaction(tx *UpdateMarginTxReq, ops *Tra
 	return ConstructUpdateMarginTx(c.keyManager, c.chainId, tx, ops)
 }
 
+func (c *LightClient) GetBinaryOptionsOperatorCreateMarketTransaction(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	return ConstructBinaryOptionsOperatorCreateMarketTx(c.keyManager, c.chainId, tx, ops)
+}
+
+func (c *LightClient) GetBinaryOptionsOperatorUpdateMarketTransaction(tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	return ConstructBinaryOptionsOperatorUpdateMarketTx(c.keyManager, c.chainId, tx, ops)
+}
+
+func (c *LightClient) GetBinaryOptionsOperatorSettleMarketTransaction(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorSettleMarketTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	return ConstructBinaryOptionsOperatorSettleMarketTx(c.keyManager, c.chainId, tx, ops)
+}
+
 func (c *LightClient) GetCreateGroupedOrdersTransaction(tx *CreateGroupedOrdersTxReq, ops *TransactOpts) (*txtypes.L2CreateGroupedOrdersTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
@@ -428,6 +452,12 @@ func getTxResponse(tx interface{}, lighterChainId uint32) map[string]any {
 	case *txtypes.L2StakeAssetsTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.BinaryOptionsOperatorCreateMarketTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.BinaryOptionsOperatorUpdateMarketTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.BinaryOptionsOperatorSettleMarketTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	default:
 		return errToJson(fmt.Errorf("unknown tx type"))

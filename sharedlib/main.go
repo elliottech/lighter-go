@@ -47,6 +47,46 @@ typedef struct {
     uint32_t TriggerPrice;
     int64_t OrderExpiry;
 } CreateOrderTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t StartTimestampMs;
+    int64_t EndTimestampMs;
+    uint32_t SettlementCap;
+    uint8_t SettlementType;
+    uint32_t DefaultPrice;
+    uint32_t TakerFee;
+    uint32_t MakerFee;
+    int64_t MinBaseAmount;
+    int64_t MinQuoteAmount;
+    int64_t OrderQuoteLimit;
+    int64_t OpenInterestLimit;
+    uint8_t IsFrozen;
+    char* Symbol;
+    uint8_t SizeDecimals;
+    uint8_t PriceDecimals;
+} BinaryOptionsOperatorCreateMarketTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t PublicMarketIndex;
+    int64_t StartTimestampMs;
+    int64_t EndTimestampMs;
+    uint32_t TakerFee;
+    uint32_t MakerFee;
+    int64_t MinBaseAmount;
+    int64_t MinQuoteAmount;
+    int64_t OrderQuoteLimit;
+    int64_t OpenInterestLimit;
+    uint8_t IsFrozen;
+} BinaryOptionsOperatorUpdateMarketTxReq;
+
+typedef struct {
+    int16_t MarketSlot;
+    int64_t PublicMarketIndex;
+    uint32_t SettlementPrice;
+    uint8_t IsRefund;
+} BinaryOptionsOperatorSettleMarketTxReq;
 */
 import "C"
 
@@ -892,6 +932,100 @@ func SignUpdateAccountAssetConfig(cAssetIndex C.int16_t, cAssetMarginMode C.uint
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetUpdateAccountAssetConfigTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignBinaryOptionsOperatorCreateMarket
+func SignBinaryOptionsOperatorCreateMarket(cReq *C.BinaryOptionsOperatorCreateMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	tx := &types.BinaryOptionsOperatorCreateMarketTxReq{
+		MarketSlot:        int16(cReq.MarketSlot),
+		StartTimestampMs:  int64(cReq.StartTimestampMs),
+		EndTimestampMs:    int64(cReq.EndTimestampMs),
+		SettlementCap:     uint32(cReq.SettlementCap),
+		SettlementType:    uint8(cReq.SettlementType),
+		DefaultPrice:      uint32(cReq.DefaultPrice),
+		TakerFee:          uint32(cReq.TakerFee),
+		MakerFee:          uint32(cReq.MakerFee),
+		MinBaseAmount:     int64(cReq.MinBaseAmount),
+		MinQuoteAmount:    int64(cReq.MinQuoteAmount),
+		OrderQuoteLimit:   int64(cReq.OrderQuoteLimit),
+		OpenInterestLimit: int64(cReq.OpenInterestLimit),
+		IsFrozen:          uint8(cReq.IsFrozen),
+		Symbol:            C.GoString(cReq.Symbol),
+		SizeDecimals:      uint8(cReq.SizeDecimals),
+		PriceDecimals:     uint8(cReq.PriceDecimals),
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetBinaryOptionsOperatorCreateMarketTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignBinaryOptionsOperatorUpdateMarket
+func SignBinaryOptionsOperatorUpdateMarket(cReq *C.BinaryOptionsOperatorUpdateMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	tx := &types.BinaryOptionsOperatorUpdateMarketTxReq{
+		MarketSlot:        int16(cReq.MarketSlot),
+		PublicMarketIndex: int64(cReq.PublicMarketIndex),
+		StartTimestampMs:  int64(cReq.StartTimestampMs),
+		EndTimestampMs:    int64(cReq.EndTimestampMs),
+		TakerFee:          uint32(cReq.TakerFee),
+		MakerFee:          uint32(cReq.MakerFee),
+		MinBaseAmount:     int64(cReq.MinBaseAmount),
+		MinQuoteAmount:    int64(cReq.MinQuoteAmount),
+		OrderQuoteLimit:   int64(cReq.OrderQuoteLimit),
+		OpenInterestLimit: int64(cReq.OpenInterestLimit),
+		IsFrozen:          uint8(cReq.IsFrozen),
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetBinaryOptionsOperatorUpdateMarketTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignBinaryOptionsOperatorSettleMarket
+func SignBinaryOptionsOperatorSettleMarket(cReq *C.BinaryOptionsOperatorSettleMarketTxReq, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	tx := &types.BinaryOptionsOperatorSettleMarketTxReq{
+		MarketSlot:        int16(cReq.MarketSlot),
+		PublicMarketIndex: int64(cReq.PublicMarketIndex),
+		SettlementPrice:   uint32(cReq.SettlementPrice),
+		IsRefund:          uint8(cReq.IsRefund),
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetBinaryOptionsOperatorSettleMarketTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
