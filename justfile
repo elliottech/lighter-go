@@ -33,17 +33,17 @@ build-windows-local:
 
 build-linux-amd64-docker:
     go mod vendor
-    docker run --rm --platform linux/amd64 -v ${PWD}:/go/src/sdk -w /go/src/sdk golang:1.23.2-bullseye /bin/sh -c " \
+    docker run --rm --platform linux/amd64 -v ${PWD}:/go/src/sdk -w /go/src/sdk -e GOTOOLCHAIN=go1.26.10 golang:1.23.2-bullseye /bin/sh -c " \
       CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-linux-amd64.so ./sharedlib"
 
 build-linux-arm64-docker:
     go mod vendor
-    docker run --rm --platform linux/arm64 -v ${PWD}:/go/src/sdk -w /go/src/sdk golang:1.23.2-bullseye /bin/sh -c " \
+    docker run --rm --platform linux/arm64 -v ${PWD}:/go/src/sdk -w /go/src/sdk -e GOTOOLCHAIN=go1.26.10 golang:1.23.2-bullseye /bin/sh -c " \
       CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-linux-arm64.so ./sharedlib"
 
 build-windows-amd64-docker:
     go mod vendor
-    docker run --rm --platform linux/amd64 -v ${PWD}:/go/src/sdk -w /go/src/sdk golang:1.23.2-bullseye bash -c " \
+    docker run --rm --platform linux/amd64 -v ${PWD}:/go/src/sdk -w /go/src/sdk -e GOTOOLCHAIN=go1.26.10 golang:1.23.2-bullseye bash -c " \
       apt-get update && \
       apt-get install -y gcc-mingw-w64-x86-64 && \
       CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -buildmode=c-shared -trimpath -o ./build/lighter-signer-windows-amd64.dll ./sharedlib"
