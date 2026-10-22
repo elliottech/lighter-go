@@ -198,6 +198,7 @@ type BinaryOptionsOperatorUpdateMarketTxReq struct {
 
 	TakerFee          uint32
 	MakerFee          uint32
+	LiquidationFee    uint32 // only applies to perps markets; must be zero for spot and binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -245,7 +246,7 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	}
 	l2TxAttributes := txtypes.L2TxAttributes{}
 	if attr.IntegratorAccountIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = *attr.IntegratorAccountIndex
+		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = int64(*attr.IntegratorAccountIndex)
 	}
 	if attr.IntegratorTakerFee != nil {
 		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int64(*attr.IntegratorTakerFee)
@@ -1100,7 +1101,7 @@ func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateM
 		EndTimestampMs:    tx.EndTimestampMs,
 		TakerFee:          tx.TakerFee,
 		MakerFee:          tx.MakerFee,
-		LiquidationFee:    0,
+		LiquidationFee:    tx.LiquidationFee,
 		MinBaseAmount:     tx.MinBaseAmount,
 		MinQuoteAmount:    tx.MinQuoteAmount,
 		OrderQuoteLimit:   tx.OrderQuoteLimit,

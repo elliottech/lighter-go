@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+<!-- Legacy WebViews need unsafe-eval for WASM; it also permits JS eval. Keep script hashes and resource restrictions. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+</head>
+
+<body>
+  <div id="debug"></div>
+  <script>
+{{GO_RUNTIME}}
+  </script>
+  <script>
+    const allowedMethods = new Set({{SIGNER_EXPORTS}});
+    const methods = new Map();
+
+    // main.wasm embedded as base64 (self-contained, no external fetch)
+    const wasmBase64 = "{{WASM_BASE64}}";
+
+    function wasmBytesFromBase64(b64) {
+      const binary = atob(b64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function loadWasm() {
+      try {
+        const go = new window.Go();
+        const bytes = wasmBytesFromBase64(wasmBase64);
+        const { instance } = await WebAssembly.instantiate(bytes, go.importObject);
+        void go.run(instance).then(
+          () => window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error' })),
+          () => window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error' }))
+        );
+        if (window._signerVersion !== 2) throw new Error('Unsupported signer version');
+        for (const name of allowedMethods) {
+          if (typeof window[name] !== 'function') throw new Error('Missing signer export');
+          methods.set(name, window[name]);
+        }
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'ready', version: 2 })
+        );
+      } catch (error) {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'error' })
+        );
+
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadWasm, false);
+  </script>
+  <script>
+    const searchParams = new URLSearchParams(window.location.search);
+    const platform = searchParams.get("platform");
+    const listenerObject = platform === 'ios' ? window : document;
+    // This is a trusted native-to-local-document channel, not message authentication.
+    // Native callers choose chain/key from app state. Same-realm script execution
+    // can also invoke WASM globals directly; identity selection does not isolate it.
+    const MAX_MESSAGE_CHARS = 1024 * 1024;
+    const MAX_QUEUED_CHARS = 4 * MAX_MESSAGE_CHARS;
+    const MAX_PENDING = 64;
+    let pending = 0;
+    let queuedChars = 0;
+    let queue = Promise.resolve();
+    const rejectRequest = (payload) => {
+      const message = typeof payload?.executeId === 'string' && payload.executeId.length <= 128
+        ? { type: 'executeError', executeId: payload.executeId }
+        : { type: 'error' };
+      window.ReactNativeWebView.postMessage(JSON.stringify(message));
+    };
+    listenerObject.addEventListener("message", (event) => {
+      let payload;
+      if (typeof event.data !== 'string' || event.data.length > MAX_MESSAGE_CHARS) {
+        rejectRequest();
+        return;
+      }
+      try {
+        payload = JSON.parse(event.data);
+        if (!payload || payload.type !== 'execute' || typeof payload.executeId !== 'string' ||
+            payload.executeId.length > 128 || !Array.isArray(payload.params) ||
+            payload.params.length > 4096 || !allowedMethods.has(payload.function)) throw new Error('Invalid request');
+      } catch {
+        rejectRequest(payload);
+        return;
+      }
+      const requiresIdentity = !['_createClient', '_createClientByPrv', '_lighterTest', '_resetClients'].includes(payload.function);
+      if (requiresIdentity && (!Number.isSafeInteger(payload.params[0]) ||
+          !Number.isSafeInteger(payload.chainId) || payload.chainId < 0 || payload.chainId > 0xffffffff ||
+          !Number.isSafeInteger(payload.apiKeyIndex) || payload.apiKeyIndex < 0 || payload.apiKeyIndex > 255)) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'executeResult', executeId: payload.executeId,
+          result: { error: 'missing or invalid signer identity metadata' } }));
+        return;
+      }
+      const size = event.data.length;
+      if (pending >= MAX_PENDING || queuedChars + size > MAX_QUEUED_CHARS) {
+        rejectRequest(payload);
+        return;
+      }
+      pending++;
+      queuedChars += size;
+      queue = queue.then(async () => {
+        try {
+          if (requiresIdentity) {
+            const selection = await methods.get('_selectClient')(payload.params[0], payload.chainId, payload.apiKeyIndex);
+            const selected = typeof selection === 'function' ? await selection() : selection;
+            if (selected.error) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'executeResult', executeId: payload.executeId, result: selected }));
+              return;
+            }
+          }
+          const response = await methods.get(payload.function)(...payload.params);
+          let result = typeof response === 'function' ? await response() : response;
+          if (['_createClient', '_createClientByPrv'].includes(payload.function) && result && 'prv' in result) {
+            result = { ...result, prv: '' };
+          }
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'executeResult', executeId: payload.executeId, result }));
+        } catch {
+          rejectRequest(payload);
+        } finally {
+          pending--;
+          queuedChars -= size;
+        }
+      }).catch(() => window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error' })));
+    });
+  </script>
+</body>
+</html>

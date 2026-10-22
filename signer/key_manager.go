@@ -32,7 +32,6 @@ func NewSeedKeyManager(seed string) (KeyManager, error) {
 	return &keyManager{key: GetScalarFromSeed(seed)}, nil
 }
 
-
 func NewKeyManager(b []byte) (KeyManager, error) {
 	if len(b) != 40 {
 		return nil, fmt.Errorf("invalid private key length. expected: 40 got: %v", len(b))
@@ -61,7 +60,6 @@ func (key *keyManager) PubKeyBytes() (res [40]byte) {
 func (key *keyManager) PrvKeyBytes() []byte {
 	return key.key.ToLittleEndianBytes()
 }
-
 
 func GetScalarFromSeed(seed string) curve.ECgFp5Scalar {
 	seedBytes, err := hex.DecodeString(seed)

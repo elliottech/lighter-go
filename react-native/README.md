@@ -71,7 +71,7 @@ raw `function`/`params` calls:
 ```ts
 import { LighterSDK } from '@elliottech/lighter-sdk-react-native';
 
-const { pk, prv } = await LighterSDK.createClient(seed, chainId, accountIndex, nonce, apiKeyIndex);
+const { pk, body } = await LighterSDK.createClient(seed, chainId, accountIndex, nonce, apiKeyIndex);
 
 const { txInfo } = await LighterSDK.signCreateOrder({
   accountIndex,
@@ -89,7 +89,14 @@ const { txInfo } = await LighterSDK.signCreateOrder({
 });
 ```
 
-Available methods: `createClient`, `createAuthToken`, `signChangePubKey`,
+`createClient` / `createClientByPrv` also remember the `chainId` and
+`apiKeyIndex` the account was created with; every other method sends that
+identity along so the page selects the matching signer before signing. Use
+`setSignerIdentity(accountIndex, chainId, apiKeyIndex)` if you create clients
+through raw `goWasmExecute` calls. The page never returns the private key
+(`prv` is stripped before it reaches native code).
+
+Available methods: `createClient`, `createClientByPrv`, `resetClients`, `createAuthToken`, `signChangePubKey`,
 `signUpdateLeverage`, `signStakeAssets`, `signUnstakeAssets`,
 `signMintShares`, `signBurnShares`, `signWithdraw`, `signTransfer`,
 `getTransferTransaction`, `signUpdateMargin`,
@@ -105,21 +112,23 @@ and response types are also exported (e.g. `TxResponse`,
 | ----------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
 | `htmlAsset` | `number`                                          | Result of `require()`-ing an alternate standalone SDK html file.         |
 | `style`     | `StyleProp<ViewStyle>`                            | Merged into the (hidden, 0x0) wrapper view's style.                      |
-| `onLog`     | `(message: string \| string[]) => void`           | Called on `console.log` messages forwarded from the page.                |
-| `onWarn`    | `(message: string \| string[]) => void`           | Called on `console.warn` messages forwarded from the page.               |
-| `onError`   | `(message: string \| string[]) => void`           | Called on uncaught errors reported by the page.                          |
+| `onInfo`    | `(message: string) => void`                       | Called when the WebView finishes loading.                                |
+| `onError`   | `(message: string) => void`                       | Called on load failures, runtime failures and rejected requests. The page never forwards error details or console output. |
 
 ## Building
 
 `dist/wasm-wrapper.standalone.html` (the file this package requires at
-runtime) is generated from `src/wasm-template.html`, not hand-written:
+runtime) is a copy of `../web-wasm/sdk.html`, which `../web-wasm/build.py`
+generates from `../web-wasm/wasm-template.html` (Go runtime, WASM as base64,
+export allow-list and CSP script hashes embedded). It is never hand-written:
 
 ```sh
 npm run build:js     # bundles src/ into dist/ (tsdown)
-npm run build:wasm   # builds ../web-wasm/main.wasm and regenerates dist/wasm-wrapper.standalone.html
+npm run build:wasm   # runs ../web-wasm/build.py and copies sdk.html + manifest into dist/
 npm run build        # runs both, in that order
 ```
 
 The order matters: `build:js` cleans and (re)creates `dist/` before
 `build:wasm` writes the generated html into it. `npm run build` (used by
-`prepublishOnly`) always runs them in the right order.
+`prepublishOnly`) always runs them in the right order. `build.py` needs
+`go` (it pins `GOTOOLCHAIN=go1.26.8`) and `brotli` on `PATH`.

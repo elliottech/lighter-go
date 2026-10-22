@@ -112,6 +112,7 @@ var (
 	ErrInvalidMinQuoteAmount                                  = fmt.Errorf("MinQuoteAmount is invalid")
 	ErrOrderQuoteLimitTooHigh                                 = fmt.Errorf("OrderQuoteLimit is invalid")
 	ErrOpenInterestLimitTooLow                                = fmt.Errorf("OpenInterestLimit is invalid")
+	ErrOpenInterestLimitInvalid                               = fmt.Errorf("OpenInterestLimit must be zero for spot markets")
 	ErrInvalidIsFrozen                                        = fmt.Errorf("IsFrozen is invalid")
 	ErrInvalidIsRefund                                        = fmt.Errorf("IsRefund is invalid")
 	ErrInvalidSettlementPrice                                 = fmt.Errorf("SettlementPrice is invalid")

@@ -78,7 +78,7 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 		InvalidRangeError: ErrNonceSkipAttributeInvalid,
 	},
 	AttributeTypeCancelAllMarketIndex: {
-		ByteSize:          2,
+		ByteSize:          6,
 		MinValue:          int64(MinPerpsMarketIndex),
 		MaxValue:          int64(MaxMarketIndex),
 		NilValue:          int64(NilMarketIndex),

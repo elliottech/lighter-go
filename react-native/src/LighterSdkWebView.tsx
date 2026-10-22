@@ -30,18 +30,14 @@ export type LighterSdkWebViewProps = {
   /** Result of `require()`-ing an alternate standalone SDK html file. Defaults to the bundled one. */
   htmlAsset?: number;
   style?: StyleProp<ViewStyle>;
-  onInfo?: (message: string | string[]) => void;
-  onLog?: (message: string | string[]) => void;
-  onWarn?: (message: string | string[]) => void;
-  onError?: (message: string | string[]) => void;
+  onInfo?: (message: string) => void;
+  onError?: (message: string) => void;
 };
 
 export const LighterSdkWebView = ({
   htmlAsset = defaultHtmlAsset,
   style,
   onInfo,
-  onLog,
-  onWarn,
   onError,
 }: LighterSdkWebViewProps) => {
   const webviewRef = useRef<WebView<{}>>(null);
@@ -72,8 +68,12 @@ export const LighterSdkWebView = ({
       <WebView<{}>
         style={hiddenStyle}
         originWhitelist={['*']}
+        onShouldStartLoadWithRequest={({ url }) => url.startsWith(localUri ?? '')}
+        setSupportMultipleWindows={false}
+        javaScriptCanOpenWindowsAutomatically={false}
         allowFileAccess
-        allowFileAccessFromFileURLs
+        allowFileAccessFromFileURLs={false}
+        allowUniversalAccessFromFileURLs={false}
         allowingReadAccessToURL={localUri ?? undefined}
         source={{
           uri: sdkUrl,
@@ -107,19 +107,13 @@ export const LighterSdkWebView = ({
               delete executePromises[msg.executeId];
               break;
             case 'executeError':
-              executePromises[msg.executeId]?.reject(new Error(msg.message));
+              // The page deliberately reports no detail; the request was rejected before reaching Go.
+              executePromises[msg.executeId]?.reject(new Error('Signer execution failed'));
               delete executePromises[msg.executeId];
-              onError?.(`Go SDK WebView execute error: ${msg.message}`);
-              break;
-
-            case 'log':
-              onLog?.(msg.message);
-              break;
-            case 'warn':
-              onWarn?.(msg.message);
+              onError?.(`Go SDK WebView rejected ${msg.executeId}`);
               break;
             case 'error':
-              onError?.(msg.message);
+              onError?.('Go SDK WebView runtime failed');
               break;
           }
         }}

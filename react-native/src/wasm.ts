@@ -1,8 +1,17 @@
-export type WasmExecutor = (args: {
+export type WasmExecutorArgs = {
   function: string;
   params: Array<unknown>;
+  /**
+   * Signer identity the page selects before running any function that takes
+   * an account index. Required for everything except `_createClient`,
+   * `_createClientByPrv`, `_lighterTest` and `_resetClients`.
+   */
+  chainId?: number;
+  apiKeyIndex?: number;
   type?: string;
-}) => Promise<unknown>;
+};
+
+export type WasmExecutor = (args: WasmExecutorArgs) => Promise<unknown>;
 
 const noopExecutor: WasmExecutor = () => Promise.resolve();
 

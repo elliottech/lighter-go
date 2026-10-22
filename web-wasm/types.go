@@ -21,8 +21,9 @@ type TransactOpts struct {
 	Nonce            *int64
 	DryRun           bool
 
-	SkipNonce              bool
-	CancelAllMarketIndex   *int64
+	SkipNonce            bool
+	CancelAllMarketIndex *int64
+
 	IntegratorAccountIndex *int64
 	IntegratorTakerFee     *uint32
 	IntegratorMakerFee     *uint32
@@ -179,6 +180,7 @@ type BinaryOptionsOperatorCreateMarketTxReq struct {
 	DefaultPrice      uint32
 	TakerFee          uint32
 	MakerFee          uint32
+	LiquidationFee    uint32 // only applies to perps markets; must be zero for spot and binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -196,6 +198,7 @@ type BinaryOptionsOperatorUpdateMarketTxReq struct {
 	EndTimestampMs    int64
 	TakerFee          uint32
 	MakerFee          uint32
+	LiquidationFee    uint32 // only applies to perps markets; must be zero for spot and binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -320,6 +323,7 @@ func ConvertModifyOrderTx(tx *ModifyOrderTxReq, ops *TransactOpts) *txtypes.L2Mo
 		L2TxAttributes: ops.L2TxAttributes(),
 	}
 }
+
 func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *txtypes.L2ApproveIntegratorTxInfo {
 	return &txtypes.L2ApproveIntegratorTxInfo{
 		AccountIndex:           *ops.FromAccountIndex,
@@ -335,6 +339,7 @@ func ConvertApproveIntegratorTx(tx *ApproveIntegratorTxReq, ops *TransactOpts) *
 		L2TxAttributes:         ops.L2TxAttributes(),
 	}
 }
+
 func ConvertTransferTx(tx *TransferTxReq, ops *TransactOpts) *txtypes.L2TransferTxInfo {
 	return &txtypes.L2TransferTxInfo{
 		FromAccountIndex: *ops.FromAccountIndex,
@@ -430,91 +435,6 @@ func ConvertUpdateAccountAssetConfigTx(tx *UpdateAccountAssetConfigTxReq, ops *T
 		ApiKeyIndex:     *ops.ApiKeyIndex,
 		AssetIndex:      tx.AssetIndex,
 		AssetMarginMode: tx.AssetMarginMode,
-		ExpiredAt:       ops.ExpiredAt,
-		Nonce:           *ops.Nonce,
-		L2TxAttributes:  ops.L2TxAttributes(),
-	}
-}
-
-func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorCreateMarketTxInfo {
-	var symbol [32]byte
-	copy(symbol[:], tx.Symbol)
-
-	quoteExtensionMultiplier := binaryOptionsQuoteExtensionMultiplier(tx.SizeDecimals, tx.PriceDecimals)
-
-	return &txtypes.BinaryOptionsOperatorCreateMarketTxInfo{
-		AccountIndex:             *ops.FromAccountIndex,
-		ApiKeyIndex:              *ops.ApiKeyIndex,
-		MarketSlot:               tx.MarketSlot,
-		MarketType:               txtypes.MarketTypeBinaryOptions,
-		BaseAssetId:              int16(txtypes.USDCAssetIndex),
-		QuoteAssetId:             int16(txtypes.USDCAssetIndex),
-		StartTimestampMs:         tx.StartTimestampMs,
-		EndTimestampMs:           tx.EndTimestampMs,
-		SizeExtensionMultiplier:  int64(tx.SettlementCap) * quoteExtensionMultiplier,
-		QuoteExtensionMultiplier: quoteExtensionMultiplier,
-		SettlementCap:            tx.SettlementCap,
-		SettlementType:           tx.SettlementType,
-		DefaultPrice:             tx.DefaultPrice,
-		TakerFee:                 tx.TakerFee,
-		MakerFee:                 tx.MakerFee,
-		MinBaseAmount:            tx.MinBaseAmount,
-		MinQuoteAmount:           tx.MinQuoteAmount,
-		OrderQuoteLimit:          tx.OrderQuoteLimit,
-		OpenInterestLimit:        tx.OpenInterestLimit,
-		IsFrozen:                 tx.IsFrozen,
-		Symbol:                   symbol,
-		SizeDecimals:             tx.SizeDecimals,
-		PriceDecimals:            tx.PriceDecimals,
-		ExpiredAt:                ops.ExpiredAt,
-		Nonce:                    *ops.Nonce,
-		L2TxAttributes:           ops.L2TxAttributes(),
-	}
-}
-
-// binaryOptionsQuoteExtensionMultiplier returns 10^(12 - sizeDecimals - priceDecimals); 0 (fails validation) when the decimals do not fit.
-func binaryOptionsQuoteExtensionMultiplier(sizeDecimals, priceDecimals uint8) int64 {
-	exp := 12 - int(sizeDecimals) - int(priceDecimals)
-	if exp < 0 {
-		return 0
-	}
-	multiplier := int64(1)
-	for i := 0; i < exp; i++ {
-		multiplier *= 10
-	}
-	return multiplier
-}
-
-func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketTxInfo {
-	return &txtypes.BinaryOptionsOperatorUpdateMarketTxInfo{
-		AccountIndex:      *ops.FromAccountIndex,
-		ApiKeyIndex:       *ops.ApiKeyIndex,
-		MarketSlot:        tx.MarketSlot,
-		MarketIndex:       tx.MarketIndex,
-		StartTimestampMs:  tx.StartTimestampMs,
-		EndTimestampMs:    tx.EndTimestampMs,
-		TakerFee:          tx.TakerFee,
-		MakerFee:          tx.MakerFee,
-		LiquidationFee:    0,
-		MinBaseAmount:     tx.MinBaseAmount,
-		MinQuoteAmount:    tx.MinQuoteAmount,
-		OrderQuoteLimit:   tx.OrderQuoteLimit,
-		OpenInterestLimit: tx.OpenInterestLimit,
-		IsFrozen:          tx.IsFrozen,
-		ExpiredAt:         ops.ExpiredAt,
-		Nonce:             *ops.Nonce,
-		L2TxAttributes:    ops.L2TxAttributes(),
-	}
-}
-
-func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
-	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
-		AccountIndex:    *ops.FromAccountIndex,
-		ApiKeyIndex:     *ops.ApiKeyIndex,
-		MarketSlot:      tx.MarketSlot,
-		MarketIndex:     tx.MarketIndex,
-		SettlementPrice: tx.SettlementPrice,
-		IsRefund:        tx.IsRefund,
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
 		L2TxAttributes:  ops.L2TxAttributes(),
@@ -967,6 +887,144 @@ func ConstructUpdateLeverageTx(key signer.KeyManager, lighterChainId uint32, tx 
 	return convertedTx, nil
 }
 
+func ConstructUpdateMarginTx(key signer.KeyManager, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
+	convertedTx := ConvertUpdateMarginTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructWithdrawTx(key signer.KeyManager, lighterChainId uint32, tx *WithdrawTxReq, ops *TransactOpts) (*txtypes.L2WithdrawTxInfo, error) {
+	convertedTx := ConvertWithdrawTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func IsZeroByteSlice(b []byte) bool {
+	for _, v := range b {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func ConvertBinaryOptionsOperatorCreateMarketTx(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorCreateMarketTxInfo {
+	var symbol [32]byte
+	copy(symbol[:], tx.Symbol)
+
+	quoteExtensionMultiplier := binaryOptionsQuoteExtensionMultiplier(tx.SizeDecimals, tx.PriceDecimals)
+
+	return &txtypes.BinaryOptionsOperatorCreateMarketTxInfo{
+		AccountIndex:             *ops.FromAccountIndex,
+		ApiKeyIndex:              *ops.ApiKeyIndex,
+		MarketSlot:               tx.MarketSlot,
+		MarketType:               txtypes.MarketTypeBinaryOptions,
+		BaseAssetId:              int16(txtypes.USDCAssetIndex),
+		QuoteAssetId:             int16(txtypes.USDCAssetIndex),
+		StartTimestampMs:         tx.StartTimestampMs,
+		EndTimestampMs:           tx.EndTimestampMs,
+		SizeExtensionMultiplier:  int64(tx.SettlementCap) * quoteExtensionMultiplier,
+		QuoteExtensionMultiplier: quoteExtensionMultiplier,
+		SettlementCap:            tx.SettlementCap,
+		SettlementType:           tx.SettlementType,
+		DefaultPrice:             tx.DefaultPrice,
+		TakerFee:                 tx.TakerFee,
+		MakerFee:                 tx.MakerFee,
+		MinBaseAmount:            tx.MinBaseAmount,
+		MinQuoteAmount:           tx.MinQuoteAmount,
+		OrderQuoteLimit:          tx.OrderQuoteLimit,
+		OpenInterestLimit:        tx.OpenInterestLimit,
+		IsFrozen:                 tx.IsFrozen,
+		Symbol:                   symbol,
+		SizeDecimals:             tx.SizeDecimals,
+		PriceDecimals:            tx.PriceDecimals,
+		ExpiredAt:                ops.ExpiredAt,
+		Nonce:                    *ops.Nonce,
+		L2TxAttributes:           ops.L2TxAttributes(),
+	}
+}
+
+// binaryOptionsQuoteExtensionMultiplier returns 10^(12 - sizeDecimals - priceDecimals); 0 (fails validation) when the decimals do not fit.
+func binaryOptionsQuoteExtensionMultiplier(sizeDecimals, priceDecimals uint8) int64 {
+	exp := 12 - int(sizeDecimals) - int(priceDecimals)
+	if exp < 0 {
+		return 0
+	}
+	multiplier := int64(1)
+	for i := 0; i < exp; i++ {
+		multiplier *= 10
+	}
+	return multiplier
+}
+
+func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorUpdateMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorUpdateMarketTxInfo{
+		AccountIndex:      *ops.FromAccountIndex,
+		ApiKeyIndex:       *ops.ApiKeyIndex,
+		MarketSlot:        tx.MarketSlot,
+		MarketIndex:       tx.MarketIndex,
+		StartTimestampMs:  tx.StartTimestampMs,
+		EndTimestampMs:    tx.EndTimestampMs,
+		TakerFee:          tx.TakerFee,
+		MakerFee:          tx.MakerFee,
+		LiquidationFee:    tx.LiquidationFee,
+		MinBaseAmount:     tx.MinBaseAmount,
+		MinQuoteAmount:    tx.MinQuoteAmount,
+		OrderQuoteLimit:   tx.OrderQuoteLimit,
+		OpenInterestLimit: tx.OpenInterestLimit,
+		IsFrozen:          tx.IsFrozen,
+		ExpiredAt:         ops.ExpiredAt,
+		Nonce:             *ops.Nonce,
+		L2TxAttributes:    ops.L2TxAttributes(),
+	}
+}
+
+func ConvertBinaryOptionsOperatorSettleMarketTx(tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) *txtypes.BinaryOptionsOperatorSettleMarketTxInfo {
+	return &txtypes.BinaryOptionsOperatorSettleMarketTxInfo{
+		AccountIndex:    *ops.FromAccountIndex,
+		ApiKeyIndex:     *ops.ApiKeyIndex,
+		MarketSlot:      tx.MarketSlot,
+		MarketIndex:     tx.MarketIndex,
+		SettlementPrice: tx.SettlementPrice,
+		IsRefund:        tx.IsRefund,
+		ExpiredAt:       ops.ExpiredAt,
+		Nonce:           *ops.Nonce,
+		L2TxAttributes:  ops.L2TxAttributes(),
+	}
+}
+
 func ConstructBinaryOptionsOperatorCreateMarketTx(key signer.KeyManager, lighterChainId uint32, tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
 	convertedTx := ConvertBinaryOptionsOperatorCreateMarketTx(tx, ops)
 	if len(tx.Symbol) >= len(convertedTx.Symbol) || !utf8.ValidString(tx.Symbol) {
@@ -1034,57 +1092,4 @@ func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.KeyManager, lighter
 	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
 	convertedTx.Sig = signature
 	return convertedTx, nil
-}
-
-func ConstructUpdateMarginTx(key signer.KeyManager, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
-	convertedTx := ConvertUpdateMarginTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
-func ConstructWithdrawTx(key signer.KeyManager, lighterChainId uint32, tx *WithdrawTxReq, ops *TransactOpts) (*txtypes.L2WithdrawTxInfo, error) {
-	convertedTx := ConvertWithdrawTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
-func IsZeroByteSlice(b []byte) bool {
-	for _, v := range b {
-		if v != 0 {
-			return false
-		}
-	}
-	return true
 }
