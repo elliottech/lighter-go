@@ -170,10 +170,16 @@ const (
 	MinMarketIndex      int64 = 0
 	MaxMarketIndex      int64 = (1 << 48) - 1
 	MinPerpsMarketIndex int64 = 0
-	NilMarketIndex      int64 = 255
+	// 255 matches the legacy nil market slot so legacy cancel-all signatures (8-bit market index, nil = 255)
+	// stay valid and are interpreted as a nil market index. 255 is never assignable as a real market index.
+	NilMarketIndex int64 = 255
 
 	// Market slots are internal positions an order book is created on; they are
 	// distinct from the public market index users trade with.
+	MinPerpsMarketSlot         int16 = 0
+	MaxPerpsMarketSlot         int16 = 254  // (1 << 8) - 2
+	MinSpotMarketSlot          int16 = 2048 // (1 << 11)
+	MaxSpotMarketSlot          int16 = 4094 // (1 << 12) - 2
 	MinBinaryOptionsMarketSlot int16 = 1000
 	MaxBinaryOptionsMarketSlot int16 = 2000
 
@@ -276,8 +282,6 @@ const (
 // Self trade equality and behavior types
 const (
 	SelfTradeBehaviorExpireMaker = 0
-	SelfTradeBehaviorExpireTaker = 1
-	SelfTradeBehaviorCancelBoth  = 2
 	SelfTradeBehaviorReduce      = 3
 
 	SelfTradeEqualityAccountIndex       = 0

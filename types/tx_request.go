@@ -15,12 +15,13 @@ import (
 )
 
 type TransactOpts struct {
-	FromAccountIndex *int64
-	ApiKeyIndex      *uint8
-	ExpiredAt        int64
-	Nonce            *int64
-	TxAttributes     *L2TxAttributes
-	DryRun           bool
+	FromAccountIndex        *int64
+	ApiKeyIndex             *uint8
+	ExpiredAt               int64
+	Nonce                   *int64
+	TxAttributes            *L2TxAttributes
+	DryRun                  bool
+	SkipInternalValidations bool
 }
 
 type L2TxAttributes struct {
@@ -113,6 +114,11 @@ type CancelAllOrdersTxReq struct {
 	Time        int64
 }
 
+type CreateStakingPoolTxReq struct {
+	InitialTotalShares   int64
+	MinOperatorShareRate uint16
+}
+
 type StakeAssetsTxReq struct {
 	StakingPoolIndex int64
 	ShareAmount      int64
@@ -198,6 +204,7 @@ type BinaryOptionsOperatorUpdateMarketTxReq struct {
 
 	TakerFee          uint32
 	MakerFee          uint32
+	LiquidationFee    uint32 // only applies to perps markets; must be zero for spot and binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -245,7 +252,7 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	}
 	l2TxAttributes := txtypes.L2TxAttributes{}
 	if attr.IntegratorAccountIndex != nil {
-		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = *attr.IntegratorAccountIndex
+		l2TxAttributes[txtypes.AttributeTypeIntegratorAccountIndex] = int64(*attr.IntegratorAccountIndex)
 	}
 	if attr.IntegratorTakerFee != nil {
 		l2TxAttributes[txtypes.AttributeTypeIntegratorTakerFee] = int64(*attr.IntegratorTakerFee)
@@ -273,9 +280,11 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 
 func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
 	convertedTx := ConvertChangePubKeyTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -295,9 +304,11 @@ func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *Chang
 
 func ConstructCreateSubAccountTx(key signer.Signer, lighterChainId uint32, ops *TransactOpts) (*txtypes.L2CreateSubAccountTxInfo, error) {
 	convertedTx := ConvertCreateSubAccountTx(ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -317,9 +328,11 @@ func ConstructCreateSubAccountTx(key signer.Signer, lighterChainId uint32, ops *
 
 func ConstructCreatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *CreatePublicPoolTxReq, ops *TransactOpts) (*txtypes.L2CreatePublicPoolTxInfo, error) {
 	convertedTx := ConvertCreatePublicPoolTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -339,9 +352,11 @@ func ConstructCreatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *C
 
 func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *UpdatePublicPoolTxReq, ops *TransactOpts) (*txtypes.L2UpdatePublicPoolTxInfo, error) {
 	convertedTx := ConvertUpdatePublicPoolTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -361,9 +376,11 @@ func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *U
 
 func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawTxReq, ops *TransactOpts) (*txtypes.L2WithdrawTxInfo, error) {
 	convertedTx := ConvertWithdrawTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -383,9 +400,11 @@ func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawT
 
 func ConstructCreateOrderTx(key signer.Signer, lighterChainId uint32, tx *CreateOrderTxReq, ops *TransactOpts) (*txtypes.L2CreateOrderTxInfo, error) {
 	convertedTx := ConvertCreateOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -405,9 +424,11 @@ func ConstructCreateOrderTx(key signer.Signer, lighterChainId uint32, tx *Create
 
 func ConstructL2CreateGroupedOrdersTx(key signer.Signer, lighterChainId uint32, tx *CreateGroupedOrdersTxReq, ops *TransactOpts) (*txtypes.L2CreateGroupedOrdersTxInfo, error) {
 	convertedTx := ConvertCreateGroupedOrdersTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -427,9 +448,11 @@ func ConstructL2CreateGroupedOrdersTx(key signer.Signer, lighterChainId uint32, 
 
 func ConstructL2CancelOrderTx(key signer.Signer, lighterChainId uint32, tx *CancelOrderTxReq, ops *TransactOpts) (*txtypes.L2CancelOrderTxInfo, error) {
 	convertedTx := ConvertCancelOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -449,9 +472,11 @@ func ConstructL2CancelOrderTx(key signer.Signer, lighterChainId uint32, tx *Canc
 
 func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *ModifyOrderTxReq, ops *TransactOpts) (*txtypes.L2ModifyOrderTxInfo, error) {
 	convertedTx := ConvertModifyOrderTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -471,9 +496,11 @@ func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *Modi
 
 func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	convertedTx := ConvertStakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -493,9 +520,11 @@ func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeA
 
 func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *UnstakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2UnstakeAssetsTxInfo, error) {
 	convertedTx := ConvertUnstakeAssetsTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -515,9 +544,11 @@ func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *Unst
 
 func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *CancelAllOrdersTxReq, ops *TransactOpts) (*txtypes.L2CancelAllOrdersTxInfo, error) {
 	convertedTx := ConvertCancelAllOrdersTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -538,9 +569,11 @@ func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *
 func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *ApproveIntegratorTxReq,
 	ops *TransactOpts) (*txtypes.L2ApproveIntegratorTxInfo, error) {
 	convertedTx := ConvertApproveIntegratorTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -560,9 +593,11 @@ func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *
 
 func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferTxReq, ops *TransactOpts) (*txtypes.L2TransferTxInfo, error) {
 	convertedTx := ConvertTransferTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -582,9 +617,11 @@ func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferT
 
 func ConstructMintSharesTx(key signer.Signer, lighterChainId uint32, tx *MintSharesTxReq, ops *TransactOpts) (*txtypes.L2MintSharesTxInfo, error) {
 	convertedTx := ConvertMintSharesTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -604,9 +641,11 @@ func ConstructMintSharesTx(key signer.Signer, lighterChainId uint32, tx *MintSha
 
 func ConstructBurnSharesTx(key signer.Signer, lighterChainId uint32, tx *BurnSharesTxReq, ops *TransactOpts) (*txtypes.L2BurnSharesTxInfo, error) {
 	convertedTx := ConvertBurnSharesTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -626,9 +665,11 @@ func ConstructBurnSharesTx(key signer.Signer, lighterChainId uint32, tx *BurnSha
 
 func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *UpdateLeverageTxReq, ops *TransactOpts) (*txtypes.L2UpdateLeverageTxInfo, error) {
 	convertedTx := ConvertUpdateLeverageTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -648,12 +689,13 @@ func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *Upd
 
 func ConstructBinaryOptionsOperatorCreateMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
 	convertedTx := ConvertBinaryOptionsOperatorCreateMarketTx(tx, ops)
-	if len(tx.Symbol) >= len(convertedTx.Symbol) || !utf8.ValidString(tx.Symbol) {
-		return nil, txtypes.ErrInvalidMarketSymbol
-	}
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		if len(tx.Symbol) >= len(convertedTx.Symbol) || !utf8.ValidString(tx.Symbol) {
+			return nil, txtypes.ErrInvalidMarketSymbol
+		}
+		if err := convertedTx.Validate(); err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -673,9 +715,11 @@ func ConstructBinaryOptionsOperatorCreateMarketTx(key signer.Signer, lighterChai
 
 func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorSettleMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorSettleMarketTxInfo, error) {
 	convertedTx := ConvertBinaryOptionsOperatorSettleMarketTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -695,9 +739,11 @@ func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.Signer, lighterChai
 
 func ConstructBinaryOptionsOperatorUpdateMarketTx(key signer.Signer, lighterChainId uint32, tx *BinaryOptionsOperatorUpdateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorUpdateMarketTxInfo, error) {
 	convertedTx := ConvertBinaryOptionsOperatorUpdateMarketTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -717,9 +763,11 @@ func ConstructBinaryOptionsOperatorUpdateMarketTx(key signer.Signer, lighterChai
 
 func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *UpdateMarginTxReq, ops *TransactOpts) (*txtypes.L2UpdateMarginTxInfo, error) {
 	convertedTx := ConvertUpdateMarginTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -739,9 +787,11 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 
 func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountConfigTxInfo, error) {
 	convertedTx := ConvertUpdateAccountConfigTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -761,9 +811,35 @@ func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx
 
 func ConstructUpdateAccountAssetConfigTx(key signer.Signer, lighterChainId uint32, tx *UpdateAccountAssetConfigTxReq, ops *TransactOpts) (*txtypes.L2UpdateAccountAssetConfigTxInfo, error) {
 	convertedTx := ConvertUpdateAccountAssetConfigTx(tx, ops)
-	err := convertedTx.Validate()
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
 	if err != nil {
 		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructCreateStakingPoolTx(key signer.Signer, lighterChainId uint32, tx *CreateStakingPoolTxReq, ops *TransactOpts) (*txtypes.L2CreateStakingPoolTxInfo, error) {
+	convertedTx := ConvertCreateStakingPoolTx(tx, ops)
+	if ops == nil || !ops.SkipInternalValidations {
+		err := convertedTx.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msgHash, err := convertedTx.Hash(lighterChainId)
@@ -1100,7 +1176,7 @@ func ConvertBinaryOptionsOperatorUpdateMarketTx(tx *BinaryOptionsOperatorUpdateM
 		EndTimestampMs:    tx.EndTimestampMs,
 		TakerFee:          tx.TakerFee,
 		MakerFee:          tx.MakerFee,
-		LiquidationFee:    0,
+		LiquidationFee:    tx.LiquidationFee,
 		MinBaseAmount:     tx.MinBaseAmount,
 		MinQuoteAmount:    tx.MinQuoteAmount,
 		OrderQuoteLimit:   tx.OrderQuoteLimit,
@@ -1145,5 +1221,17 @@ func ConvertUpdateAccountAssetConfigTx(tx *UpdateAccountAssetConfigTxReq, ops *T
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
 		L2TxAttributes:  ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertCreateStakingPoolTx(tx *CreateStakingPoolTxReq, ops *TransactOpts) *txtypes.L2CreateStakingPoolTxInfo {
+	return &txtypes.L2CreateStakingPoolTxInfo{
+		AccountIndex:         *ops.FromAccountIndex,
+		ApiKeyIndex:          *ops.ApiKeyIndex,
+		InitialTotalShares:   tx.InitialTotalShares,
+		MinOperatorShareRate: tx.MinOperatorShareRate,
+		ExpiredAt:            ops.ExpiredAt,
+		Nonce:                *ops.Nonce,
+		L2TxAttributes:       ConstructL2TxAttributes(ops.TxAttributes),
 	}
 }

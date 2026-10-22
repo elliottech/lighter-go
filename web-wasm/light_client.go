@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
 	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types/txtypes"
+	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +33,15 @@ type LightClient struct {
 }
 
 func NewLightClient(seed string, chainId uint32) (*LightClient, error) {
+	// Keep input policy in the WASM adapter; the shared signer retains its
+	// existing panic/error contracts for other Go callers.
+	decoded, err := hex.DecodeString(seed)
+	if err != nil {
+		return nil, fmt.Errorf("seed must be hexadecimal")
+	}
+	if len(decoded) < 32 {
+		return nil, fmt.Errorf("seed too short, should be at least 32 bytes")
+	}
 	keyManager, err := signer.NewSeedKeyManager(seed)
 	if err != nil {
 		return nil, err
@@ -47,6 +58,20 @@ func NewLightClientByPrv(prv string, chainId uint32) (*LightClient, error) {
 	prvBytes, err := hex.DecodeString(prv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode private key hex string: %w", err)
+	}
+
+	// Enforce the browser signer policy here, without narrowing the shared
+	// signer package's historical 40-byte import contract.
+	if len(prvBytes) != 40 {
+		return nil, fmt.Errorf("private key length is not 40 bytes, length: %d", len(prvBytes))
+	}
+	reversed := make([]byte, len(prvBytes))
+	for i := range prvBytes {
+		reversed[len(prvBytes)-1-i] = prvBytes[i]
+	}
+	scalar := new(big.Int).SetBytes(reversed)
+	if scalar.Sign() == 0 || scalar.Cmp(curve.ORDER) >= 0 {
+		return nil, fmt.Errorf("private key must be a nonzero canonical scalar")
 	}
 
 	keyManager, err := signer.NewKeyManager(prvBytes)
@@ -304,6 +329,14 @@ func (c *LightClient) GetBurnSharesTransaction(tx *BurnSharesTxReq, ops *Transac
 	return ConstructBurnSharesTx(c.keyManager, c.chainId, tx, ops)
 }
 
+func (c *LightClient) GetCreateStakingPoolTransaction(tx *CreateStakingPoolTxReq, ops *TransactOpts) (*txtypes.L2CreateStakingPoolTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	return ConstructCreateStakingPoolTx(c.keyManager, c.chainId, tx, ops)
+}
+
 func (c *LightClient) GetStakeAssetsTransaction(tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
@@ -352,6 +385,14 @@ func (c *LightClient) GetUpdateMarginTransaction(tx *UpdateMarginTxReq, ops *Tra
 	return ConstructUpdateMarginTx(c.keyManager, c.chainId, tx, ops)
 }
 
+func (c *LightClient) GetCreateGroupedOrdersTransaction(tx *CreateGroupedOrdersTxReq, ops *TransactOpts) (*txtypes.L2CreateGroupedOrdersTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	return ConstructL2CreateGroupedOrdersTx(c.keyManager, c.chainId, tx, ops)
+}
+
 func (c *LightClient) GetBinaryOptionsOperatorCreateMarketTransaction(tx *BinaryOptionsOperatorCreateMarketTxReq, ops *TransactOpts) (*txtypes.BinaryOptionsOperatorCreateMarketTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
@@ -374,14 +415,6 @@ func (c *LightClient) GetBinaryOptionsOperatorSettleMarketTransaction(tx *Binary
 		return nil, err
 	}
 	return ConstructBinaryOptionsOperatorSettleMarketTx(c.keyManager, c.chainId, tx, ops)
-}
-
-func (c *LightClient) GetCreateGroupedOrdersTransaction(tx *CreateGroupedOrdersTxReq, ops *TransactOpts) (*txtypes.L2CreateGroupedOrdersTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	return ConstructL2CreateGroupedOrdersTx(c.keyManager, c.chainId, tx, ops)
 }
 
 func (c *LightClient) SignMessage(message string) (string, error) {
@@ -450,6 +483,8 @@ func getTxResponse(tx interface{}, lighterChainId uint32) map[string]any {
 	case *txtypes.L2UnstakeAssetsTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2StakeAssetsTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.L2CreateStakingPoolTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
 		hash, err = t.Hash(lighterChainId)

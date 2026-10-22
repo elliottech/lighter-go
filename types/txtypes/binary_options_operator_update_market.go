@@ -7,9 +7,14 @@ import (
 
 var _ TxInfo = (*BinaryOptionsOperatorUpdateMarketTxInfo)(nil)
 
-// BinaryOptionsOperatorUpdateMarketTxInfo updates the mutable parameters of an active binary options
-// order book on behalf of its market operator. Every field of the order book that is not carried here
-// is immutable after creation.
+// MaxUpdateMarketLiquidationFee caps the liquidation fee a BinaryOptionsOperatorUpdateMarket tx can set
+// on a perps market at 1%.
+const MaxUpdateMarketLiquidationFee int64 = FeeTick / 100
+
+// BinaryOptionsOperatorUpdateMarketTxInfo updates the mutable parameters of an active order book on behalf
+// of its market operator. For perps and spot markets, StartTimestampMs, EndTimestampMs and IsFrozen do not
+// apply and must be zero; LiquidationFee only applies to perps markets and is capped at 1%.
+// Every field of the order book that is not carried here is immutable after creation.
 type BinaryOptionsOperatorUpdateMarketTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
@@ -22,7 +27,7 @@ type BinaryOptionsOperatorUpdateMarketTxInfo struct {
 
 	TakerFee          uint32
 	MakerFee          uint32
-	LiquidationFee    uint32 // only applies to perps markets; must be zero for binary options markets
+	LiquidationFee    uint32 // only applies to perps markets, capped at 1%; must be zero for spot and binary options markets
 	MinBaseAmount     int64
 	MinQuoteAmount    int64
 	OrderQuoteLimit   int64
@@ -72,7 +77,10 @@ func (txInfo *BinaryOptionsOperatorUpdateMarketTxInfo) Validate() error {
 	}
 
 	// MarketSlot
-	if txInfo.MarketSlot < MinBinaryOptionsMarketSlot || txInfo.MarketSlot > MaxBinaryOptionsMarketSlot {
+	isBinaryOptionsMarket := txInfo.MarketSlot >= MinBinaryOptionsMarketSlot && txInfo.MarketSlot <= MaxBinaryOptionsMarketSlot
+	isPerpsMarket := txInfo.MarketSlot >= MinPerpsMarketSlot && txInfo.MarketSlot <= MaxPerpsMarketSlot
+	isSpotMarket := txInfo.MarketSlot >= MinSpotMarketSlot && txInfo.MarketSlot <= MaxSpotMarketSlot
+	if !isBinaryOptionsMarket && !isPerpsMarket && !isSpotMarket {
 		return ErrInvalidMarketIndex
 	}
 
@@ -82,14 +90,24 @@ func (txInfo *BinaryOptionsOperatorUpdateMarketTxInfo) Validate() error {
 		return ErrInvalidMarketIndex
 	}
 
-	if txInfo.StartTimestampMs < 0 || txInfo.EndTimestampMs > MaxTimestamp || txInfo.StartTimestampMs >= txInfo.EndTimestampMs {
+	if isBinaryOptionsMarket {
+		if txInfo.StartTimestampMs < 0 || txInfo.EndTimestampMs > MaxTimestamp || txInfo.StartTimestampMs >= txInfo.EndTimestampMs {
+			return ErrInvalidMarketTimestamps
+		}
+	} else if txInfo.StartTimestampMs != 0 || txInfo.EndTimestampMs != 0 {
+		// StartTimestampMs and EndTimestampMs only apply to binary options markets
 		return ErrInvalidMarketTimestamps
 	}
 
 	if int64(txInfo.TakerFee) > FeeTick || int64(txInfo.MakerFee) > FeeTick {
 		return ErrFeeTooHigh
 	}
-	if txInfo.LiquidationFee != 0 {
+	// LiquidationFee only applies to perps markets and is capped at 1%
+	if isPerpsMarket {
+		if int64(txInfo.LiquidationFee) > MaxUpdateMarketLiquidationFee {
+			return ErrFeeTooHigh
+		}
+	} else if txInfo.LiquidationFee != 0 {
 		return ErrFeeTooHigh
 	}
 
@@ -102,11 +120,22 @@ func (txInfo *BinaryOptionsOperatorUpdateMarketTxInfo) Validate() error {
 	if txInfo.OrderQuoteLimit > MaxOrderQuoteAmount || txInfo.OrderQuoteLimit < txInfo.MinQuoteAmount {
 		return ErrOrderQuoteLimitTooHigh
 	}
-	if txInfo.OpenInterestLimit < txInfo.OrderQuoteLimit || txInfo.OpenInterestLimit > MaxOpenInterest {
+
+	// Spot markets do not carry an open interest limit
+	if isSpotMarket {
+		if txInfo.OpenInterestLimit != 0 {
+			return ErrOpenInterestLimitInvalid
+		}
+	} else if txInfo.OpenInterestLimit < txInfo.OrderQuoteLimit || txInfo.OpenInterestLimit > MaxOpenInterest {
 		return ErrOpenInterestLimitTooLow
 	}
 
-	if txInfo.IsFrozen > 1 {
+	if isBinaryOptionsMarket {
+		if txInfo.IsFrozen > 1 {
+			return ErrInvalidIsFrozen
+		}
+	} else if txInfo.IsFrozen != 0 {
+		// IsFrozen only applies to binary options markets
 		return ErrInvalidIsFrozen
 	}
 
