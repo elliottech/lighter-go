@@ -317,15 +317,3 @@ func (c *TxClient) GetUpdateAccountAssetConfigTransaction(tx *types.UpdateAccoun
 	}
 	return txInfo, nil
 }
-
-func (c *TxClient) GetCreateStakingPoolTransaction(tx *types.CreateStakingPoolTxReq, ops *types.TransactOpts) (*txtypes.L2CreateStakingPoolTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	txInfo, err := types.ConstructCreateStakingPoolTx(c.keyManager, c.chainId, tx, ops)
-	if err != nil {
-		return nil, err
-	}
-	return txInfo, nil
-}

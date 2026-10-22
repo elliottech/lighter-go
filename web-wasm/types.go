@@ -117,11 +117,6 @@ type CancelAllOrdersTxReq struct {
 	Time        int64
 }
 
-type CreateStakingPoolTxReq struct {
-	InitialTotalShares   int64
-	MinOperatorShareRate uint16
-}
-
 type StakeAssetsTxReq struct {
 	StakingPoolIndex int64
 	ShareAmount      int64
@@ -383,18 +378,6 @@ func ConvertBurnSharesTx(tx *BurnSharesTxReq, ops *TransactOpts) *txtypes.L2Burn
 		ExpiredAt:       ops.ExpiredAt,
 		Nonce:           *ops.Nonce,
 		L2TxAttributes:  ops.L2TxAttributes(),
-	}
-}
-
-func ConvertCreateStakingPoolTx(tx *CreateStakingPoolTxReq, ops *TransactOpts) *txtypes.L2CreateStakingPoolTxInfo {
-	return &txtypes.L2CreateStakingPoolTxInfo{
-		AccountIndex:         *ops.FromAccountIndex,
-		ApiKeyIndex:          *ops.ApiKeyIndex,
-		InitialTotalShares:   tx.InitialTotalShares,
-		MinOperatorShareRate: tx.MinOperatorShareRate,
-		ExpiredAt:            ops.ExpiredAt,
-		Nonce:                *ops.Nonce,
-		L2TxAttributes:       ops.L2TxAttributes(),
 	}
 }
 
@@ -774,28 +757,6 @@ func ConstructMintSharesTx(key signer.KeyManager, lighterChainId uint32, tx *Min
 
 func ConstructBurnSharesTx(key signer.KeyManager, lighterChainId uint32, tx *BurnSharesTxReq, ops *TransactOpts) (*txtypes.L2BurnSharesTxInfo, error) {
 	convertedTx := ConvertBurnSharesTx(tx, ops)
-	err := convertedTx.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	msgHash, err := convertedTx.Hash(lighterChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
-	if err != nil {
-		return nil, err
-	}
-
-	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
-	return convertedTx, nil
-}
-
-func ConstructCreateStakingPoolTx(key signer.KeyManager, lighterChainId uint32, tx *CreateStakingPoolTxReq, ops *TransactOpts) (*txtypes.L2CreateStakingPoolTxInfo, error) {
-	convertedTx := ConvertCreateStakingPoolTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err

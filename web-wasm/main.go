@@ -49,7 +49,6 @@ func main() {
 	register("_getTransferTransaction", GetTransferTransaction)
 	register("_getAirdropAllocationMessage", GetAirdropAllocationMessage)
 	register("_createAuthToken", CreateAuthToken)
-	register("_signCreateStakingPool", SignCreateStakingPool)
 	register("_signStakeAssets", SignStakeAssets)
 	register("_signUnstakeAssets", SignUnstakeAssets)
 	register("_signBinaryOptionsOperatorCreateMarket", SignBinaryOptionsOperatorCreateMarket)
@@ -738,32 +737,6 @@ func SignApproveIntegrator(this js.Value, args []js.Value) any {
 		ops.Nonce = &nonce
 		ops.ApiKeyIndex = &apiKeyIndex
 		tx, err := clients[accountIndex].GetApproveIntegratorTransaction(txInfo, ops, signedMessage)
-		if err != nil {
-			resolve.Invoke(errToJson(err))
-			return
-		}
-		resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
-	})
-}
-
-func SignCreateStakingPool(this js.Value, args []js.Value) any {
-	accountIndex := int64(checkedInt(args[0]))
-	if clients[accountIndex] == nil {
-		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
-	}
-
-	initialTotalShares := int64(checkedInt(args[1]))
-	minOperatorShareRate := checkedUint16(checkedInt(args[2]))
-	nonce := int64(checkedInt(args[3]))
-
-	return promiseResult(func(resolve js.Value) {
-		txInfo := &CreateStakingPoolTxReq{
-			InitialTotalShares:   initialTotalShares,
-			MinOperatorShareRate: minOperatorShareRate,
-		}
-		ops := new(TransactOpts)
-		ops.Nonce = &nonce
-		tx, err := clients[accountIndex].GetCreateStakingPoolTransaction(txInfo, ops)
 		if err != nil {
 			resolve.Invoke(errToJson(err))
 			return

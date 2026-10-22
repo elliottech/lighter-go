@@ -329,14 +329,6 @@ func (c *LightClient) GetBurnSharesTransaction(tx *BurnSharesTxReq, ops *Transac
 	return ConstructBurnSharesTx(c.keyManager, c.chainId, tx, ops)
 }
 
-func (c *LightClient) GetCreateStakingPoolTransaction(tx *CreateStakingPoolTxReq, ops *TransactOpts) (*txtypes.L2CreateStakingPoolTxInfo, error) {
-	ops, err := c.FullFillDefaultOps(ops)
-	if err != nil {
-		return nil, err
-	}
-	return ConstructCreateStakingPoolTx(c.keyManager, c.chainId, tx, ops)
-}
-
 func (c *LightClient) GetStakeAssetsTransaction(tx *StakeAssetsTxReq, ops *TransactOpts) (*txtypes.L2StakeAssetsTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
@@ -483,8 +475,6 @@ func getTxResponse(tx interface{}, lighterChainId uint32) map[string]any {
 	case *txtypes.L2UnstakeAssetsTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2StakeAssetsTxInfo:
-		hash, err = t.Hash(lighterChainId)
-	case *txtypes.L2CreateStakingPoolTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
 		hash, err = t.Hash(lighterChainId)
