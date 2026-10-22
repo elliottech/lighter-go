@@ -1,9 +1,9 @@
 {
   "protocol": 2,
-  "sourceCommit": "255703e94f5fcce2a3be67c533f45b2e59db4cea",
-  "sourceTreeSha256": "2edfc4645cc17e0ba9f22d2b1950e1442e3e32e20be6ac7cbec1b38b28b1ef63",
+  "sourceCommit": "5b75f5c77e9e41b0fb5df72c99150c6047af1e0e",
+  "sourceTreeSha256": "129f41748f77d65405898f446ebef9cafac2e8efb990b8709010dea807c0f21a",
   "goVersion": "go1.26.8",
-  "sha256": "f8dfb40e705bcca4d5393394cf0b77f516d247bb074495df20616affe1ce7baf",
+  "sha256": "6e24ad64ecbf16fc35c1a381ddf0acce0e3c564a32fe6c116ffd29e9df723c5b",
   "exports": [
     "_lighterTest",
     "_createClient",
@@ -33,7 +33,6 @@
     "_getTransferTransaction",
     "_getAirdropAllocationMessage",
     "_createAuthToken",
-    "_signCreateStakingPool",
     "_signStakeAssets",
     "_signUnstakeAssets",
     "_signBinaryOptionsOperatorCreateMarket",
@@ -43,5 +42,5 @@
     "_selectClient"
   ],
   "runtimeSha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14",
-  "htmlSha256": "4576ee06ded23fd9de49820ee7bc3d1cba6d3e001b0cf64363cd0d07132ef271"
+  "htmlSha256": "5fe515602db36f649593dd59e2373703d3a04380297076556a9fc82fb223bb54"
 }
