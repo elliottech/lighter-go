@@ -54,9 +54,10 @@ build-darwin-amd64-local:
 
 ### WASM builds
 
+# Same pinned toolchain and clean env as web-wasm/build.py, so builds are byte-reproducible.
 build-wasm:
-    go mod vendor
-    GOOS=js GOARCH=wasm go build -trimpath -o ./build/lighter-signer.wasm ./wasm/
+    GOTOOLCHAIN=go1.26.8 GOFLAGS= GOWASM= GOEXPERIMENT= CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -mod=readonly -trimpath -buildvcs=false -o ./build/lighter-signer.wasm ./wasm/
+    sha256sum ./build/lighter-signer.wasm
 
 ### Web WASM build
 

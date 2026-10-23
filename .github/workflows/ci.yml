@@ -38,13 +38,9 @@ jobs:
       - run: just build-linux-local
       - run: just build-wasm
 
-      - name: Fetch wasm_exec.js
-        run: |
-          GO_VERSION=$(go env GOVERSION)
-          curl -fsSL "https://raw.githubusercontent.com/golang/go/${GO_VERSION}/lib/wasm/wasm_exec.js" \
-            -o ./build/wasm_exec.js \
-            || curl -fsSL "https://raw.githubusercontent.com/golang/go/${GO_VERSION}/misc/wasm/wasm_exec.js" \
-               -o ./build/wasm_exec.js
+      - name: Copy wasm_exec.js
+        run: cp "$(GOTOOLCHAIN=go1.26.8 go env GOROOT)/lib/wasm/wasm_exec.js" ./build/wasm_exec.js
+      - run: sha256sum build/lighter-signer.wasm build/wasm_exec.js >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cross-compile Windows DLL
         run: |
