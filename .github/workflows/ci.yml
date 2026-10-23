@@ -38,13 +38,9 @@ jobs:
       - run: just build-linux-local
       - run: just build-wasm
 
-      - name: Fetch wasm_exec.js
-        run: |
-          GO_VERSION=$(go env GOVERSION)
-          curl -fsSL "https://raw.githubusercontent.com/golang/go/${GO_VERSION}/lib/wasm/wasm_exec.js" \
-            -o ./build/wasm_exec.js \
-            || curl -fsSL "https://raw.githubusercontent.com/golang/go/${GO_VERSION}/misc/wasm/wasm_exec.js" \
-               -o ./build/wasm_exec.js
+      - name: Copy wasm_exec.js
+        run: cp "$(GOTOOLCHAIN=go1.26.8 go env GOROOT)/lib/wasm/wasm_exec.js" ./build/wasm_exec.js
+      - run: sha256sum build/lighter-signer.wasm build/wasm_exec.js >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cross-compile Windows DLL
         run: |
@@ -75,6 +71,19 @@ jobs:
             build/lighter-signer-windows-amd64.h
             build/lighter-signer.wasm
             build/wasm_exec.js
+
+  web-wasm-reproducible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683        # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff        # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: sudo apt-get update && sudo apt-get install -y brotli
+      # Rebuilds with the pinned toolchain and fails if any committed artifact differs.
+      - run: python3 web-wasm/build.py --check
+      - run: sha256sum web-wasm/main.wasm web-wasm/sdk.html >> "$GITHUB_STEP_SUMMARY"
 
   build-darwin:
     runs-on: macos-14

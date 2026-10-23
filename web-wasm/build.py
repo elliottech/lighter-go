@@ -32,7 +32,10 @@ sources = [path for path in sources if not path.name.endswith('_test.go')]
 h = hashlib.sha256()
 for path in sources:
     h.update(str(path.relative_to(root)).encode() + b'\0' + path.read_bytes() + b'\0')
-run('go', 'build', '-buildvcs=false', '-trimpath', '-ldflags=-s -w', '-o', str(out / 'main.wasm'), './web-wasm', env={**os.environ, 'GOOS': 'js', 'GOARCH': 'wasm'})
+# Pin every input that changes the binary: ignore vendor/ and user GOFLAGS, and
+# reset wasm/experiment knobs a developer machine may have set.
+go_env = {**os.environ, 'GOOS': 'js', 'GOARCH': 'wasm', 'CGO_ENABLED': '0', 'GOFLAGS': '', 'GOWASM': '', 'GOEXPERIMENT': ''}
+run('go', 'build', '-mod=readonly', '-buildvcs=false', '-trimpath', '-ldflags=-s -w', '-o', str(out / 'main.wasm'), './web-wasm', env=go_env)
 binary = (out / 'main.wasm').read_bytes()
 (out / 'main.wasm.gz').write_bytes(gzip.compress(binary, mtime=0))
 run('brotli', '-Z', '-f', '-k', str(out / 'main.wasm'))
@@ -44,11 +47,11 @@ manifest = {
     'protocol': 2,
     'sourceCommit': run('git', 'rev-parse', 'HEAD').decode().strip(),
     'sourceTreeSha256': h.hexdigest(),
-    'goVersion': run('go', 'env', 'GOVERSION').decode().strip(),
+    'goVersion': run('go', 'env', 'GOVERSION', env=go_env).decode().strip(),
     'sha256': hashlib.sha256(binary).hexdigest(),
     'exports': exports,
 }
-goroot = Path(run('go', 'env', 'GOROOT').decode().strip())
+goroot = Path(run('go', 'env', 'GOROOT', env=go_env).decode().strip())
 runtime = goroot / 'lib/wasm/wasm_exec.js'
 if not runtime.exists(): runtime = goroot / 'misc/wasm/wasm_exec.js'
 html = (wasm / 'wasm-template.html').read_text().replace('{{GO_RUNTIME}}', runtime.read_text()).replace('{{WASM_BASE64}}', base64.b64encode(binary).decode()).replace('{{SIGNER_EXPORTS}}', json.dumps(exports))
