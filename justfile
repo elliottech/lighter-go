@@ -60,9 +60,12 @@ build-wasm:
 
 ### Web WASM build
 
+# Release asset must be byte-identical to the committed web-wasm/main.wasm.
 build-web-wasm:
-    go mod vendor
-    GOOS=js GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -o ./build/lighter-signer-web.wasm ./web-wasm
+    python3 web-wasm/build.py --check
+    mkdir -p ./build
+    cp web-wasm/main.wasm ./build/lighter-signer-web.wasm
+    sha256sum ./build/lighter-signer-web.wasm
 
 ### Examples
 

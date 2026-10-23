@@ -76,6 +76,19 @@ jobs:
             build/lighter-signer.wasm
             build/wasm_exec.js
 
+  web-wasm-reproducible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683        # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff        # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: sudo apt-get update && sudo apt-get install -y brotli
+      # Rebuilds with the pinned toolchain and fails if any committed artifact differs.
+      - run: python3 web-wasm/build.py --check
+      - run: sha256sum web-wasm/main.wasm web-wasm/sdk.html >> "$GITHUB_STEP_SUMMARY"
+
   build-darwin:
     runs-on: macos-14
     steps:
