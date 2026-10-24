@@ -48,6 +48,17 @@ func (attr *L2TxAttributes) IsEmpty() bool {
 
 type PublicKey = gFp5.Element
 
+type directHashSigner interface {
+	SignHash(message []byte) ([]byte, error)
+}
+
+func signHashedMessage(key signer.Signer, message []byte) ([]byte, error) {
+	if direct, ok := key.(directHashSigner); ok {
+		return direct.SignHash(message)
+	}
+	return key.Sign(message, p2.NewPoseidon2())
+}
+
 type ChangePubKeyReq struct {
 	PubKey [40]byte
 }
@@ -231,7 +242,7 @@ func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts
 
 	msgHash := p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
 
-	signatureBytes, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signatureBytes, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return "", err
 	}
@@ -284,7 +295,7 @@ func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *Chang
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +317,7 @@ func ConstructCreateSubAccountTx(key signer.Signer, lighterChainId uint32, ops *
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +339,7 @@ func ConstructCreatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *C
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +361,7 @@ func ConstructUpdatePublicPoolTx(key signer.Signer, lighterChainId uint32, tx *U
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +383,7 @@ func ConstructWithdrawTx(key signer.Signer, lighterChainId uint32, tx *WithdrawT
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +405,7 @@ func ConstructCreateOrderTx(key signer.Signer, lighterChainId uint32, tx *Create
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +427,7 @@ func ConstructL2CreateGroupedOrdersTx(key signer.Signer, lighterChainId uint32, 
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +449,7 @@ func ConstructL2CancelOrderTx(key signer.Signer, lighterChainId uint32, tx *Canc
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +471,7 @@ func ConstructL2ModifyOrderTx(key signer.Signer, lighterChainId uint32, tx *Modi
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +493,7 @@ func ConstructStakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *StakeA
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +515,7 @@ func ConstructUnstakeAssetsTx(key signer.Signer, lighterChainId uint32, tx *Unst
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +537,7 @@ func ConstructL2CancelAllOrdersTx(key signer.Signer, lighterChainId uint32, tx *
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -549,7 +560,7 @@ func ConstructApproveIntegratorTx(key signer.Signer, lighterChainId uint32, tx *
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -571,7 +582,7 @@ func ConstructTransferTx(key signer.Signer, lighterChainId uint32, tx *TransferT
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +604,7 @@ func ConstructMintSharesTx(key signer.Signer, lighterChainId uint32, tx *MintSha
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +626,7 @@ func ConstructBurnSharesTx(key signer.Signer, lighterChainId uint32, tx *BurnSha
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -637,7 +648,7 @@ func ConstructUpdateLeverageTx(key signer.Signer, lighterChainId uint32, tx *Upd
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -728,7 +739,7 @@ func ConstructUpdateMarginTx(key signer.Signer, lighterChainId uint32, tx *Updat
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -750,7 +761,7 @@ func ConstructUpdateAccountConfigTx(key signer.Signer, lighterChainId uint32, tx
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -772,7 +783,7 @@ func ConstructUpdateAccountAssetConfigTx(key signer.Signer, lighterChainId uint3
 		return nil, err
 	}
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	signature, err := signHashedMessage(key, msgHash)
 	if err != nil {
 		return nil, err
 	}
