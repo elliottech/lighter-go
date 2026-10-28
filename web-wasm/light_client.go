@@ -270,6 +270,73 @@ func (c *LightClient) GetWithdrawTransaction(tx *WithdrawTxReq, ops *TransactOpt
 	return ConstructWithdrawTx(c.keyManager, c.chainId, tx, ops)
 }
 
+func (c *LightClient) GenerateSendToEvmSignBody(txData *SendToEvmTxReq, ops *TransactOpts) (string, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return "", err
+	}
+	ops.SkipNonce = false
+
+	txInfo, err := ConstructSendToEvmTx(c.keyManager, c.chainId, txData, ops)
+	if err != nil {
+		return "", err
+	}
+	return txInfo.GetOwnerSignatureBody(c.chainId), nil
+}
+
+func (c *LightClient) GetSendToEvmTransaction(tx *SendToEvmTxReq, ops *TransactOpts, ownerSignature string) (*txtypes.L2SendToEvmTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	ops.SkipNonce = false
+
+	txInfo, err := ConstructSendToEvmTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+
+	if ownerSignature != "" && ownerSignature != "0x" {
+		txInfo.OwnerSig = ownerSignature
+	}
+
+	return txInfo, nil
+}
+
+func (c *LightClient) GenerateWithdrawToL1AddressSignBody(txData *WithdrawToL1AddressTxReq, ops *TransactOpts) (string, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return "", err
+	}
+	ops.SkipNonce = false
+
+	txInfo, err := ConstructWithdrawToL1AddressTx(c.keyManager, c.chainId, txData, ops)
+	if err != nil {
+		return "", err
+	}
+	return txInfo.GetOwnerSignatureBody(c.chainId), nil
+}
+
+func (c *LightClient) GetWithdrawToL1AddressTransaction(tx *WithdrawToL1AddressTxReq, ops *TransactOpts, ownerSignature string) (*txtypes.L2WithdrawToL1AddressTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	ops.SkipNonce = false
+
+	if ownerSignature == "" || ownerSignature == "0x" {
+		return nil, errors.New("owner signature is expected to be passed")
+	}
+
+	txInfo, err := ConstructWithdrawToL1AddressTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo.OwnerSig = ownerSignature
+
+	return txInfo, nil
+}
+
 func (c *LightClient) GetCancelAllOrdersTransaction(tx *CancelAllOrdersTxReq, ops *TransactOpts) (*txtypes.L2CancelAllOrdersTxInfo, error) {
 	ops, err := c.FullFillDefaultOps(ops)
 	if err != nil {
@@ -469,6 +536,10 @@ func getTxResponse(tx interface{}, lighterChainId uint32) map[string]any {
 	case *txtypes.L2UpdateMarginTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2WithdrawTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.L2SendToEvmTxInfo:
+		hash, err = t.Hash(lighterChainId)
+	case *txtypes.L2WithdrawToL1AddressTxInfo:
 		hash, err = t.Hash(lighterChainId)
 	case *txtypes.L2CreateGroupedOrdersTxInfo:
 		hash, err = t.Hash(lighterChainId)
