@@ -127,7 +127,7 @@ Node smoke test that loads the lighter-go WASM build and exercises the signer gl
 ### Prerequisites
 
 - Node.js 22+
-- Go 1.23+ (to build the WASM artifact)
+- Go 1.26+ (to build the WASM artifact)
 - [just](https://github.com/casey/just) (optional, for the build recipe)
 
 Install on macOS:
