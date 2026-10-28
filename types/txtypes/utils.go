@@ -69,7 +69,11 @@ func calculateL1AddressBySignature(signatureBody, l1Signature string) common.Add
 	message := accounts.TextHash([]byte(signatureBody))
 	// Decode from signature string to get the signature byte array
 	signatureContent, err := hexutil.Decode(l1Signature)
-	if err != nil || len(signatureContent) != L1SignatureLength {
+	if err != nil {
+		return [20]byte{}
+	}
+
+	if len(signatureContent) != L1SignatureLength {
 		return [20]byte{}
 	}
 

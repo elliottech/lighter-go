@@ -103,8 +103,12 @@ func (txInfo *L2TransferTxInfo) Validate() error {
 	}
 
 	if txInfo.L1Sig != "" {
+		// Decode from signature string to get the signature byte array
 		signatureContent, err := hexutil.Decode(txInfo.L1Sig)
-		if err != nil || len(signatureContent) != L1SignatureLength {
+		if err != nil {
+			return ErrInvalidL1Signature
+		}
+		if len(signatureContent) != L1SignatureLength {
 			return ErrInvalidL1Signature
 		}
 	}
