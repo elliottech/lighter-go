@@ -1,8 +1,6 @@
 module github.com/elliottech/lighter-go
 
-go 1.23.0
-
-toolchain go1.23.1
+go 1.26.0
 
 require (
 	github.com/elliottech/poseidon_crypto v0.0.15
@@ -21,8 +19,8 @@ require (
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/supranational/blst v0.3.14 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
