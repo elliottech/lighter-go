@@ -191,6 +191,10 @@ func (c *LightClient) GetApproveIntegratorTransaction(tx *ApproveIntegratorTxReq
 		txInfo.L1Sig = signature
 	}
 
+	if err := txInfo.Validate(); err != nil {
+		return nil, err
+	}
+
 	return txInfo, nil
 }
 
@@ -219,6 +223,10 @@ func (c *LightClient) GetChangePubKeyTransaction(tx *ChangePubKeyReq, ops *Trans
 	}
 
 	txInfo.L1Sig = signature
+	if err := txInfo.Validate(); err != nil {
+		return nil, err
+	}
+
 	return txInfo, nil
 }
 
@@ -308,6 +316,10 @@ func (c *LightClient) GetTransferTransaction(tx *TransferTxReq, ops *TransactOpt
 
 	if signature != "" && signature != "0x" {
 		txInfo.L1Sig = signature
+	}
+
+	if err := txInfo.Validate(); err != nil {
+		return nil, err
 	}
 
 	return txInfo, nil

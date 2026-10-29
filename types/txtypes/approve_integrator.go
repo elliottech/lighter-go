@@ -19,6 +19,7 @@ package txtypes
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
@@ -100,6 +101,17 @@ func (txInfo *L2ApproveIntegratorTxInfo) Validate() error {
 
 	if txInfo.ExpiredAt < 0 || txInfo.ExpiredAt > MaxTimestamp {
 		return ErrExpiredAtInvalid
+	}
+
+	if txInfo.L1Sig != "" {
+		// Decode from signature string to get the signature byte array
+		signatureContent, err := hexutil.Decode(txInfo.L1Sig)
+		if err != nil {
+			return ErrInvalidL1Signature
+		}
+		if len(signatureContent) != L1SignatureLength {
+			return ErrInvalidL1Signature
+		}
 	}
 
 	return nil
