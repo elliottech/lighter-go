@@ -7,6 +7,7 @@ import (
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 var _ TxInfo = (*L2ChangePubKeyTxInfo)(nil)
@@ -70,6 +71,17 @@ func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
 
 	if !IsValidPubKeyLength(txInfo.PubKey) {
 		return ErrPubKeyInvalid
+	}
+
+	if txInfo.L1Sig != "" {
+		// Decode from signature string to get the signature byte array
+		signatureContent, err := hexutil.Decode(txInfo.L1Sig)
+		if err != nil {
+			return ErrInvalidL1Signature
+		}
+		if len(signatureContent) != L1SignatureLength {
+			return ErrInvalidL1Signature
+		}
 	}
 
 	return nil
