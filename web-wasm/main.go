@@ -47,6 +47,10 @@ func main() {
 	register("_getChangePubKeyTransaction", GetChangePubKeyTransaction)
 	register("_getRevokePubKeyTransaction", GetRevokePubKeyTransaction)
 	register("_getTransferTransaction", GetTransferTransaction)
+	register("_getSendToEvmTransaction", GetSendToEvmTransaction)
+	register("_signSendToEvm", SignSendToEvm)
+	register("_getWithdrawToL1AddressTransaction", GetWithdrawToL1AddressTransaction)
+	register("_signWithdrawToL1Address", SignWithdrawToL1Address)
 	register("_getAirdropAllocationMessage", GetAirdropAllocationMessage)
 	register("_createAuthToken", CreateAuthToken)
 	register("_signStakeAssets", SignStakeAssets)
@@ -1214,5 +1218,175 @@ func integratorAttributes(args []js.Value, idx int) (accountIndex *int64, takerF
 func errPromise(err error) js.Value {
 	return promiseResult(func(resolve js.Value) {
 		resolve.Invoke(errToJson(err))
+	})
+}
+
+func GetSendToEvmTransaction(this js.Value, args []js.Value) any {
+	accountIndex := int64(checkedInt(args[0]))
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	nonce := int64(checkedInt(args[1]))
+	apiKeyIndex := checkedUint8(checkedInt(args[2]))
+	assetIndex := checkedUint32(checkedInt(args[3]))
+	evmRecipient := checkedString(args[4])
+	routeType := checkedUint8(checkedInt(args[5]))
+	baseAmount, err := parseUnsignedAmount(checkedString(args[6]))
+	if err != nil {
+		return errPromise(err)
+	}
+	usdcFee := int64(checkedInt(args[7]))
+
+	return promiseResult(func(resolve js.Value) {
+		txInfo := &SendToEvmTxReq{
+			AssetIndex:   assetIndex,
+			EvmRecipient: evmRecipient,
+			RouteType:    routeType,
+			BaseAmount:   baseAmount,
+			USDCFee:      usdcFee,
+		}
+
+		ops := new(TransactOpts)
+		ops.Nonce = &nonce
+		ops.ApiKeyIndex = &apiKeyIndex
+		sdkClient := clients[accountIndex]
+		txnBody, err := sdkClient.GenerateSendToEvmSignBody(txInfo, ops)
+		if err != nil {
+			resolve.Invoke(errToJson(err))
+			return
+		}
+
+		resolve.Invoke(map[string]any{
+			"success":       true,
+			"pubKeySuccess": true,
+			"body":          txnBody,
+		})
+	})
+}
+
+func SignSendToEvm(this js.Value, args []js.Value) any {
+	accountIndex := int64(checkedInt(args[0]))
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	ownerSignature := checkedString(args[1])
+	if ownerSignature != "" && !strings.HasPrefix(ownerSignature, "0x") {
+		ownerSignature = "0x" + ownerSignature
+	}
+
+	nonce := int64(checkedInt(args[2]))
+	apiKeyIndex := checkedUint8(checkedInt(args[3]))
+	assetIndex := checkedUint32(checkedInt(args[4]))
+	evmRecipient := checkedString(args[5])
+	routeType := checkedUint8(checkedInt(args[6]))
+	baseAmount, err := parseUnsignedAmount(checkedString(args[7]))
+	if err != nil {
+		return errPromise(err)
+	}
+	usdcFee := int64(checkedInt(args[8]))
+
+	return promiseResult(func(resolve js.Value) {
+		txInfo := &SendToEvmTxReq{
+			AssetIndex:   assetIndex,
+			EvmRecipient: evmRecipient,
+			RouteType:    routeType,
+			BaseAmount:   baseAmount,
+			USDCFee:      usdcFee,
+		}
+
+		ops := new(TransactOpts)
+		ops.Nonce = &nonce
+		ops.ApiKeyIndex = &apiKeyIndex
+		tx, err := clients[accountIndex].GetSendToEvmTransaction(txInfo, ops, ownerSignature)
+		if err != nil {
+			resolve.Invoke(errToJson(err))
+			return
+		}
+		resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
+	})
+}
+
+func GetWithdrawToL1AddressTransaction(this js.Value, args []js.Value) any {
+	accountIndex := int64(checkedInt(args[0]))
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	nonce := int64(checkedInt(args[1]))
+	apiKeyIndex := checkedUint8(checkedInt(args[2]))
+	assetIndex := checkedUint32(checkedInt(args[3]))
+	l1Recipient := checkedString(args[4])
+	routeType := checkedUint8(checkedInt(args[5]))
+	baseAmount, err := parseUnsignedAmount(checkedString(args[6]))
+	if err != nil {
+		return errPromise(err)
+	}
+
+	return promiseResult(func(resolve js.Value) {
+		txInfo := &WithdrawToL1AddressTxReq{
+			AssetIndex:  assetIndex,
+			L1Recipient: l1Recipient,
+			RouteType:   routeType,
+			BaseAmount:  baseAmount,
+		}
+
+		ops := new(TransactOpts)
+		ops.Nonce = &nonce
+		ops.ApiKeyIndex = &apiKeyIndex
+		sdkClient := clients[accountIndex]
+		txnBody, err := sdkClient.GenerateWithdrawToL1AddressSignBody(txInfo, ops)
+		if err != nil {
+			resolve.Invoke(errToJson(err))
+			return
+		}
+
+		resolve.Invoke(map[string]any{
+			"success":       true,
+			"pubKeySuccess": true,
+			"body":          txnBody,
+		})
+	})
+}
+
+func SignWithdrawToL1Address(this js.Value, args []js.Value) any {
+	accountIndex := int64(checkedInt(args[0]))
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+
+	ownerSignature := checkedString(args[1])
+	if ownerSignature != "" && !strings.HasPrefix(ownerSignature, "0x") {
+		ownerSignature = "0x" + ownerSignature
+	}
+
+	nonce := int64(checkedInt(args[2]))
+	apiKeyIndex := checkedUint8(checkedInt(args[3]))
+	assetIndex := checkedUint32(checkedInt(args[4]))
+	l1Recipient := checkedString(args[5])
+	routeType := checkedUint8(checkedInt(args[6]))
+	baseAmount, err := parseUnsignedAmount(checkedString(args[7]))
+	if err != nil {
+		return errPromise(err)
+	}
+
+	return promiseResult(func(resolve js.Value) {
+		txInfo := &WithdrawToL1AddressTxReq{
+			AssetIndex:  assetIndex,
+			L1Recipient: l1Recipient,
+			RouteType:   routeType,
+			BaseAmount:  baseAmount,
+		}
+
+		ops := new(TransactOpts)
+		ops.Nonce = &nonce
+		ops.ApiKeyIndex = &apiKeyIndex
+		tx, err := clients[accountIndex].GetWithdrawToL1AddressTransaction(txInfo, ops, ownerSignature)
+		if err != nil {
+			resolve.Invoke(errToJson(err))
+			return
+		}
+		resolve.Invoke(getTxResponse(tx, clients[accountIndex].ChainId()))
 	})
 }

@@ -73,6 +73,9 @@ const (
 	TxTypeL2UnstakeAssets   = 36
 	TxTypeL1UnstakeAssets   = 37
 	TxTypeL1SetSystemConfig = 38
+
+	TxTypeL2SendToEvm           = 128
+	TxTypeL2WithdrawToL1Address = 132
 )
 
 // Order Type

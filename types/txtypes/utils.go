@@ -1,10 +1,12 @@
 package txtypes
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	gFp5 "github.com/elliottech/poseidon_crypto/field/goldilocks_quintic_extension"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,6 +19,8 @@ const (
 	TemplateTransfer     = "Transfer\n\nnonce: %s\nfrom: %s (route %s)\napi key: %s\nto: %s (route %s)\nasset: %s\namount: %s\nfee: %s" +
 		"\nchainId: %s\nmemo: %s\nOnly sign this message for a trusted client!"
 	TemplateSubAccount          = "Create Lighter Sub Account\n\nmaster account index: %s\nOnly sign this message for a trusted client!"
+	TemplateSendToEvm           = "Send to EVM\n\nnonce: %s\nfrom: %s (route %s)\napi key: %s\nto evm: %s\nasset: %s\namount: %s\nfee: %s\nchainId: %s\nOnly sign this message for a trusted client!"
+	TemplateWithdrawToL1Address = "Withdraw to L1 Address\n\nnonce: %s\nfrom: %s (route %s)\napi key: %s\nto l1: %s\nasset: %s\namount: %s\nchainId: %s\nOnly sign this message for a trusted client!"
 	TemplateAirdropAllocation   = "Airdrop Allocation\n\nallocations: %s\nchainId: %s\nOnly sign this message for a trusted client!"
 	TemplateL2ApproveIntegrator = "Approve Integrator\n\nnonce: %s\naccount index: %s\napi key index: %s\nintegrator account index: %s\nmax perps taker fee: %s" +
 		"\nmax perps maker fee: %s\nmax spot taker fee: %s\nmax spot maker fee: %s\napproval expiry: %s\nchainId: %s\nOnly sign this message for a trusted client!"
@@ -63,6 +67,15 @@ func getHex10FromUint64(value uint64) string {
 	}
 
 	return fmt.Sprintf("0x%s", string(vBytes))
+}
+
+func appendAddressLimbs(elems []g.GoldilocksField, recipient string) []g.GoldilocksField {
+	address := common.HexToAddress(recipient)
+	// Core hashes the address as five 32-bit limbs, least significant first.
+	for end := len(address); end > 0; end -= 4 {
+		elems = append(elems, g.GoldilocksField(binary.BigEndian.Uint32(address[end-4:end])))
+	}
+	return elems
 }
 
 func calculateL1AddressBySignature(signatureBody, l1Signature string) common.Address {

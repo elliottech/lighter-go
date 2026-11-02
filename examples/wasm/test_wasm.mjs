@@ -134,4 +134,47 @@ assert.equal(groupedTxInfo.Orders[1].Type, 4);
 assert.equal(groupedTxInfo.Orders[1].TriggerPrice, 49000);
 assertSkipNonceAttr("SignCreateGroupedOrders (skipNonce=1)", groupedTxInfo, true);
 
+const interopClientResult = globalThis.CreateClient("", privateKey, 300, 2, 5);
+assertNoError("CreateClient (Core interop)", interopClientResult);
+
+const recipient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+const beforeSendToEvm = Date.now();
+const sendToEvmResult = globalThis.SignSendToEvm(
+    7, recipient, 1, 1000000, 100, 3, 2, 5
+);
+console.log("SignSendToEvm:", sendToEvmResult);
+const sendToEvmTxInfo = assertSignedTx("SignSendToEvm", sendToEvmResult, 128);
+assert.equal(sendToEvmTxInfo.AccountIndex, 5);
+assert.equal(sendToEvmTxInfo.ApiKeyIndex, 2);
+assert.equal(sendToEvmTxInfo.AssetIndex, 7);
+assert.equal(sendToEvmTxInfo.EvmRecipient, recipient);
+assert.equal(sendToEvmTxInfo.RouteType, 1);
+assert.equal(sendToEvmTxInfo.BaseAmount, 1000000);
+assert.equal(sendToEvmTxInfo.USDCFee, 100);
+assert.ok(sendToEvmTxInfo.ExpiredAt >= beforeSendToEvm + 599000);
+assert.ok(sendToEvmTxInfo.ExpiredAt <= Date.now() + 599000);
+assert.equal(sendToEvmTxInfo.Nonce, 3);
+assertSkipNonceAttr("SignSendToEvm", sendToEvmTxInfo, false);
+assert.match(sendToEvmResult.messageToSign, /^Send to EVM\n/);
+assert.match(sendToEvmResult.messageToSign, /\nchainId: 0x000000000000012c\n/);
+
+const beforeWithdrawToL1 = Date.now();
+const withdrawToL1Result = globalThis.SignWithdrawToL1Address(
+    7, recipient, 1, 1000000, 3, 2, 5
+);
+console.log("SignWithdrawToL1Address:", withdrawToL1Result);
+const withdrawToL1TxInfo = assertSignedTx("SignWithdrawToL1Address", withdrawToL1Result, 132);
+assert.equal(withdrawToL1TxInfo.AccountIndex, 5);
+assert.equal(withdrawToL1TxInfo.ApiKeyIndex, 2);
+assert.equal(withdrawToL1TxInfo.AssetIndex, 7);
+assert.equal(withdrawToL1TxInfo.L1Recipient, recipient);
+assert.equal(withdrawToL1TxInfo.RouteType, 1);
+assert.equal(withdrawToL1TxInfo.BaseAmount, 1000000);
+assert.ok(withdrawToL1TxInfo.ExpiredAt >= beforeWithdrawToL1 + 599000);
+assert.ok(withdrawToL1TxInfo.ExpiredAt <= Date.now() + 599000);
+assert.equal(withdrawToL1TxInfo.Nonce, 3);
+assertSkipNonceAttr("SignWithdrawToL1Address", withdrawToL1TxInfo, false);
+assert.match(withdrawToL1Result.messageToSign, /^Withdraw to L1 Address\n/);
+assert.match(withdrawToL1Result.messageToSign, /\nchainId: 0x000000000000012c\n/);
+
 console.log("\n--- All assertions passed ---");
