@@ -5,7 +5,9 @@ import (
 	"time"
 
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
+	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 )
@@ -37,6 +39,29 @@ func (c *TxClient) GetChangePubKeyTransaction(tx *types.ChangePubKeyReq, ops *ty
 	// Signing a ChangePubKey is a strong signal that this account's
 	// server-side pubkey is about to change. Drop cached entries so a
 	// subsequent Check refetches from the server.
+	if c.apiClient != nil {
+		c.apiClient.InvalidateApiKeys(c.accountIndex)
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetChangeECDSAPubKeyTransaction(tx *types.ChangeECDSAPubKeyReq, ops *types.TransactOpts) (*txtypes.L2ChangeECDSAPubKeyTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructChangeECDSAPubKeyTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+
+	if !txtypes.IsZeroECDSAPubKey(txInfo.PubKey) { // Allow revoking to the zero pubkey
+		msgHash, _ := txInfo.Hash(c.chainId)
+		if !crypto.VerifySignature(txInfo.PubKey, signer.ECDSASigningHash(msgHash), txInfo.Sig[:signer.ECDSASignatureLength]) {
+			return nil, fmt.Errorf("failed to validate signature. the client key is not the installed key")
+		}
+	}
+
 	if c.apiClient != nil {
 		c.apiClient.InvalidateApiKeys(c.accountIndex)
 	}

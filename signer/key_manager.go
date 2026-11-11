@@ -18,10 +18,17 @@ type Signer interface {
 
 type KeyManager interface {
 	Signer
-	PubKey() gFp5.Element
+	KeyType() uint8
 	PubKeyBytes() [40]byte
 	PrvKeyBytes() []byte
 }
+
+const (
+	KeyTypeSchnorr       uint8 = 0
+	KeyTypeECDSA         uint8 = 1
+	ECDSASignatureLength       = 64
+	TxSignatureLength          = 80
+)
 
 type keyManager struct {
 	key curve.ECgFp5Scalar
@@ -45,6 +52,10 @@ func (key *keyManager) Sign(hashedMessage []byte, hFunc hash.Hash) ([]byte, erro
 		return nil, fmt.Errorf("failed to parse message while signing. message: %v err: %w", hashedMessage, err)
 	}
 	return schnorr.SchnorrSignHashedMessage(hashedMessageAsQuinticExtension, key.key).ToBytes(), nil
+}
+
+func (key *keyManager) KeyType() uint8 {
+	return KeyTypeSchnorr
 }
 
 func (key *keyManager) PubKey() gFp5.Element {

@@ -103,6 +103,8 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
+	case *txtypes.L2ChangeECDSAPubKeyTxInfo:
+		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
@@ -253,6 +255,25 @@ func GenerateAPIKey() (ret C.ApiKeyResponse) {
 	}
 }
 
+//export GenerateECDSAAPIKey
+func GenerateECDSAAPIKey() (ret C.ApiKeyResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = C.ApiKeyResponse{err: wrapErr(fmt.Errorf("panic: %v", r))}
+		}
+	}()
+
+	privateKeyStr, publicKeyStr, err := client.GenerateECDSAAPIKey()
+	if err != nil {
+		return C.ApiKeyResponse{err: wrapErr(err)}
+	}
+
+	return C.ApiKeyResponse{
+		privateKey: C.CString(privateKeyStr),
+		publicKey:  C.CString(publicKeyStr),
+	}
+}
+
 //export CreateClient
 func CreateClient(cUrl *C.char, cPrivateKey *C.char, cChainId C.int, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret *C.char) {
 	defer func() {
@@ -319,6 +340,39 @@ func SignChangePubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, 
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetChangePubKeyTransaction(tx, ops)
+	return convertTxInfoToResponse(txInfo, err)
+}
+
+//export SignChangeECDSAPubKey
+func SignChangeECDSAPubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, cApiKeyIndex C.int, cAccountIndex C.longlong) (ret C.SignedTxResponse) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret = signedTxResponsePanic(r)
+		}
+	}()
+
+	c, err := getClient(cApiKeyIndex, cAccountIndex)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+
+	pubKeyStr := C.GoString(cPubKey)
+	pubKeyBytes, err := hexutil.Decode(pubKeyStr)
+	if err != nil {
+		return signedTxResponseErr(err)
+	}
+	if len(pubKeyBytes) != txtypes.ECDSACompressedPubKeyLength {
+		return signedTxResponseErr(fmt.Errorf("invalid pub key length. expected %v but got %v", txtypes.ECDSACompressedPubKeyLength, len(pubKeyBytes)))
+	}
+	var pubKey [txtypes.ECDSACompressedPubKeyLength]byte
+	copy(pubKey[:], pubKeyBytes)
+
+	tx := &types.ChangeECDSAPubKeyReq{
+		PubKey: pubKey,
+	}
+	ops := getTransactOpts(cSkipNonce, cNonce)
+
+	txInfo, err := c.GetChangeECDSAPubKeyTransaction(tx, ops)
 	return convertTxInfoToResponse(txInfo, err)
 }
 
