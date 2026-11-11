@@ -76,6 +76,8 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
+	case *txtypes.L2ChangeECDSAPubKeyTxInfo:
+		return typed.GetL1SignatureBody()
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
@@ -206,6 +208,16 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("GenerateECDSAAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			privateKey, publicKey, err := client.GenerateECDSAAPIKey()
+			if err != nil {
+				return wrapErr(err)
+			}
+			return js.ValueOf(map[string]interface{}{"privateKey": privateKey, "publicKey": publicKey})
+		})
+	}))
+
 	js.Global().Set("CreateClient", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 5 {
@@ -300,6 +312,43 @@ func main() {
 			}
 
 			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignChangeECDSAPubKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignChangeECDSAPubKey expects 5 args: pubKeyHex, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			pubKeyHex := args[0].String()
+			skipNonce := uint8(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			pubKeyBytes, err := hexutil.Decode(pubKeyHex)
+			if err != nil {
+				return wrapErr(err)
+			}
+			if len(pubKeyBytes) != txtypes.ECDSACompressedPubKeyLength {
+				return js.ValueOf(map[string]interface{}{"error": "invalid pub key length. expected 33 but got " + strconv.Itoa(len(pubKeyBytes))})
+			}
+			var pubKey [txtypes.ECDSACompressedPubKeyLength]byte
+			copy(pubKey[:], pubKeyBytes)
+
+			txInfo := &types.ChangeECDSAPubKeyReq{
+				PubKey: pubKey,
+			}
+			ops := &types.TransactOpts{
+				Nonce:        &nonce,
+				TxAttributes: txAttributesWithSkipNonce(skipNonce),
+			}
+
+			tx, err := c.GetChangeECDSAPubKeyTransaction(txInfo, ops)
 			return convertTxInfoToJS(tx, err)
 		})
 	}))

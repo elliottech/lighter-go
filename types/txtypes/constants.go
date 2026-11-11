@@ -63,6 +63,8 @@ const (
 	TxTypeBinaryOptionsOperatorSettleMarket = 50
 	TxTypeBinaryOptionsOperatorUpdateMarket = 52
 
+	TxTypeL2ChangeECDSAPubKey = 54
+
 	TxTypeL1BurnShares    = 30
 	TxTypeL1RegisterAsset = 31
 	TxTypeL1UpdateAsset   = 32

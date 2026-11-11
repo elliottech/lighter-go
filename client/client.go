@@ -8,6 +8,9 @@ import (
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/elliottech/lighter-go/signer"
 )
 
 // SharedClientManager holds the global txClient and backupTxClients
@@ -25,6 +28,18 @@ func GenerateAPIKey() (string, string, error) {
 	key := curve.SampleScalar()
 	publicKeyStr := hexutil.Encode(schnorr.SchnorrPkFromSk(key).ToLittleEndianBytes())
 	privateKeyStr := hexutil.Encode(key.ToLittleEndianBytes())
+
+	return privateKeyStr, publicKeyStr, nil
+}
+
+// GenerateECDSAAPIKey generates a new secp256k1 API key pair (32-byte private key, 33-byte compressed public key)
+func GenerateECDSAAPIKey() (string, string, error) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return "", "", err
+	}
+	publicKeyStr := hexutil.Encode(crypto.CompressPubkey(&key.PublicKey))
+	privateKeyStr := hexutil.Encode(crypto.FromECDSA(key))
 
 	return privateKeyStr, publicKeyStr, nil
 }
@@ -104,6 +119,10 @@ func (c *TxClient) Check() error {
 
 	pubKeyBytes := c.GetKeyManager().PubKeyBytes()
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
+	if km, ok := c.GetKeyManager().(*signer.ECDSAKeyManager); ok {
+		ecdsaPubKeyBytes := km.ECDSAPubKeyBytes()
+		pubKeyStr = hexutil.Encode(ecdsaPubKeyBytes[:])
+	}
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
 	if publicKey == pubKeyStr {
