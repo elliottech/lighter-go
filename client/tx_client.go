@@ -4,17 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 )
-
-const schnorrAPIKeyWarning = "lighter: Schnorr API keys are deprecated, generate a new ECDSA key with GenerateAPIKey / create_api_key " +
-	"and register it with SignChangeECDSAPubKey / change_api_key"
-
-var schnorrAPIKeyWarningOnce sync.Once
 
 var (
 	// DefaultExpireTime is a public var, so it can be changed directly in the SDK if required.
@@ -51,13 +45,11 @@ func NewTxClient(apiClient MinimalHTTPClient, apiKeyPrivateKey string, accountIn
 	if len(b) == 32 {
 		keyManager, err = signer.NewECDSAKeyManager(apiKeyPrivateKey)
 	} else {
+		fmt.Fprintln(os.Stderr, "lighter: Schnorr API keys are deprecated, use an ECDSA key (GenerateAPIKey / create_api_key)")
 		keyManager, err = signer.NewKeyManager(b)
 	}
 	if err != nil {
 		return nil, err
-	}
-	if keyManager.KeyType() == signer.KeyTypeSchnorr {
-		schnorrAPIKeyWarningOnce.Do(func() { fmt.Fprintln(os.Stderr, schnorrAPIKeyWarning) })
 	}
 
 	return &TxClient{
