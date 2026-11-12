@@ -300,7 +300,7 @@ func TestSignCreateGroupedOrders(t *testing.T) {
 }
 
 func TestGetChangePubKeyTransactionNilApiClient(t *testing.T) {
-	priv, _, errr := GenerateAPIKey()
+	priv, _, errr := GenerateSchnorrAPIKey()
 	if errr != nil {
 		t.Fatalf("GenerateAPIKey error: %v", errr)
 	}
