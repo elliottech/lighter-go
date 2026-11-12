@@ -309,11 +309,17 @@ func (c *TxClient) GetApproveIntegratorTx(tx *types.ApproveIntegratorTxReq, ops 
 		return nil, err
 	}
 
-	pk := c.keyManager.PubKeyBytes()
 	msgHash, _ := txInfo.Hash(c.chainId)
-
-	if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
-		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+	if km, ok := c.keyManager.(*signer.ECDSAKeyManager); ok {
+		pk := km.ECDSAPubKeyBytes()
+		if !crypto.VerifySignature(pk[:], signer.ECDSASigningHash(msgHash), txInfo.Sig[:signer.ECDSASignatureLength]) {
+			return nil, fmt.Errorf("failed to validate signature")
+		}
+	} else {
+		pk := c.keyManager.PubKeyBytes()
+		if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
+			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		}
 	}
 
 	return txInfo, nil
