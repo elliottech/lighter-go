@@ -42,7 +42,7 @@ func NewTxClient(apiClient MinimalHTTPClient, apiKeyPrivateKey string, accountIn
 	// 40-byte private keys are Schnorr api keys, 32-byte ones are secp256k1 ECDSA api keys
 	var keyManager signer.KeyManager
 	if len(b) == 32 {
-		keyManager, err = signer.NewECDSAKeyManager(b)
+		keyManager, err = signer.NewECDSAKeyManager(apiKeyPrivateKey)
 	} else {
 		keyManager, err = signer.NewKeyManager(b)
 	}
