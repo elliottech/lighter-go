@@ -40,13 +40,16 @@ func NewTxClient(apiClient MinimalHTTPClient, apiKeyPrivateKey string, accountIn
 		return nil, err
 	}
 
-	// 40-byte private keys are Schnorr api keys, 32-byte ones are secp256k1 ECDSA api keys
+	// 32-byte private keys are secp256k1 ECDSA api keys, 40-byte ones are (deprecated) Schnorr api keys
 	var keyManager signer.KeyManager
-	if len(b) == 32 {
+	switch len(b) {
+	case 32:
 		keyManager, err = signer.NewECDSAKeyManager(apiKeyPrivateKey)
-	} else {
+	case 40:
 		fmt.Fprintln(os.Stderr, "lighter: Schnorr API keys are deprecated, use an ECDSA key (GenerateAPIKey / create_api_key)")
 		keyManager, err = signer.NewKeyManager(b)
+	default:
+		return nil, fmt.Errorf("invalid private key length: expected 32 (ECDSA) or 40 (Schnorr) bytes, got %v", len(b))
 	}
 	if err != nil {
 		return nil, err
