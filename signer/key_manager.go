@@ -18,6 +18,7 @@ type Signer interface {
 
 type KeyManager interface {
 	Signer
+	// KeyTypeSchnorr (0) or KeyTypeECDSA (1); selects how PubKeyBytes / Sign are interpreted.
 	KeyType() uint8
 	PubKeyBytes() [40]byte
 	PrvKeyBytes() []byte
@@ -58,12 +59,8 @@ func (key *keyManager) KeyType() uint8 {
 	return KeyTypeSchnorr
 }
 
-func (key *keyManager) PubKey() gFp5.Element {
-	return schnorr.SchnorrPkFromSk(key.key)
-}
-
 func (key *keyManager) PubKeyBytes() (res [40]byte) {
-	bytes := key.PubKey().ToLittleEndianBytes()
+	bytes := schnorr.SchnorrPkFromSk(key.key).ToLittleEndianBytes()
 	copy(res[:], bytes[:])
 	return
 }

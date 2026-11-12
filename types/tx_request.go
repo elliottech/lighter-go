@@ -300,6 +300,7 @@ func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *Chang
 	return convertedTx, nil
 }
 
+// The tx is signed by the key it installs, so `key` must be the ECDSA key manager of `tx.PubKey`.
 func ConstructChangeECDSAPubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangeECDSAPubKeyReq, ops *TransactOpts) (*txtypes.L2ChangeECDSAPubKeyTxInfo, error) {
 	convertedTx := ConvertChangeECDSAPubKeyTx(tx, ops)
 	err := convertedTx.Validate()
