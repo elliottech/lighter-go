@@ -255,15 +255,15 @@ func GenerateAPIKey() (ret C.ApiKeyResponse) {
 	}
 }
 
-//export GenerateECDSAAPIKey
-func GenerateECDSAAPIKey() (ret C.ApiKeyResponse) {
+//export GenerateSchnorrAPIKey
+func GenerateSchnorrAPIKey() (ret C.ApiKeyResponse) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret = C.ApiKeyResponse{err: wrapErr(fmt.Errorf("panic: %v", r))}
 		}
 	}()
 
-	privateKeyStr, publicKeyStr, err := client.GenerateECDSAAPIKey()
+	privateKeyStr, publicKeyStr, err := client.GenerateSchnorrAPIKey()
 	if err != nil {
 		return C.ApiKeyResponse{err: wrapErr(err)}
 	}

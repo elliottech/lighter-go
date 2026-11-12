@@ -208,9 +208,9 @@ func main() {
 		})
 	}))
 
-	js.Global().Set("GenerateECDSAAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	js.Global().Set("GenerateSchnorrAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
-			privateKey, publicKey, err := client.GenerateECDSAAPIKey()
+			privateKey, publicKey, err := client.GenerateSchnorrAPIKey()
 			if err != nil {
 				return wrapErr(err)
 			}
