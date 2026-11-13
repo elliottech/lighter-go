@@ -18,10 +18,18 @@ type Signer interface {
 
 type KeyManager interface {
 	Signer
-	PubKey() gFp5.Element
+	// KeyTypeSchnorr (0) or KeyTypeECDSA (1); selects how PubKeyBytes / Sign are interpreted.
+	KeyType() uint8
 	PubKeyBytes() [40]byte
 	PrvKeyBytes() []byte
 }
+
+const (
+	KeyTypeSchnorr       uint8 = 0
+	KeyTypeECDSA         uint8 = 1
+	ECDSASignatureLength       = 64
+	TxSignatureLength          = 80
+)
 
 type keyManager struct {
 	key curve.ECgFp5Scalar
@@ -47,12 +55,12 @@ func (key *keyManager) Sign(hashedMessage []byte, hFunc hash.Hash) ([]byte, erro
 	return schnorr.SchnorrSignHashedMessage(hashedMessageAsQuinticExtension, key.key).ToBytes(), nil
 }
 
-func (key *keyManager) PubKey() gFp5.Element {
-	return schnorr.SchnorrPkFromSk(key.key)
+func (key *keyManager) KeyType() uint8 {
+	return KeyTypeSchnorr
 }
 
 func (key *keyManager) PubKeyBytes() (res [40]byte) {
-	bytes := key.PubKey().ToLittleEndianBytes()
+	bytes := schnorr.SchnorrPkFromSk(key.key).ToLittleEndianBytes()
 	copy(res[:], bytes[:])
 	return
 }

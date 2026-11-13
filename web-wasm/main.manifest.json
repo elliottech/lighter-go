@@ -1,9 +1,9 @@
 {
   "protocol": 2,
-  "sourceCommit": "9a85cca2979d79c771a86733434e476b88bcdfec",
-  "sourceTreeSha256": "999b8072eb8cf4730d8425cdd06afd1f229bcabbc351b1cd23c6f2bfcf2668c6",
+  "sourceCommit": "4a7de55fe2a452628d2db585989666ed97aa1ed8",
+  "sourceTreeSha256": "0af5d00c8a7194fcf0cce185c28fd084c763ee082c267841faee39b133edf524",
   "goVersion": "go1.26.8",
-  "sha256": "6caf0765a6f993bff0bd25ff4553ba8ea5657d0a6b85c767aae44ac5dcf17de9",
+  "sha256": "4efe0b1a47a1abc874e8545da86f0bf3f23afd7d8de77ff3cf49f3203e20ee95",
   "exports": [
     "_lighterTest",
     "_createClient",
@@ -42,5 +42,5 @@
     "_selectClient"
   ],
   "runtimeSha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14",
-  "htmlSha256": "552e531f65cd5b0af831d4c72ede5234cad4edb9bd0da7beb94805aa007c2b89"
+  "htmlSha256": "55e805d42ce1314e17e72c4b236902a997c85a2333cfe0ec98956652f58a3eb7"
 }

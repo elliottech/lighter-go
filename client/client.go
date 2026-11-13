@@ -8,6 +8,9 @@ import (
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/elliottech/lighter-go/signer"
 )
 
 // SharedClientManager holds the global txClient and backupTxClients
@@ -20,8 +23,21 @@ var (
 	allTxClients            map[int64]map[uint8]*TxClient // accountIndex -> apiKeyIndex -> client
 )
 
-// GenerateAPIKey generates a new API key pair from a seed
+// GenerateAPIKey generates a new secp256k1 ECDSA API key pair (32-byte private key, 33-byte compressed public key).
+// Register it with SignChangeECDSAPubKey. Use GenerateSchnorrAPIKey for the legacy 40-byte Schnorr keys.
 func GenerateAPIKey() (string, string, error) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return "", "", err
+	}
+	publicKeyStr := hexutil.Encode(crypto.CompressPubkey(&key.PublicKey))
+	privateKeyStr := hexutil.Encode(crypto.FromECDSA(key))
+
+	return privateKeyStr, publicKeyStr, nil
+}
+
+// GenerateSchnorrAPIKey generates a new Schnorr API key pair (40-byte private and public keys). Register it with SignChangePubKey.
+func GenerateSchnorrAPIKey() (string, string, error) {
 	key := curve.SampleScalar()
 	publicKeyStr := hexutil.Encode(schnorr.SchnorrPkFromSk(key).ToLittleEndianBytes())
 	privateKeyStr := hexutil.Encode(key.ToLittleEndianBytes())
@@ -104,6 +120,10 @@ func (c *TxClient) Check() error {
 
 	pubKeyBytes := c.GetKeyManager().PubKeyBytes()
 	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
+	if km, ok := c.GetKeyManager().(*signer.ECDSAKeyManager); ok {
+		ecdsaPubKeyBytes := km.ECDSAPubKeyBytes()
+		pubKeyStr = hexutil.Encode(ecdsaPubKeyBytes[:])
+	}
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
 	if publicKey == pubKeyStr {

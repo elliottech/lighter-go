@@ -52,6 +52,10 @@ type ChangePubKeyReq struct {
 	PubKey [40]byte
 }
 
+type ChangeECDSAPubKeyReq struct {
+	PubKey [txtypes.ECDSACompressedPubKeyLength]byte
+}
+
 type ApproveIntegratorTxReq struct {
 	IntegratorAccountIndex int64
 	MaxPerpsTakerFee       uint32
@@ -224,12 +228,14 @@ func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts
 	}
 	message := fmt.Sprintf("%v:%v:%v", deadline.Unix(), *ops.FromAccountIndex, *ops.ApiKeyIndex)
 
-	msgInField, err := g.ArrayFromCanonicalLittleEndianBytes([]byte(message))
-	if err != nil {
-		return "", fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
+	msgHash := []byte(message)
+	if km, ok := key.(signer.KeyManager); !ok || km.KeyType() == signer.KeyTypeSchnorr {
+		msgInField, err := g.ArrayFromCanonicalLittleEndianBytes(msgHash)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
+		}
+		msgHash = p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
 	}
-
-	msgHash := p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
 
 	signatureBytes, err := key.Sign(msgHash, p2.NewPoseidon2())
 	if err != nil {
@@ -274,6 +280,29 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 
 func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
 	convertedTx := ConvertChangePubKeyTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+// The tx is signed by the key it installs, so `key` must be the ECDSA key manager of `tx.PubKey`.
+func ConstructChangeECDSAPubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangeECDSAPubKeyReq, ops *TransactOpts) (*txtypes.L2ChangeECDSAPubKeyTxInfo, error) {
+	convertedTx := ConvertChangeECDSAPubKeyTx(tx, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
@@ -919,6 +948,17 @@ func ConvertWithdrawTx(tx *WithdrawTxReq, ops *TransactOpts) *txtypes.L2Withdraw
 
 func ConvertChangePubKeyTx(tx *ChangePubKeyReq, ops *TransactOpts) *txtypes.L2ChangePubKeyTxInfo {
 	return &txtypes.L2ChangePubKeyTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		PubKey:         tx.PubKey[:],
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+	}
+}
+
+func ConvertChangeECDSAPubKeyTx(tx *ChangeECDSAPubKeyReq, ops *TransactOpts) *txtypes.L2ChangeECDSAPubKeyTxInfo {
+	return &txtypes.L2ChangeECDSAPubKeyTxInfo{
 		AccountIndex:   *ops.FromAccountIndex,
 		ApiKeyIndex:    *ops.ApiKeyIndex,
 		PubKey:         tx.PubKey[:],

@@ -1,0 +1,114 @@
+package txtypes
+
+// Installs a secp256k1 ECDSA key into an api key slot (tx type 54). Same L1 wallet message as the
+// Schnorr key change, with the 33-byte compressed key in place of the 40-byte Schnorr key.
+
+import (
+	"fmt"
+
+	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
+	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks_plonky2"
+	"github.com/ethereum/go-ethereum/common"
+)
+
+var _ TxInfo = (*L2ChangeECDSAPubKeyTxInfo)(nil)
+
+type L2ChangeECDSAPubKeyTxInfo struct {
+	AccountIndex int64
+	ApiKeyIndex  uint8
+
+	PubKey []byte
+	L1Sig  string
+
+	ExpiredAt  int64
+	Nonce      int64
+	Sig        []byte
+	SignedHash string `json:"-"`
+
+	L2TxAttributes
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetTxType() uint8 {
+	return TxTypeL2ChangeECDSAPubKey
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetTxInfo() (string, error) {
+	return getTxInfo(txInfo)
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetTxHash() string {
+	return txInfo.SignedHash
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) Validate() error {
+	if err := txInfo.L2TxAttributes.Validate(); err != nil {
+		return err
+	}
+
+	// AccountIndex
+	if txInfo.AccountIndex < MinAccountIndex {
+		return ErrFromAccountIndexTooLow
+	}
+	if txInfo.AccountIndex > MaxAccountIndex {
+		return ErrFromAccountIndexTooHigh
+	}
+
+	// ApiKeyIndex
+	if txInfo.ApiKeyIndex < MinApiKeyIndex {
+		return ErrApiKeyIndexTooLow
+	}
+
+	if txInfo.ApiKeyIndex > MaxApiKeyIndex {
+		return ErrApiKeyIndexTooHigh
+	}
+
+	if txInfo.Nonce < MinNonce {
+		return ErrNonceTooLow
+	}
+
+	if txInfo.ExpiredAt < 0 || txInfo.ExpiredAt > MaxTimestamp {
+		return ErrExpiredAtInvalid
+	}
+
+	if !IsValidECDSAPubKey(txInfo.PubKey) {
+		return ErrPubKeyInvalid
+	}
+
+	return nil
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1SignatureBody() string {
+	signatureBody := fmt.Sprintf(
+		TemplateChangeECDSAPubKey,
+		common.Bytes2Hex(txInfo.PubKey),
+		getHex10FromUint64(uint64(txInfo.Nonce)),
+		getHex10FromUint64(uint64(txInfo.AccountIndex)),
+		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
+	)
+	return signatureBody
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1AddressBySignature() common.Address {
+	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(), txInfo.L1Sig)
+}
+
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {
+	elems := make([]g.GoldilocksField, 0, 15)
+
+	elems = append(elems, g.GoldilocksField(lighterChainId))
+	elems = append(elems, g.GoldilocksField(TxTypeL2ChangeECDSAPubKey))
+	elems = append(elems, g.GoldilocksField(txInfo.Nonce))
+	elems = append(elems, g.GoldilocksField(txInfo.ExpiredAt))
+
+	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
+	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
+
+	pubKeyElems, err := ECDSAPubKeyFieldElements(txInfo.PubKey)
+	if err != nil {
+		return nil, err
+	}
+	elems = append(elems, pubKeyElems...)
+
+	txHash := p2.HashToQuinticExtension(elems)
+	return txInfo.L2TxAttributes.AggregateTxHash(txHash)
+}
