@@ -1093,3 +1093,91 @@ func ConstructBinaryOptionsOperatorSettleMarketTx(key signer.KeyManager, lighter
 	convertedTx.Sig = signature
 	return convertedTx, nil
 }
+
+type SendToEvmTxReq struct {
+	AssetIndex   uint32
+	EvmRecipient string
+	RouteType    uint8
+	BaseAmount   uint64
+	USDCFee      int64
+}
+
+type WithdrawToL1AddressTxReq struct {
+	AssetIndex  uint32
+	L1Recipient string
+	RouteType   uint8
+	BaseAmount  uint64
+}
+
+func ConvertSendToEvmTx(tx *SendToEvmTxReq, ops *TransactOpts) *txtypes.L2SendToEvmTxInfo {
+	return &txtypes.L2SendToEvmTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		AssetIndex:     tx.AssetIndex,
+		EvmRecipient:   tx.EvmRecipient,
+		RouteType:      tx.RouteType,
+		BaseAmount:     tx.BaseAmount,
+		USDCFee:        tx.USDCFee,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ops.L2TxAttributes(),
+	}
+}
+
+func ConvertWithdrawToL1AddressTx(tx *WithdrawToL1AddressTxReq, ops *TransactOpts) *txtypes.L2WithdrawToL1AddressTxInfo {
+	return &txtypes.L2WithdrawToL1AddressTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		AssetIndex:     tx.AssetIndex,
+		L1Recipient:    tx.L1Recipient,
+		RouteType:      tx.RouteType,
+		BaseAmount:     tx.BaseAmount,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ops.L2TxAttributes(),
+	}
+}
+
+func ConstructSendToEvmTx(key signer.KeyManager, lighterChainId uint32, tx *SendToEvmTxReq, ops *TransactOpts) (*txtypes.L2SendToEvmTxInfo, error) {
+	convertedTx := ConvertSendToEvmTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}
+
+func ConstructWithdrawToL1AddressTx(key signer.KeyManager, lighterChainId uint32, tx *WithdrawToL1AddressTxReq, ops *TransactOpts) (*txtypes.L2WithdrawToL1AddressTxInfo, error) {
+	convertedTx := ConvertWithdrawToL1AddressTx(tx, ops)
+	err := convertedTx.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if err != nil {
+		return nil, err
+	}
+
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
+	convertedTx.Sig = signature
+	return convertedTx, nil
+}

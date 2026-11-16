@@ -1,9 +1,9 @@
 {
   "protocol": 2,
-  "sourceCommit": "9a85cca2979d79c771a86733434e476b88bcdfec",
-  "sourceTreeSha256": "999b8072eb8cf4730d8425cdd06afd1f229bcabbc351b1cd23c6f2bfcf2668c6",
+  "sourceCommit": "3d291cb189b7c984f908982e85ace4e7878b809d",
+  "sourceTreeSha256": "ed5f977243fc6e204dc5571d99161ad91e3d1c23609fafd7e769e4aaca137618",
   "goVersion": "go1.26.8",
-  "sha256": "6caf0765a6f993bff0bd25ff4553ba8ea5657d0a6b85c767aae44ac5dcf17de9",
+  "sha256": "583905cbf0e877b74d20bb1c7b5c1ccc70883ee7814aadb8732bf789deea2c37",
   "exports": [
     "_lighterTest",
     "_createClient",
@@ -31,6 +31,10 @@
     "_getChangePubKeyTransaction",
     "_getRevokePubKeyTransaction",
     "_getTransferTransaction",
+    "_getSendToEvmTransaction",
+    "_signSendToEvm",
+    "_getWithdrawToL1AddressTransaction",
+    "_signWithdrawToL1Address",
     "_getAirdropAllocationMessage",
     "_createAuthToken",
     "_signStakeAssets",
@@ -42,5 +46,5 @@
     "_selectClient"
   ],
   "runtimeSha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14",
-  "htmlSha256": "552e531f65cd5b0af831d4c72ede5234cad4edb9bd0da7beb94805aa007c2b89"
+  "htmlSha256": "6dbacad48ee06545e3221ffb5ee898ed6a8f6dc4ecd92ab7a3a897e3c7f80d9a"
 }
