@@ -24,3 +24,5 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+retract v1.0.1 // GenerateAPIKey with a non-empty seed produces weak API keys; use v1.0.2+
