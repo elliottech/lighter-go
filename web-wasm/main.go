@@ -49,6 +49,8 @@ func main() {
 	register("_getTransferTransaction", GetTransferTransaction)
 	register("_getAirdropAllocationMessage", GetAirdropAllocationMessage)
 	register("_createAuthToken", CreateAuthToken)
+	register("_signStrategyServerCommand", SignStrategyServerCommand)
+	register("_verifyStrategyServerCommand", VerifyStrategyServerCommand)
 	register("_signStakeAssets", SignStakeAssets)
 	register("_signUnstakeAssets", SignUnstakeAssets)
 	register("_signBinaryOptionsOperatorCreateMarket", SignBinaryOptionsOperatorCreateMarket)
@@ -1173,6 +1175,53 @@ func CreateAuthToken(this js.Value, args []js.Value) any {
 			"accountIndex": accountIndex,
 			"apiKeyIndex":  apiKeyIndex,
 			"token":        fmt.Sprintf("%v:%v:%v:%v", deadline, accountIndex, apiKeyIndex, signature),
+		})
+	})
+}
+
+// The prefix keeps a command signature from ever matching an auth token or another signed message.
+const strategyServerCommandPrefix = "lighter-strategy-server-command:v1:"
+
+// TODO: add ECDSA after merging https://github.com/elliottech/lighter-go/pull/107
+const strategyServerKeyTypeSchnorr uint8 = 0
+
+// Messages are hashed in zero-padded 8-byte chunks, so a NUL would let two payloads share a hash.
+func strategyServerCommand(payload string) string {
+	if strings.ContainsRune(payload, 0) {
+		panic(argumentError("payload must not contain NUL"))
+	}
+	return strategyServerCommandPrefix + payload
+}
+
+func SignStrategyServerCommand(this js.Value, args []js.Value) any {
+	accountIndex := int64(checkedInt(args[0]))
+	if clients[accountIndex] == nil {
+		return errPromise(fmt.Errorf("client is not created for the account index %d", accountIndex))
+	}
+	command := strategyServerCommand(checkedString(args[1]))
+	return promiseResult(func(resolve js.Value) {
+		signature, err := clients[accountIndex].SignMessage(command)
+		if err != nil {
+			resolve.Invoke(errToJson(err))
+			return
+		}
+		resolve.Invoke(map[string]any{
+			"signature": signature,
+		})
+	})
+}
+
+func VerifyStrategyServerCommand(this js.Value, args []js.Value) any {
+	keyType := checkedUint8(checkedInt(args[0]))
+	if keyType != strategyServerKeyTypeSchnorr {
+		panic(argumentError("unsupported key type"))
+	}
+	publicKey := checkedString(args[1])
+	command := strategyServerCommand(checkedString(args[2]))
+	signature := checkedString(args[3])
+	return promiseResult(func(resolve js.Value) {
+		resolve.Invoke(map[string]any{
+			"valid": verifyMessage(publicKey, command, signature) == nil,
 		})
 	})
 }

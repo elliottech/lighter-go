@@ -16,6 +16,7 @@ import (
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	g "github.com/elliottech/poseidon_crypto/field/goldilocks"
 	p2 "github.com/elliottech/poseidon_crypto/hash/poseidon2_goldilocks"
+	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -421,13 +422,37 @@ func (c *LightClient) GetBinaryOptionsOperatorSettleMarketTransaction(tx *Binary
 	return ConstructBinaryOptionsOperatorSettleMarketTx(c.keyManager, c.chainId, tx, ops)
 }
 
-func (c *LightClient) SignMessage(message string) (string, error) {
+func hashMessage(message string) ([]byte, error) {
 	msgInField, err := g.ArrayFromCanonicalLittleEndianBytes([]byte(message))
 	if err != nil {
-		return "", fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
+		return nil, fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
 	}
+	return p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes(), nil
+}
 
-	msgHash := p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
+// Checks a SignMessage signature against an API public key.
+// TODO: add ECDSA after merging https://github.com/elliottech/lighter-go/pull/107
+func verifyMessage(publicKeyHex, message, signatureHex string) error {
+	publicKey, err := hex.DecodeString(strings.TrimPrefix(publicKeyHex, "0x"))
+	if err != nil {
+		return fmt.Errorf("invalid public key hex: %w", err)
+	}
+	signature, err := hex.DecodeString(strings.TrimPrefix(signatureHex, "0x"))
+	if err != nil {
+		return fmt.Errorf("invalid signature hex: %w", err)
+	}
+	msgHash, err := hashMessage(message)
+	if err != nil {
+		return err
+	}
+	return schnorr.Validate(publicKey, msgHash, signature)
+}
+
+func (c *LightClient) SignMessage(message string) (string, error) {
+	msgHash, err := hashMessage(message)
+	if err != nil {
+		return "", err
+	}
 
 	signature, err := c.keyManager.Sign(msgHash, p2.NewPoseidon2())
 	if err != nil {
