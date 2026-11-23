@@ -3,7 +3,6 @@ package txtypes
 import (
 	"math"
 
-	"github.com/elliottech/lighter-go/signer"
 	curve "github.com/elliottech/poseidon_crypto/curve/ecgfp5"
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
 )
@@ -292,12 +291,3 @@ const (
 	SelfTradeEqualityAccountIndex       = 0
 	SelfTradeEqualityMasterAccountIndex = 1
 )
-
-// Api key signature schemes
-const (
-	KeyTypeSchnorr = signer.KeyTypeSchnorr
-	KeyTypeECDSA   = signer.KeyTypeECDSA
-)
-
-// Compressed SEC1 secp256k1 public key length (02|03 || x)
-const ECDSACompressedPubKeyLength = 33

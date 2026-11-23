@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+const EmptyECDSACompressedPubKey = "020000000000000000000000000000000000000000000000000000000000000000"
+
 // A secp256k1 api key. Txs are signed over the personal_sign digest of the 40-byte tx hash,
 // keccak256("\x19Ethereum Signed Message:\n40" || txHash), as the circuit verifies them.
 type ECDSAKeyManager struct {
@@ -55,25 +57,19 @@ func (key *ECDSAKeyManager) Sign(hashedMessage []byte, _ hash.Hash) ([]byte, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign with ecdsa key: %w", err)
 	}
-	padded := make([]byte, TxSignatureLength)
-	copy(padded, sig[:ECDSASignatureLength])
-	return padded, nil
+	// Trim 'v' from signature. We are not going to recover pk
+	trimmed := make([]byte, ECDSASignatureLength)
+	copy(trimmed, sig[:ECDSASignatureLength])
+	return trimmed, nil
 }
 
 func (key *ECDSAKeyManager) KeyType() uint8 {
 	return KeyTypeECDSA
 }
 
-// Padded 40-byte representation of the compressed public key.
-func (key *ECDSAKeyManager) PubKeyBytes() (res [40]byte) {
-	copy(res[:], crypto.CompressPubkey(&key.key.PublicKey))
-	return res
-}
-
 // Compressed SEC1 encoding (02|03 || x), as stored in the api key.
-func (key *ECDSAKeyManager) ECDSAPubKeyBytes() (res [33]byte) {
-	copy(res[:], crypto.CompressPubkey(&key.key.PublicKey))
-	return res
+func (key *ECDSAKeyManager) PubKeyBytes() (res []byte) {
+	return crypto.CompressPubkey(&key.key.PublicKey)
 }
 
 func (key *ECDSAKeyManager) PrvKeyBytes() []byte {

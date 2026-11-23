@@ -18,18 +18,26 @@ type Signer interface {
 
 type KeyManager interface {
 	Signer
-	// KeyTypeSchnorr (0) or KeyTypeECDSA (1); selects how PubKeyBytes / Sign are interpreted.
-	KeyType() uint8
-	PubKeyBytes() [40]byte
+	KeyType() uint8 // KeyTypeSchnorr (0) or KeyTypeECDSA (1)
+	PubKeyBytes() []byte
 	PrvKeyBytes() []byte
 }
 
 const (
-	KeyTypeSchnorr       uint8 = 0
-	KeyTypeECDSA         uint8 = 1
-	ECDSASignatureLength       = 64
-	TxSignatureLength          = 80
+	KeyTypeSchnorr uint8 = 0
+	KeyTypeECDSA   uint8 = 1
+
+	ECDSASignatureLength   = 64
+	SchnorrSignatureLength = 80
+
+	// Compressed SEC1 secp256k1 public key length (02|03 || x)
+	ECDSACompressedPubKeyLength = 33
+	// Uncompressed SEC1 secp256k1 public key length (04 || x || y)
+	ECDSAUncompressedPubKeyLength = 65
+	SchnorrPubKeyLength           = 40
 )
+
+const EmptySchnorrPubKey = "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 type keyManager struct {
 	key curve.ECgFp5Scalar
@@ -59,10 +67,8 @@ func (key *keyManager) KeyType() uint8 {
 	return KeyTypeSchnorr
 }
 
-func (key *keyManager) PubKeyBytes() (res [40]byte) {
-	bytes := schnorr.SchnorrPkFromSk(key.key).ToLittleEndianBytes()
-	copy(res[:], bytes[:])
-	return
+func (key *keyManager) PubKeyBytes() (res []byte) {
+	return schnorr.SchnorrPkFromSk(key.key).ToLittleEndianBytes()
 }
 
 func (key *keyManager) PrvKeyBytes() []byte {

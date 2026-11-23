@@ -17,7 +17,7 @@ type L2ChangeECDSAPubKeyTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	PubKey []byte
+	PubKey [33]byte
 	L1Sig  string
 
 	ExpiredAt  int64
@@ -77,19 +77,21 @@ func (txInfo *L2ChangeECDSAPubKeyTxInfo) Validate() error {
 	return nil
 }
 
-func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1SignatureBody() string {
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1SignatureBody(chainId uint32) string {
 	signatureBody := fmt.Sprintf(
 		TemplateChangeECDSAPubKey,
-		common.Bytes2Hex(txInfo.PubKey),
+		common.Bytes2Hex(txInfo.PubKey[:]),
 		getHex10FromUint64(uint64(txInfo.Nonce)),
 		getHex10FromUint64(uint64(txInfo.AccountIndex)),
 		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
+		getHex10FromUint64(uint64(txInfo.ExpiredAt)),
+		getHex10FromUint64(uint64(chainId)),
 	)
 	return signatureBody
 }
 
-func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1AddressBySignature() common.Address {
-	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(), txInfo.L1Sig)
+func (txInfo *L2ChangeECDSAPubKeyTxInfo) GetL1AddressBySignature(chainId uint32) common.Address {
+	return calculateL1AddressBySignature(txInfo.GetL1SignatureBody(chainId), txInfo.L1Sig)
 }
 
 func (txInfo *L2ChangeECDSAPubKeyTxInfo) Hash(lighterChainId uint32) (msgHash []byte, err error) {

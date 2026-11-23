@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/elliottech/lighter-go/signer"
 )
 
 // SharedClientManager holds the global txClient and backupTxClients
@@ -118,12 +117,7 @@ func (c *TxClient) Check() error {
 		return fmt.Errorf("failed to get Api Keys. err: %v", err)
 	}
 
-	pubKeyBytes := c.GetKeyManager().PubKeyBytes()
-	pubKeyStr := hexutil.Encode(pubKeyBytes[:])
-	if km, ok := c.GetKeyManager().(*signer.ECDSAKeyManager); ok {
-		ecdsaPubKeyBytes := km.ECDSAPubKeyBytes()
-		pubKeyStr = hexutil.Encode(ecdsaPubKeyBytes[:])
-	}
+	pubKeyStr := hexutil.Encode(c.GetKeyManager().PubKeyBytes())
 	pubKeyStr = strings.Replace(pubKeyStr, "0x", "", 1)
 
 	if publicKey == pubKeyStr {

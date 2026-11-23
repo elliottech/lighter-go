@@ -17,7 +17,7 @@ import (
 
 const (
 	TemplateChangePubKey      = "Register Lighter Account\n\npubkey: 0x%s\nnonce: %s\naccount index: %s\napi key index: %s\nOnly sign this message for a trusted client!"
-	TemplateChangeECDSAPubKey = "Register Lighter Account\n\npubkey: 0x%s\nscheme: ECDSA\nnonce: %s\naccount index: %s\napi key index: %s\nOnly sign this message for a trusted client!"
+	TemplateChangeECDSAPubKey = "Register Lighter Account\n\npubkey: 0x%s\nnonce: %s\naccount index: %s\napi key index: %s\nexpired at: %s\nchainId: %s"
 	TemplateTransfer          = "Transfer\n\nnonce: %s\nfrom: %s (route %s)\napi key: %s\nto: %s (route %s)\nasset: %s\namount: %s\nfee: %s" +
 		"\nchainId: %s\nmemo: %s\nOnly sign this message for a trusted client!"
 	TemplateSubAccount          = "Create Lighter Sub Account\n\nmaster account index: %s\nOnly sign this message for a trusted client!"
@@ -26,7 +26,7 @@ const (
 		"\nmax perps maker fee: %s\nmax spot taker fee: %s\nmax spot maker fee: %s\napproval expiry: %s\nchainId: %s\nOnly sign this message for a trusted client!"
 )
 
-const SignatureLength = signer.TxSignatureLength
+const SignatureLength = 80
 const L1SignatureLength = 65
 const PubKeyLength = gFp5.Bytes
 const HashLength = gFp5.Bytes
@@ -97,22 +97,28 @@ func calculateL1AddressBySignature(signatureBody, l1Signature string) common.Add
 	return publicAddress
 }
 
-// The zero (revoked) ECDSA key: even-parity prefix and zero x coordinate. It is not a curve point.
-func IsZeroECDSAPubKey(pubKey []byte) bool {
-	return len(pubKey) == ECDSACompressedPubKeyLength && pubKey[0] == 0x02 && IsZeroByteSlice(pubKey[1:])
+// The zero (revoked) Schnorr public key: all zero bytes
+func IsZeroSchnorrPubKey(pubKey [40]byte) bool {
+	gPK, _ := gFp5.FromCanonicalLittleEndianBytes(pubKey[:])
+	return gFp5.IsZero(gPK)
+}
+
+// The zero (revoked) ECDSA key: even-parity prefix and zero x coordinate. Caution: It is not a curve point.
+func IsZeroECDSAPubKey(pubKey [33]byte) bool {
+	return len(pubKey) == signer.ECDSACompressedPubKeyLength && pubKey[0] == 0x02 && IsZeroByteSlice(pubKey[1:])
 }
 
 // A compressed secp256k1 point in canonical encoding, or the zero key.
-func IsValidECDSAPubKey(pubKey []byte) bool {
+func IsValidECDSAPubKey(pubKey [33]byte) bool {
 	if IsZeroECDSAPubKey(pubKey) {
 		return true
 	}
-	_, err := crypto.DecompressPubkey(pubKey)
+	_, err := crypto.DecompressPubkey(pubKey[:])
 	return err == nil
 }
 
 // The compressed key as the circuit hashes it: x as 8 little-endian u32 limbs, then the y parity bit.
-func ECDSAPubKeyFieldElements(pubKey []byte) ([]g.GoldilocksField, error) {
+func ECDSAPubKeyFieldElements(pubKey [33]byte) ([]g.GoldilocksField, error) {
 	if !IsValidECDSAPubKey(pubKey) {
 		return nil, ErrPubKeyInvalid
 	}

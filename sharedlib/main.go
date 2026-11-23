@@ -8,6 +8,7 @@ import (
 
 	"github.com/elliottech/lighter-go/client"
 	"github.com/elliottech/lighter-go/client/http"
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -104,7 +105,7 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
 	case *txtypes.L2ChangeECDSAPubKeyTxInfo:
-		return typed.GetL1SignatureBody()
+		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
@@ -331,12 +332,7 @@ func SignChangePubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longlong, 
 	if len(pubKeyBytes) != 40 {
 		return signedTxResponseErr(fmt.Errorf("invalid pub key length. expected 40 but got %v", len(pubKeyBytes)))
 	}
-	var pubKey [40]byte
-	copy(pubKey[:], pubKeyBytes)
-
-	tx := &types.ChangePubKeyReq{
-		PubKey: pubKey,
-	}
+	tx := types.ChangePubKeyReqFromBytes(pubKeyBytes)
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetChangePubKeyTransaction(tx, ops)
@@ -361,15 +357,10 @@ func SignChangeECDSAPubKey(cPubKey *C.char, cSkipNonce C.uint8_t, cNonce C.longl
 	if err != nil {
 		return signedTxResponseErr(err)
 	}
-	if len(pubKeyBytes) != txtypes.ECDSACompressedPubKeyLength {
-		return signedTxResponseErr(fmt.Errorf("invalid pub key length. expected %v but got %v", txtypes.ECDSACompressedPubKeyLength, len(pubKeyBytes)))
+	if len(pubKeyBytes) != signer.ECDSACompressedPubKeyLength {
+		return signedTxResponseErr(fmt.Errorf("invalid pub key length. expected %v but got %v", signer.ECDSACompressedPubKeyLength, len(pubKeyBytes)))
 	}
-	var pubKey [txtypes.ECDSACompressedPubKeyLength]byte
-	copy(pubKey[:], pubKeyBytes)
-
-	tx := &types.ChangeECDSAPubKeyReq{
-		PubKey: pubKey,
-	}
+	tx := types.ChangeECDSAPubKeyReqFromBytes(pubKeyBytes)
 	ops := getTransactOpts(cSkipNonce, cNonce)
 
 	txInfo, err := c.GetChangeECDSAPubKeyTransaction(tx, ops)

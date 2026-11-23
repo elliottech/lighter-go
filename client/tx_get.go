@@ -29,11 +29,20 @@ func (c *TxClient) GetChangePubKeyTransaction(tx *types.ChangePubKeyReq, ops *ty
 		return nil, err
 	}
 
-	pk := c.keyManager.PubKeyBytes()
-	msgHash, _ := txInfo.Hash(c.chainId)
+	if !txtypes.IsZeroSchnorrPubKey(txInfo.PubKey) {
+		// Non revoke change pubkey transaction must be signed by the new key.
+		msgHash, err := txInfo.Hash(c.chainId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash tx info for signature validation. error: %v", err)
+		}
 
-	if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
-		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		if len(txInfo.Sig) != signer.SchnorrSignatureLength {
+			return nil, fmt.Errorf("invalid schnorr signature length: %d", len(txInfo.Sig))
+		}
+
+		if err := schnorr.Validate(txInfo.PubKey[:], msgHash, txInfo.Sig); err != nil {
+			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		}
 	}
 
 	// Signing a ChangePubKey is a strong signal that this account's
@@ -55,10 +64,17 @@ func (c *TxClient) GetChangeECDSAPubKeyTransaction(tx *types.ChangeECDSAPubKeyRe
 		return nil, err
 	}
 
-	if !txtypes.IsZeroECDSAPubKey(txInfo.PubKey) { // Allow revoking to the zero pubkey
-		msgHash, _ := txInfo.Hash(c.chainId)
-		if !crypto.VerifySignature(txInfo.PubKey, signer.ECDSASigningHash(msgHash), txInfo.Sig[:signer.ECDSASignatureLength]) {
-			return nil, fmt.Errorf("failed to validate signature. the client key is not the installed key")
+	if !txtypes.IsZeroECDSAPubKey(txInfo.PubKey) {
+		// Non revoke change ECDSA pubkey transaction must be signed by the new key.
+		msgHash, err := txInfo.Hash(c.chainId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash tx info for signature validation. error: %v", err)
+		}
+		if len(txInfo.Sig) != signer.ECDSASignatureLength {
+			return nil, fmt.Errorf("invalid ecdsa signature length: %d", len(txInfo.Sig))
+		}
+		if !crypto.VerifySignature(txInfo.PubKey[:], signer.ECDSASigningHash(msgHash), txInfo.Sig) {
+			return nil, fmt.Errorf("failed to validate ecdsa signature: the key manager does not hold the installed key")
 		}
 	}
 
@@ -310,14 +326,13 @@ func (c *TxClient) GetApproveIntegratorTx(tx *types.ApproveIntegratorTxReq, ops 
 	}
 
 	msgHash, _ := txInfo.Hash(c.chainId)
-	if km, ok := c.keyManager.(*signer.ECDSAKeyManager); ok {
-		pk := km.ECDSAPubKeyBytes()
-		if !crypto.VerifySignature(pk[:], signer.ECDSASigningHash(msgHash), txInfo.Sig[:signer.ECDSASignatureLength]) {
+	pk := c.keyManager.PubKeyBytes()
+	if c.keyManager.KeyType() == signer.KeyTypeECDSA {
+		if !crypto.VerifySignature(pk, signer.ECDSASigningHash(msgHash), txInfo.Sig) {
 			return nil, fmt.Errorf("failed to validate signature")
 		}
 	} else {
-		pk := c.keyManager.PubKeyBytes()
-		if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
+		if err := schnorr.Validate(pk, msgHash, txInfo.Sig); err != nil {
 			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
 		}
 	}

@@ -308,7 +308,7 @@ func TestGetChangePubKeyTransactionNilApiClient(t *testing.T) {
 
 	nonce := testNonce
 	_, err := c.GetChangePubKeyTransaction(
-		&types.ChangePubKeyReq{PubKey: c.keyManager.PubKeyBytes()},
+		types.ChangePubKeyReqFromBytes(c.keyManager.PubKeyBytes()),
 		&types.TransactOpts{Nonce: &nonce},
 	)
 	if err != nil {

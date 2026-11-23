@@ -12,6 +12,7 @@ import (
 
 	"github.com/elliottech/lighter-go/client"
 	"github.com/elliottech/lighter-go/client/http"
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -77,7 +78,7 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
 	case *txtypes.L2ChangeECDSAPubKeyTxInfo:
-		return typed.GetL1SignatureBody()
+		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
@@ -300,12 +301,7 @@ func main() {
 			if len(pubKeyBytes) != 40 {
 				return js.ValueOf(map[string]interface{}{"error": "invalid pub key length. expected 40 but got " + strconv.Itoa(len(pubKeyBytes))})
 			}
-			var pubKey [40]byte
-			copy(pubKey[:], pubKeyBytes)
-
-			txInfo := &types.ChangePubKeyReq{
-				PubKey: pubKey,
-			}
+			txInfo := types.ChangePubKeyReqFromBytes(pubKeyBytes)
 			ops := &types.TransactOpts{
 				Nonce:        &nonce,
 				TxAttributes: txAttributesWithSkipNonce(skipNonce),
@@ -334,15 +330,10 @@ func main() {
 			if err != nil {
 				return wrapErr(err)
 			}
-			if len(pubKeyBytes) != txtypes.ECDSACompressedPubKeyLength {
+			if len(pubKeyBytes) != signer.ECDSACompressedPubKeyLength {
 				return js.ValueOf(map[string]interface{}{"error": "invalid pub key length. expected 33 but got " + strconv.Itoa(len(pubKeyBytes))})
 			}
-			var pubKey [txtypes.ECDSACompressedPubKeyLength]byte
-			copy(pubKey[:], pubKeyBytes)
-
-			txInfo := &types.ChangeECDSAPubKeyReq{
-				PubKey: pubKey,
-			}
+			txInfo := types.ChangeECDSAPubKeyReqFromBytes(pubKeyBytes)
 			ops := &types.TransactOpts{
 				Nonce:        &nonce,
 				TxAttributes: txAttributesWithSkipNonce(skipNonce),

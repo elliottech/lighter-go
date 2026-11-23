@@ -118,4 +118,5 @@ var (
 	ErrInvalidIsRefund                                        = fmt.Errorf("IsRefund is invalid")
 	ErrInvalidSettlementPrice                                 = fmt.Errorf("SettlementPrice is invalid")
 	ErrInvalidMarketSymbol                                    = fmt.Errorf("Market symbol is invalid")
+	ErrRevokePubKeyWithoutL1SignatureInvalid                  = fmt.Errorf("RevokePubKeyWithoutL1Signature is invalid")
 )
