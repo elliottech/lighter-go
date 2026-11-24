@@ -40,16 +40,29 @@ void run_example(int apiKeyIndex) {
         return;
     }
 
-    auto clientErr = CreateClient(nullptr, apiResp.privateKey, 304, apiKeyIndex, 100);
+    long long accountIndex = 100;
+
+    auto clientErr = CreateClient(nullptr, apiResp.privateKey, 304, apiKeyIndex, accountIndex);
     Free(apiResp.privateKey);
-    Free(apiResp.publicKey);
     if (clientErr != nullptr) {
         cerr << "CreateClient" << '\t' << clientErr << '\n';
         Free(clientErr);
+        Free(apiResp.publicKey);
         return;
     }
 
-    long long accountIndex = 100;
+    // GenerateAPIKey returns a secp256k1 ECDSA key, which is registered with SignChangeECDSAPubKey (tx type 54).
+    // The L1 wallet signs messageToSign and the signature goes into the L1Sig field of txInfo before sending.
+    // Legacy Schnorr keys (GenerateSchnorrAPIKey) are registered with SignChangePubKey instead.
+    auto changePubKey = SignChangeECDSAPubKey(apiResp.publicKey, /* cSkipNonce */ 0, /* cNonce */ 0, apiKeyIndex, accountIndex);
+    Free(apiResp.publicKey);
+    if (changePubKey.err != nullptr) {
+        cerr << "changePubKey" << '\t' << changePubKey.err << '\n';
+        Free(changePubKey.err);
+    }
+    if (changePubKey.txInfo != nullptr) Free(changePubKey.txInfo);
+    if (changePubKey.txHash != nullptr) Free(changePubKey.txHash);
+    if (changePubKey.messageToSign != nullptr) Free(changePubKey.messageToSign);
 
     // create an auth token with expiry 7 hours in the future
     StrOrErr tokenResp = CreateAuthToken(0 , apiKeyIndex, accountIndex);

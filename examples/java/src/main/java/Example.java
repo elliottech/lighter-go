@@ -48,6 +48,18 @@ public class Example {
             return;
         }
 
+        // GenerateAPIKey returns a secp256k1 ECDSA key, registered with SignChangeECDSAPubKey (tx type 54).
+        // The L1 wallet signs messageToSign and the signature goes into the L1Sig field of txInfo before sending.
+        // Legacy Schnorr keys (GenerateSchnorrAPIKey) are registered with SignChangePubKey instead.
+        LighterLib.SignedTxResponse.ByValue changePubKey = lib.SignChangeECDSAPubKey(
+            publicKey, /* skipNonce */ (byte) 0, /* nonce */ 0L, apiKeyIndex, ACCOUNT_INDEX);
+        try {
+            changePubKey.readAndFree(lib);
+        } catch (RuntimeException e) {
+            System.err.println("[" + apiKeyIndex + "] SignChangeECDSAPubKey error: " + e.getMessage());
+            return;
+        }
+
         // Auth token valid for 7 hours
         long tokenDeadline = 0;
         LighterLib.StrOrErr.ByValue tokenResp = lib.CreateAuthToken(tokenDeadline, apiKeyIndex, ACCOUNT_INDEX);

@@ -57,6 +57,49 @@ const createResult = globalThis.CreateClient("http://localhost:1234", privateKey
 console.log("CreateClient:", createResult);
 assertNoError("CreateClient", createResult);
 
+// GenerateAPIKey returns a secp256k1 ECDSA key: 32-byte private key, 33-byte compressed public key.
+assert.equal(privateKey.length, 2 + 64, "GenerateAPIKey.privateKey should be 32 bytes");
+assert.equal(keyResult.publicKey.length, 2 + 66, "GenerateAPIKey.publicKey should be 33 bytes");
+
+// It is registered with SignChangeECDSAPubKey (tx type 54); the L1 wallet signs messageToSign.
+const changeECDSAResult = globalThis.SignChangeECDSAPubKey(keyResult.publicKey, 0, 42, 0, 1);
+console.log("SignChangeECDSAPubKey:", changeECDSAResult);
+const changeECDSATxInfo = assertSignedTx("SignChangeECDSAPubKey", changeECDSAResult, 54);
+assert.equal(changeECDSATxInfo.AccountIndex, 1);
+assert.equal(changeECDSATxInfo.ApiKeyIndex, 0);
+assert.equal(changeECDSATxInfo.PubKey.length, 33);
+assert.equal(Buffer.from(changeECDSATxInfo.PubKey).toString("hex"), keyResult.publicKey.slice(2));
+assert.equal(Buffer.from(changeECDSATxInfo.Sig, "base64").length, 64, "ECDSA signatures are 64 bytes");
+assert.match(changeECDSAResult.messageToSign, /^Register Lighter Account\n\npubkey: 0x[0-9a-f]{66}\n/);
+assert.match(changeECDSAResult.messageToSign, /\nexpired at: 0x[0-9a-f]+\nchainId: 0x[0-9a-f]+$/);
+
+// SignChangePubKey is the Schnorr registration and rejects an ECDSA public key.
+const wrongSchemeResult = globalThis.SignChangePubKey(keyResult.publicKey, 0, 42, 0, 1);
+assert.match(wrongSchemeResult.error, /invalid pub key length/);
+
+// Legacy Schnorr key: 40-byte private and public keys, registered with SignChangePubKey (tx type 8).
+const schnorrKeyResult = globalThis.GenerateSchnorrAPIKey();
+console.log("GenerateSchnorrAPIKey:", schnorrKeyResult);
+assertNoError("GenerateSchnorrAPIKey", schnorrKeyResult);
+assert.equal(schnorrKeyResult.privateKey.length, 2 + 80, "GenerateSchnorrAPIKey.privateKey should be 40 bytes");
+assert.equal(schnorrKeyResult.publicKey.length, 2 + 80, "GenerateSchnorrAPIKey.publicKey should be 40 bytes");
+
+const schnorrCreateResult = globalThis.CreateClient("http://localhost:1234", schnorrKeyResult.privateKey, 304, 1, 1);
+assertNoError("CreateClient (Schnorr)", schnorrCreateResult);
+
+const changeSchnorrResult = globalThis.SignChangePubKey(schnorrKeyResult.publicKey, 0, 42, 1, 1);
+console.log("SignChangePubKey:", changeSchnorrResult);
+const changeSchnorrTxInfo = assertSignedTx("SignChangePubKey", changeSchnorrResult, 8);
+assert.equal(changeSchnorrTxInfo.ApiKeyIndex, 1);
+assert.equal(changeSchnorrTxInfo.PubKey.length, 40);
+assert.equal(Buffer.from(changeSchnorrTxInfo.Sig, "base64").length, 80, "Schnorr signatures are 80 bytes");
+
+const schnorrOrderResult = globalThis.SignCreateOrder(
+    0, 1, 1000, 50000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 1, 1
+);
+const schnorrOrderTxInfo = assertSignedTx("SignCreateOrder (Schnorr)", schnorrOrderResult, 14);
+assert.equal(Buffer.from(schnorrOrderTxInfo.Sig, "base64").length, 80);
+
 const cancelResult = globalThis.SignCancelOrder(0, 12345, 1, 42, 0, 1);
 console.log("SignCancelOrder (skipNonce=1):", cancelResult);
 const cancelTxInfo = assertSignedTx("SignCancelOrder (skipNonce=1)", cancelResult, 15);

@@ -179,10 +179,20 @@ impl LighterLib {
     // Functions
     // -------------------------------------------------------------------------
 
+    /// secp256k1 ECDSA key, registered with `sign_change_ecdsa_pub_key`.
     pub fn generate_api_key(&self) -> ApiKeyResponse {
+        self.call_generate_api_key(b"GenerateAPIKey\0")
+    }
+
+    /// Legacy 40-byte Schnorr key, registered with `sign_change_pub_key`.
+    pub fn generate_schnorr_api_key(&self) -> ApiKeyResponse {
+        self.call_generate_api_key(b"GenerateSchnorrAPIKey\0")
+    }
+
+    fn call_generate_api_key(&self, symbol: &[u8]) -> ApiKeyResponse {
         unsafe {
             let f: Symbol<unsafe extern "C" fn() -> RawApiKeyResponse> =
-                self.lib.get(b"GenerateAPIKey\0").unwrap();
+                self.lib.get(symbol).unwrap();
             let raw = f();
             ApiKeyResponse {
                 private_key: ptr_to_string(raw.private_key, self.free_fn),
@@ -228,8 +238,33 @@ impl LighterLib {
         }
     }
 
+    /// Registers a 40-byte Schnorr public key (`generate_schnorr_api_key`).
     pub fn sign_change_pub_key(
         &self,
+        pub_key: &str,
+        skip_nonce: u8,
+        nonce: i64,
+        api_key_index: i32,
+        account_index: i64,
+    ) -> SignedTxResponse {
+        self.call_sign_change_pub_key(b"SignChangePubKey\0", pub_key, skip_nonce, nonce, api_key_index, account_index)
+    }
+
+    /// Registers a 33-byte ECDSA public key (`generate_api_key`), tx type 54.
+    pub fn sign_change_ecdsa_pub_key(
+        &self,
+        pub_key: &str,
+        skip_nonce: u8,
+        nonce: i64,
+        api_key_index: i32,
+        account_index: i64,
+    ) -> SignedTxResponse {
+        self.call_sign_change_pub_key(b"SignChangeECDSAPubKey\0", pub_key, skip_nonce, nonce, api_key_index, account_index)
+    }
+
+    fn call_sign_change_pub_key(
+        &self,
+        symbol: &[u8],
         pub_key: &str,
         skip_nonce: u8,
         nonce: i64,
@@ -240,7 +275,7 @@ impl LighterLib {
         unsafe {
             let f: Symbol<
                 unsafe extern "C" fn(*mut c_char, u8, i64, i32, i64) -> RawSignedTxResponse,
-            > = self.lib.get(b"SignChangePubKey\0").unwrap();
+            > = self.lib.get(symbol).unwrap();
             raw_to_signed_tx(f(
                 pk_c.as_ptr() as *mut c_char,
                 skip_nonce,
