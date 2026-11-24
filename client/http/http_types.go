@@ -19,6 +19,7 @@ type ApiKey struct {
 	ApiKeyIndex  uint8  `json:"api_key_index,example=0"`
 	Nonce        int64  `json:"nonce,example=722"`
 	PublicKey    string `json:"public_key"`
+	KeyType      uint8  `json:"key_type"`
 }
 
 type AccountApiKeys struct {

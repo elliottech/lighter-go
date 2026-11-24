@@ -18,10 +18,26 @@ type Signer interface {
 
 type KeyManager interface {
 	Signer
-	PubKey() gFp5.Element
-	PubKeyBytes() [40]byte
+	KeyType() uint8 // KeyTypeSchnorr (0) or KeyTypeECDSA (1)
+	PubKeyBytes() []byte
 	PrvKeyBytes() []byte
 }
+
+const (
+	KeyTypeSchnorr uint8 = 0
+	KeyTypeECDSA   uint8 = 1
+
+	ECDSASignatureLength   = 64
+	SchnorrSignatureLength = 80
+
+	// Compressed SEC1 secp256k1 public key length (02|03 || x)
+	ECDSACompressedPubKeyLength = 33
+	// Uncompressed SEC1 secp256k1 public key length (04 || x || y)
+	ECDSAUncompressedPubKeyLength = 65
+	SchnorrPubKeyLength           = 40
+)
+
+const EmptySchnorrPubKey = "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 type keyManager struct {
 	key curve.ECgFp5Scalar
@@ -47,14 +63,12 @@ func (key *keyManager) Sign(hashedMessage []byte, hFunc hash.Hash) ([]byte, erro
 	return schnorr.SchnorrSignHashedMessage(hashedMessageAsQuinticExtension, key.key).ToBytes(), nil
 }
 
-func (key *keyManager) PubKey() gFp5.Element {
-	return schnorr.SchnorrPkFromSk(key.key)
+func (key *keyManager) KeyType() uint8 {
+	return KeyTypeSchnorr
 }
 
-func (key *keyManager) PubKeyBytes() (res [40]byte) {
-	bytes := key.PubKey().ToLittleEndianBytes()
-	copy(res[:], bytes[:])
-	return
+func (key *keyManager) PubKeyBytes() (res []byte) {
+	return schnorr.SchnorrPkFromSk(key.key).ToLittleEndianBytes()
 }
 
 func (key *keyManager) PrvKeyBytes() []byte {

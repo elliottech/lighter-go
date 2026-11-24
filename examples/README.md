@@ -164,8 +164,9 @@ node ./examples/wasm/test_wasm.mjs
 ### What the script does
 
 1. Instantiates `build/lighter-signer.wasm` via `wasm_exec.js` and starts the Go runtime
-2. Calls `GenerateAPIKey()` and asserts a valid hex keypair is returned
+2. Calls `GenerateAPIKey()` and asserts a valid ECDSA hex keypair is returned
 3. Calls `CreateClient(...)` on chain 304 with the generated private key
-4. Signs a cancel-order, cancel-all-orders, create-order, create-sub-account and update-leverage transaction
-5. For each signed tx, asserts the `txType`, `txHash` and decoded `txInfo` fields match the inputs
-6. Verifies that toggling the `skipNonce` flag changes the resulting tx hash and populates the `L2TxAttributes` accordingly
+4. Signs the key registration with `SignChangeECDSAPubKey` (tx type 54), then does the same for a legacy Schnorr key with `GenerateSchnorrAPIKey()` and `SignChangePubKey` (tx type 8)
+5. Signs a cancel-order, cancel-all-orders, create-order, create-sub-account and update-leverage transaction
+6. For each signed tx, asserts the `txType`, `txHash` and decoded `txInfo` fields match the inputs
+7. Verifies that toggling the `skipNonce` flag changes the resulting tx hash and populates the `L2TxAttributes` accordingly

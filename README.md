@@ -26,7 +26,9 @@ CheckClient
 === API Key ===
 CreateAuthToken
 SignChangePubKey
+SignChangeECDSAPubKey
 GenerateAPIKey
+GenerateSchnorrAPIKey
 
 === Order ===
 SignCreateOrder

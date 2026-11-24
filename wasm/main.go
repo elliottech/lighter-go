@@ -12,6 +12,7 @@ import (
 
 	"github.com/elliottech/lighter-go/client"
 	"github.com/elliottech/lighter-go/client/http"
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -76,6 +77,8 @@ func messageToSign(txInfo txtypes.TxInfo) string {
 	switch typed := txInfo.(type) {
 	case *txtypes.L2ChangePubKeyTxInfo:
 		return typed.GetL1SignatureBody()
+	case *txtypes.L2ChangeECDSAPubKeyTxInfo:
+		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2TransferTxInfo:
 		return typed.GetL1SignatureBody(chainId)
 	case *txtypes.L2ApproveIntegratorTxInfo:
@@ -206,6 +209,16 @@ func main() {
 		})
 	}))
 
+	js.Global().Set("GenerateSchnorrAPIKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			privateKey, publicKey, err := client.GenerateSchnorrAPIKey()
+			if err != nil {
+				return wrapErr(err)
+			}
+			return js.ValueOf(map[string]interface{}{"privateKey": privateKey, "publicKey": publicKey})
+		})
+	}))
+
 	js.Global().Set("CreateClient", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		return recoverPanic(func() js.Value {
 			if len(args) < 5 {
@@ -288,18 +301,45 @@ func main() {
 			if len(pubKeyBytes) != 40 {
 				return js.ValueOf(map[string]interface{}{"error": "invalid pub key length. expected 40 but got " + strconv.Itoa(len(pubKeyBytes))})
 			}
-			var pubKey [40]byte
-			copy(pubKey[:], pubKeyBytes)
-
-			txInfo := &types.ChangePubKeyReq{
-				PubKey: pubKey,
-			}
+			txInfo := types.ChangePubKeyReqFromBytes(pubKeyBytes)
 			ops := &types.TransactOpts{
 				Nonce:        &nonce,
 				TxAttributes: txAttributesWithSkipNonce(skipNonce),
 			}
 
 			tx, err := c.GetChangePubKeyTransaction(txInfo, ops)
+			return convertTxInfoToJS(tx, err)
+		})
+	}))
+
+	js.Global().Set("SignChangeECDSAPubKey", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		return recoverPanic(func() js.Value {
+			if len(args) < 5 {
+				return js.ValueOf(map[string]interface{}{"error": "SignChangeECDSAPubKey expects 5 args: pubKeyHex, skipNonce, nonce, apiKeyIndex, accountIndex"})
+			}
+			pubKeyHex := args[0].String()
+			skipNonce := uint8(args[1].Int())
+			nonce := int64(args[2].Int())
+
+			c, err := getClient(args)
+			if err != nil {
+				return wrapErr(err)
+			}
+
+			pubKeyBytes, err := hexutil.Decode(pubKeyHex)
+			if err != nil {
+				return wrapErr(err)
+			}
+			if len(pubKeyBytes) != signer.ECDSACompressedPubKeyLength {
+				return js.ValueOf(map[string]interface{}{"error": "invalid pub key length. expected 33 but got " + strconv.Itoa(len(pubKeyBytes))})
+			}
+			txInfo := types.ChangeECDSAPubKeyReqFromBytes(pubKeyBytes)
+			ops := &types.TransactOpts{
+				Nonce:        &nonce,
+				TxAttributes: txAttributesWithSkipNonce(skipNonce),
+			}
+
+			tx, err := c.GetChangeECDSAPubKeyTransaction(txInfo, ops)
 			return convertTxInfoToJS(tx, err)
 		})
 	}))

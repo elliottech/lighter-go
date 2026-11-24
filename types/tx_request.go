@@ -24,14 +24,15 @@ type TransactOpts struct {
 }
 
 type L2TxAttributes struct {
-	IntegratorAccountIndex *int64
-	IntegratorTakerFee     *uint32
-	IntegratorMakerFee     *uint32
-	SkipNonce              *uint8
-	CancelAllMarketIndex   *int64
-	SelfTradeBehaviorMode  *uint8
-	SelfTradeEqualityMode  *uint8
-	OrderVersion           *int64
+	IntegratorAccountIndex         *int64
+	IntegratorTakerFee             *uint32
+	IntegratorMakerFee             *uint32
+	SkipNonce                      *uint8
+	CancelAllMarketIndex           *int64
+	SelfTradeBehaviorMode          *uint8
+	SelfTradeEqualityMode          *uint8
+	OrderVersion                   *int64
+	RevokePubKeyWithoutL1Signature *uint8
 }
 
 func (attr *L2TxAttributes) IsEmpty() bool {
@@ -43,13 +44,30 @@ func (attr *L2TxAttributes) IsEmpty() bool {
 			attr.CancelAllMarketIndex == nil &&
 			attr.SelfTradeBehaviorMode == nil &&
 			attr.SelfTradeEqualityMode == nil &&
-			attr.OrderVersion == nil)
+			attr.OrderVersion == nil &&
+			attr.RevokePubKeyWithoutL1Signature == nil)
 }
 
 type PublicKey = gFp5.Element
 
 type ChangePubKeyReq struct {
-	PubKey [40]byte
+	PubKey *[signer.SchnorrPubKeyLength]byte
+}
+
+func ChangePubKeyReqFromBytes(pubKeyBytes []byte) *ChangePubKeyReq {
+	var pubKey [signer.SchnorrPubKeyLength]byte
+	copy(pubKey[:], pubKeyBytes)
+	return &ChangePubKeyReq{PubKey: &pubKey}
+}
+
+type ChangeECDSAPubKeyReq struct {
+	PubKey *[signer.ECDSACompressedPubKeyLength]byte
+}
+
+func ChangeECDSAPubKeyReqFromBytes(pubKeyBytes []byte) *ChangeECDSAPubKeyReq {
+	var pubKey [signer.ECDSACompressedPubKeyLength]byte
+	copy(pubKey[:], pubKeyBytes)
+	return &ChangeECDSAPubKeyReq{PubKey: &pubKey}
 }
 
 type ApproveIntegratorTxReq struct {
@@ -224,12 +242,14 @@ func ConstructAuthToken(key signer.Signer, deadline time.Time, ops *TransactOpts
 	}
 	message := fmt.Sprintf("%v:%v:%v", deadline.Unix(), *ops.FromAccountIndex, *ops.ApiKeyIndex)
 
-	msgInField, err := g.ArrayFromCanonicalLittleEndianBytes([]byte(message))
-	if err != nil {
-		return "", fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
+	msgHash := []byte(message)
+	if km, ok := key.(signer.KeyManager); !ok || km.KeyType() == signer.KeyTypeSchnorr {
+		msgInField, err := g.ArrayFromCanonicalLittleEndianBytes(msgHash)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert bytes to field element. message: %s, error: %w", message, err)
+		}
+		msgHash = p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
 	}
-
-	msgHash := p2.HashToQuinticExtension(msgInField).ToLittleEndianBytes()
 
 	signatureBytes, err := key.Sign(msgHash, p2.NewPoseidon2())
 	if err != nil {
@@ -269,11 +289,18 @@ func ConstructL2TxAttributes(attr *L2TxAttributes) txtypes.L2TxAttributes {
 	if attr.OrderVersion != nil {
 		l2TxAttributes[txtypes.AttributeTypeOrderOrderVersion] = int64(*attr.OrderVersion)
 	}
+	if attr.RevokePubKeyWithoutL1Signature != nil {
+		l2TxAttributes[txtypes.AttributeTypeRevokePubKeyWithoutL1Signature] = int64(*attr.RevokePubKeyWithoutL1Signature)
+	}
 	return l2TxAttributes
 }
 
-func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
-	convertedTx := ConvertChangePubKeyTx(tx, ops)
+func ConstructChangePubKeyTx(key signer.KeyManager, lighterChainId uint32, tx *ChangePubKeyReq, ops *TransactOpts) (*txtypes.L2ChangePubKeyTxInfo, error) {
+	if key != nil && key.KeyType() != signer.KeyTypeSchnorr {
+		return nil, fmt.Errorf("key must be of type Schnorr to sign ChangePubKeyTx")
+	}
+
+	convertedTx := ConvertChangePubKeyTx(tx, key, ops)
 	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
@@ -283,14 +310,45 @@ func ConstructChangePubKeyTx(key signer.Signer, lighterChainId uint32, tx *Chang
 	if err != nil {
 		return nil, err
 	}
+	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
 
-	signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+	if key != nil {
+		signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+		if err != nil {
+			return nil, err
+		}
+		convertedTx.Sig = signature
+	}
+
+	return convertedTx, nil
+}
+
+// The tx is signed by the key it installs, so `key` must be the ECDSA key manager of `tx.PubKey`.
+func ConstructChangeECDSAPubKeyTx(key signer.KeyManager, lighterChainId uint32, tx *ChangeECDSAPubKeyReq, ops *TransactOpts) (*txtypes.L2ChangeECDSAPubKeyTxInfo, error) {
+	if key != nil && key.KeyType() != signer.KeyTypeECDSA {
+		return nil, fmt.Errorf("key manager must be of type ECDSA to sign ChangeECDSAPubKeyTx")
+	}
+
+	convertedTx := ConvertChangeECDSAPubKeyTx(tx, key, ops)
+	err := convertedTx.Validate()
 	if err != nil {
 		return nil, err
 	}
 
+	msgHash, err := convertedTx.Hash(lighterChainId)
+	if err != nil {
+		return nil, err
+	}
 	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
-	convertedTx.Sig = signature
+
+	if key != nil {
+		signature, err := key.Sign(msgHash, p2.NewPoseidon2())
+		if err != nil {
+			return nil, err
+		}
+		convertedTx.Sig = signature
+	}
+
 	return convertedTx, nil
 }
 
@@ -917,15 +975,36 @@ func ConvertWithdrawTx(tx *WithdrawTxReq, ops *TransactOpts) *txtypes.L2Withdraw
 	}
 }
 
-func ConvertChangePubKeyTx(tx *ChangePubKeyReq, ops *TransactOpts) *txtypes.L2ChangePubKeyTxInfo {
-	return &txtypes.L2ChangePubKeyTxInfo{
+func ConvertChangePubKeyTx(tx *ChangePubKeyReq, key signer.KeyManager, ops *TransactOpts) *txtypes.L2ChangePubKeyTxInfo {
+	t := &txtypes.L2ChangePubKeyTxInfo{
 		AccountIndex:   *ops.FromAccountIndex,
 		ApiKeyIndex:    *ops.ApiKeyIndex,
-		PubKey:         tx.PubKey[:],
 		ExpiredAt:      ops.ExpiredAt,
 		Nonce:          *ops.Nonce,
 		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
 	}
+	if tx.PubKey != nil {
+		t.PubKey = *tx.PubKey
+	} else if key != nil {
+		copy(t.PubKey[:], key.PubKeyBytes())
+	}
+	return t
+}
+
+func ConvertChangeECDSAPubKeyTx(tx *ChangeECDSAPubKeyReq, key signer.KeyManager, ops *TransactOpts) *txtypes.L2ChangeECDSAPubKeyTxInfo {
+	t := &txtypes.L2ChangeECDSAPubKeyTxInfo{
+		AccountIndex:   *ops.FromAccountIndex,
+		ApiKeyIndex:    *ops.ApiKeyIndex,
+		ExpiredAt:      ops.ExpiredAt,
+		Nonce:          *ops.Nonce,
+		L2TxAttributes: ConstructL2TxAttributes(ops.TxAttributes),
+	}
+	if tx.PubKey != nil {
+		t.PubKey = *tx.PubKey
+	} else if key != nil {
+		copy(t.PubKey[:], key.PubKeyBytes())
+	}
+	return t
 }
 
 func ConvertCreateSubAccountTx(ops *TransactOpts) *txtypes.L2CreateSubAccountTxInfo {

@@ -219,7 +219,7 @@ func ConvertChangePubKeyTx(tx *ChangePubKeyReq, ops *TransactOpts) *txtypes.L2Ch
 	return &txtypes.L2ChangePubKeyTxInfo{
 		AccountIndex:   *ops.FromAccountIndex,
 		ApiKeyIndex:    *ops.ApiKeyIndex,
-		PubKey:         tx.PubKey[:],
+		PubKey:         tx.PubKey,
 		ExpiredAt:      ops.ExpiredAt,
 		Nonce:          *ops.Nonce,
 		L2TxAttributes: ops.L2TxAttributes(),
@@ -487,11 +487,11 @@ func ConstructChangePubKeyTx(key signer.KeyManager, lighterChainId uint32, tx *C
 	convertedTx.SignedHash = ethCommon.Bytes2Hex(msgHash)
 	convertedTx.Sig = signature
 
-	if !IsZeroByteSlice(convertedTx.PubKey) {
+	if !IsZeroByteSlice(convertedTx.PubKey[:]) {
 		pk := key.PubKeyBytes()
 		msgHash, _ := convertedTx.Hash(lighterChainId)
 
-		if err := schnorr.Validate(pk[:], msgHash, convertedTx.Sig); err != nil {
+		if err := schnorr.Validate(pk, msgHash, convertedTx.Sig); err != nil {
 			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
 		}
 	}

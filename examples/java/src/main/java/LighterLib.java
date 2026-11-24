@@ -117,7 +117,11 @@ public class LighterLib {
     // -------------------------------------------------------------------------
 
     public interface Lib extends Library {
+        // secp256k1 ECDSA key, registered with SignChangeECDSAPubKey
         ApiKeyResponse.ByValue   GenerateAPIKey();
+
+        // legacy 40-byte Schnorr key, registered with SignChangePubKey
+        ApiKeyResponse.ByValue   GenerateSchnorrAPIKey();
 
         Pointer                  CreateClient(String url, String privateKey, int chainId,
                                               int apiKeyIndex, long accountIndex);
@@ -126,6 +130,9 @@ public class LighterLib {
 
         SignedTxResponse.ByValue SignChangePubKey(String pubKey, byte skipNonce, long nonce,
                                                  int apiKeyIndex, long accountIndex);
+
+        SignedTxResponse.ByValue SignChangeECDSAPubKey(String pubKey, byte skipNonce, long nonce,
+                                                      int apiKeyIndex, long accountIndex);
 
         SignedTxResponse.ByValue SignCreateOrder(
                 long marketIndex, long clientOrderIndex, long baseAmount,

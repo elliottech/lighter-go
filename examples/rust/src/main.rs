@@ -40,6 +40,15 @@ fn run_example(lib: &LighterLib, api_key_index: i32) {
         return;
     }
 
+    // generate_api_key returns a secp256k1 ECDSA key, registered with sign_change_ecdsa_pub_key (tx type 54).
+    // The L1 wallet signs message_to_sign and the signature goes into the L1Sig field of tx_info before sending.
+    // Legacy Schnorr keys (generate_schnorr_api_key) are registered with sign_change_pub_key instead.
+    let change_pub_key = lib.sign_change_ecdsa_pub_key(&public_key, 0, 0, api_key_index, ACCOUNT_INDEX);
+    if let Some(e) = change_pub_key.err {
+        eprintln!("[{}] SignChangeECDSAPubKey error: {}", api_key_index, e);
+        return;
+    }
+
     // Auth token valid for 7 hours
     let token_deadline = 0;
     let auth_token = match lib

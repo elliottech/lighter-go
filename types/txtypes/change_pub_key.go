@@ -16,7 +16,7 @@ type L2ChangePubKeyTxInfo struct {
 	AccountIndex int64
 	ApiKeyIndex  uint8
 
-	PubKey []byte
+	PubKey [40]byte
 	L1Sig  string
 
 	ExpiredAt  int64
@@ -69,10 +69,6 @@ func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
 		return ErrExpiredAtInvalid
 	}
 
-	if !IsValidPubKeyLength(txInfo.PubKey) {
-		return ErrPubKeyInvalid
-	}
-
 	if txInfo.L1Sig != "" {
 		// Decode from signature string to get the signature byte array
 		signatureContent, err := hexutil.Decode(txInfo.L1Sig)
@@ -90,7 +86,7 @@ func (txInfo *L2ChangePubKeyTxInfo) Validate() error {
 func (txInfo *L2ChangePubKeyTxInfo) GetL1SignatureBody() string {
 	signatureBody := fmt.Sprintf(
 		TemplateChangePubKey,
-		common.Bytes2Hex(txInfo.PubKey),
+		common.Bytes2Hex(txInfo.PubKey[:]),
 		getHex10FromUint64(uint64(txInfo.Nonce)),
 		getHex10FromUint64(uint64(txInfo.AccountIndex)),
 		getHex10FromUint64(uint64(txInfo.ApiKeyIndex)),
@@ -113,7 +109,7 @@ func (txInfo *L2ChangePubKeyTxInfo) Hash(lighterChainId uint32) (msgHash []byte,
 	elems = append(elems, g.GoldilocksField(txInfo.AccountIndex))
 	elems = append(elems, g.GoldilocksField(txInfo.ApiKeyIndex))
 
-	pubKey, err := gFp5.FromCanonicalLittleEndianBytes(txInfo.PubKey)
+	pubKey, err := gFp5.FromCanonicalLittleEndianBytes(txInfo.PubKey[:])
 	if err != nil {
 		return nil, ErrPubKeyInvalid
 	}

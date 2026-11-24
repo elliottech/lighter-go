@@ -27,17 +27,18 @@ import (
 )
 
 const (
-	_                                   = iota
-	AttributeTypeIntegratorAccountIndex = 1
-	AttributeTypeIntegratorTakerFee     = 2
-	AttributeTypeIntegratorMakerFee     = 3
-	AttributeTypeSkipTxNonce            = 4
-	AttributeTypeCancelAllMarketIndex   = 5
-	AttributeTypeSelfTradeBehaviorMode  = 6
-	AttributeTypeSelfTradeEqualityMode  = 7
-	AttributeTypeOrderOrderVersion      = 8
+	_                                           = iota
+	AttributeTypeIntegratorAccountIndex         = 1
+	AttributeTypeIntegratorTakerFee             = 2
+	AttributeTypeIntegratorMakerFee             = 3
+	AttributeTypeSkipTxNonce                    = 4
+	AttributeTypeCancelAllMarketIndex           = 5
+	AttributeTypeSelfTradeBehaviorMode          = 6
+	AttributeTypeSelfTradeEqualityMode          = 7
+	AttributeTypeOrderOrderVersion              = 8
+	AttributeTypeRevokePubKeyWithoutL1Signature = 9
 
-	MaxAttributeType = AttributeTypeOrderOrderVersion
+	MaxAttributeType = AttributeTypeRevokePubKeyWithoutL1Signature
 )
 
 type AttibuteConfig struct {
@@ -104,6 +105,13 @@ var AttributeTypeToConfig = map[uint8]*AttibuteConfig{
 		MaxValue:          MaxTimestamp,
 		NilValue:          NilOrderVersion,
 		InvalidRangeError: ErrOrderOrderVersionInvalidRange,
+	},
+	AttributeTypeRevokePubKeyWithoutL1Signature: {
+		ByteSize:          1,
+		MinValue:          0,
+		MaxValue:          1,
+		NilValue:          0,
+		InvalidRangeError: ErrRevokePubKeyWithoutL1SignatureInvalid,
 	},
 }
 

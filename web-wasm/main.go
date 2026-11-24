@@ -87,7 +87,7 @@ func CreateClient(this js.Value, args []js.Value) any {
 		sdkClient.SetApiKeyIndex(apiKeyIndex)
 		sdkClient.SetSkipNonce(skipNonce)
 
-		pub := sdkClient.KeyManager().PubKeyBytes()
+		pub := [40]byte(sdkClient.KeyManager().PubKeyBytes())
 		txInfo := &ChangePubKeyReq{PubKey: pub}
 		ops := new(TransactOpts)
 		ops.Nonce = &nonce
@@ -129,7 +129,7 @@ func CreateClientByPrv(this js.Value, args []js.Value) any {
 		sdkClient.SetApiKeyIndex(apiKeyIndex)
 		sdkClient.SetSkipNonce(skipNonce)
 
-		pub := sdkClient.KeyManager().PubKeyBytes()
+		pub := [40]byte(sdkClient.KeyManager().PubKeyBytes())
 		txInfo := &ChangePubKeyReq{PubKey: pub}
 		ops := new(TransactOpts)
 		ops.Nonce = &nonce
@@ -163,7 +163,7 @@ func GetChangePubKeyTransaction(this js.Value, args []js.Value) any {
 
 	return promiseResult(func(resolve js.Value) {
 		sdkClient := clients[accountIndex]
-		pub := sdkClient.KeyManager().PubKeyBytes()
+		pub := [40]byte(sdkClient.KeyManager().PubKeyBytes())
 		txInfo := &ChangePubKeyReq{PubKey: pub}
 		ops := new(TransactOpts)
 		ops.Nonce = &nonce
@@ -235,7 +235,7 @@ func SignChangePubKey(this js.Value, args []js.Value) any {
 		apiKeyIndex = checkedUint8(checkedInt(args[3]))
 	}
 	return promiseResult(func(resolve js.Value) {
-		txInfo := &ChangePubKeyReq{PubKey: clients[accountIndex].KeyManager().PubKeyBytes()}
+		txInfo := &ChangePubKeyReq{PubKey: [40]byte(clients[accountIndex].KeyManager().PubKeyBytes())}
 		ops := new(TransactOpts)
 		ops.Nonce = &nonce
 		ops.ApiKeyIndex = &apiKeyIndex

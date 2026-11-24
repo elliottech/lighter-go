@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/elliottech/lighter-go/signer"
@@ -39,7 +40,17 @@ func NewTxClient(apiClient MinimalHTTPClient, apiKeyPrivateKey string, accountIn
 		return nil, err
 	}
 
-	keyManager, err := signer.NewKeyManager(b)
+	// 32-byte private keys are secp256k1 ECDSA api keys, 40-byte ones are (deprecated) Schnorr api keys
+	var keyManager signer.KeyManager
+	switch len(b) {
+	case 32:
+		keyManager, err = signer.NewECDSAKeyManager(apiKeyPrivateKey)
+	case 40:
+		fmt.Fprintln(os.Stderr, "lighter: Schnorr API keys are deprecated, use an ECDSA key (GenerateAPIKey / create_api_key)")
+		keyManager, err = signer.NewKeyManager(b)
+	default:
+		return nil, fmt.Errorf("invalid private key length: expected 32 (ECDSA) or 40 (Schnorr) bytes, got %v", len(b))
+	}
 	if err != nil {
 		return nil, err
 	}

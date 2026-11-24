@@ -5,7 +5,9 @@ import (
 	"time"
 
 	schnorr "github.com/elliottech/poseidon_crypto/signature/schnorr"
+	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/elliottech/lighter-go/signer"
 	"github.com/elliottech/lighter-go/types"
 	"github.com/elliottech/lighter-go/types/txtypes"
 )
@@ -27,16 +29,55 @@ func (c *TxClient) GetChangePubKeyTransaction(tx *types.ChangePubKeyReq, ops *ty
 		return nil, err
 	}
 
-	pk := c.keyManager.PubKeyBytes()
-	msgHash, _ := txInfo.Hash(c.chainId)
+	if !txtypes.IsZeroSchnorrPubKey(txInfo.PubKey) {
+		// Non revoke change pubkey transaction must be signed by the new key.
+		msgHash, err := txInfo.Hash(c.chainId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash tx info for signature validation. error: %v", err)
+		}
 
-	if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
-		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		if len(txInfo.Sig) != signer.SchnorrSignatureLength {
+			return nil, fmt.Errorf("invalid schnorr signature length: %d", len(txInfo.Sig))
+		}
+
+		if err := schnorr.Validate(txInfo.PubKey[:], msgHash, txInfo.Sig); err != nil {
+			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		}
 	}
 
 	// Signing a ChangePubKey is a strong signal that this account's
 	// server-side pubkey is about to change. Drop cached entries so a
 	// subsequent Check refetches from the server.
+	if c.apiClient != nil {
+		c.apiClient.InvalidateApiKeys(c.accountIndex)
+	}
+	return txInfo, nil
+}
+
+func (c *TxClient) GetChangeECDSAPubKeyTransaction(tx *types.ChangeECDSAPubKeyReq, ops *types.TransactOpts) (*txtypes.L2ChangeECDSAPubKeyTxInfo, error) {
+	ops, err := c.FullFillDefaultOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	txInfo, err := types.ConstructChangeECDSAPubKeyTx(c.keyManager, c.chainId, tx, ops)
+	if err != nil {
+		return nil, err
+	}
+
+	if !txtypes.IsZeroECDSAPubKey(txInfo.PubKey) {
+		// Non revoke change ECDSA pubkey transaction must be signed by the new key.
+		msgHash, err := txInfo.Hash(c.chainId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash tx info for signature validation. error: %v", err)
+		}
+		if len(txInfo.Sig) != signer.ECDSASignatureLength {
+			return nil, fmt.Errorf("invalid ecdsa signature length: %d", len(txInfo.Sig))
+		}
+		if !crypto.VerifySignature(txInfo.PubKey[:], signer.ECDSASigningHash(msgHash), txInfo.Sig) {
+			return nil, fmt.Errorf("failed to validate ecdsa signature: the key manager does not hold the installed key")
+		}
+	}
+
 	if c.apiClient != nil {
 		c.apiClient.InvalidateApiKeys(c.accountIndex)
 	}
@@ -284,11 +325,16 @@ func (c *TxClient) GetApproveIntegratorTx(tx *types.ApproveIntegratorTxReq, ops 
 		return nil, err
 	}
 
-	pk := c.keyManager.PubKeyBytes()
 	msgHash, _ := txInfo.Hash(c.chainId)
-
-	if err := schnorr.Validate(pk[:], msgHash, txInfo.Sig); err != nil {
-		return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+	pk := c.keyManager.PubKeyBytes()
+	if c.keyManager.KeyType() == signer.KeyTypeECDSA {
+		if !crypto.VerifySignature(pk, signer.ECDSASigningHash(msgHash), txInfo.Sig) {
+			return nil, fmt.Errorf("failed to validate signature")
+		}
+	} else {
+		if err := schnorr.Validate(pk, msgHash, txInfo.Sig); err != nil {
+			return nil, fmt.Errorf("failed to validate signature. error: %v", err)
+		}
 	}
 
 	return txInfo, nil
