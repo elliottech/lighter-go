@@ -22,7 +22,7 @@
     "react-native-webview": "*"
   },
   "dependencies": {
-    "zod": "^3.23.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -33,5 +33,10 @@
     "react-native-webview": "^13.8.0",
     "tsdown": "^0.22.14",
     "typescript": "^5.4.0"
+  },
+  "overrides": {
+    "@xmldom/xmldom@<0.9": "^0.8.15",
+    "@expo/cli": "^57.0.35",
+    "image-size": "^2.0.3"
   }
 }
