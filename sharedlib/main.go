@@ -530,6 +530,17 @@ func SignModifyOrder(cMarketIndex C.longlong, cIndex C.longlong, cBaseAmount C.l
 	marketIndex := int64(cMarketIndex)
 	index := int64(cIndex)
 	baseAmount := int64(cBaseAmount)
+
+	// price and trigger price are 64-bit here so range check them before narrowing to uint32
+	if cPrice < 0 {
+		return signedTxResponseErr(txtypes.ErrPriceTooLow)
+	}
+	if cPrice > C.longlong(txtypes.MaxOrderPrice) {
+		return signedTxResponseErr(txtypes.ErrPriceTooHigh)
+	}
+	if cTriggerPrice < 0 || cTriggerPrice > C.longlong(txtypes.MaxOrderTriggerPrice) {
+		return signedTxResponseErr(txtypes.ErrOrderTriggerPriceInvalid)
+	}
 	price := uint32(cPrice)
 	triggerPrice := uint32(cTriggerPrice)
 
