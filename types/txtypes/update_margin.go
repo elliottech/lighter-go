@@ -64,7 +64,7 @@ func (txInfo *L2UpdateMarginTxInfo) Validate() error {
 		return ErrInvalidMarketIndex
 	}
 
-	if txInfo.USDCAmount == 0 {
+	if txInfo.USDCAmount < MinTransferAmount {
 		return ErrTransferAmountTooLow
 	}
 	if txInfo.USDCAmount > MaxTransferAmount {
